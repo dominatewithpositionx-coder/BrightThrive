@@ -155,16 +155,21 @@ function ChildView({
   rewards,
   onBack,
   onTaskToggle,
+  onGenerateMissions,
+  generating,
 }: {
   child: Child;
   tasks: Task[];
   rewards: Reward[];
   onBack: () => void;
   onTaskToggle: (task: Task) => void;
+  onGenerateMissions: () => void;
+  generating: boolean;
 }) {
   const colors = getColors(child.name);
   const pending = tasks.filter((t) => !t.completed);
   const done = tasks.filter((t) => t.completed);
+  const allDone = tasks.length > 0 && pending.length === 0;
 
   // Next reward the child can almost afford
   const sortedRewards = [...rewards].sort((a, b) => a.cost - b.cost);
@@ -249,11 +254,44 @@ function ChildView({
         {/* Tasks to do */}
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-3">
-            {pending.length === 0 ? '🎉 All done for today!' : `Tasks to do (${pending.length})`}
+            {allDone ? '🎉 All done for today!' : tasks.length === 0 ? 'Your Missions' : `Missions to do (${pending.length})`}
           </h2>
-          {pending.length === 0 && done.length === 0 && (
+
+          {/* All done — celebrate + offer new missions */}
+          {allDone && (
+            <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-2xl p-6 text-center mb-4">
+              <div className="text-4xl mb-2">🏆</div>
+              <p className="font-bold text-green-800 mb-1">You finished all your missions!</p>
+              <p className="text-sm text-green-600 mb-4">Ready for your next challenge?</p>
+              <button
+                onClick={onGenerateMissions}
+                disabled={generating}
+                className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60"
+              >
+                {generating ? '✨ Getting new missions…' : '✨ Get New Missions!'}
+              </button>
+            </div>
+          )}
+
+          {/* No tasks at all — auto-generate or prompt */}
+          {tasks.length === 0 && (
             <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
-              <p className="text-gray-400 text-sm">No tasks yet — ask a parent to add some!</p>
+              {generating ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="text-3xl">✨</div>
+                  <p className="text-gray-500 text-sm">Getting your missions ready…</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-500 text-sm mb-3">No missions yet!</p>
+                  <button
+                    onClick={onGenerateMissions}
+                    className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-green-700 active:scale-95 transition-all"
+                  >
+                    ✨ Generate My Missions!
+                  </button>
+                </>
+              )}
             </div>
           )}
           <div className="space-y-3">
@@ -306,6 +344,7 @@ export default function ChildPage() {
   const [selected, setSelected] = useState<Child | null>(null);
   const [pendingChild, setPendingChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -333,6 +372,31 @@ export default function ChildPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  async function handleGenerateMissions() {
+    if (!selected || generating) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ childId: selected.id, childName: selected.name, childAge: null, count: 5 }),
+      });
+      if (res.ok) await fetchData();
+    } catch (err) {
+      console.error('Mission generation failed:', err);
+    }
+    setGenerating(false);
+  }
+
+  // Auto-generate missions when a child is selected and has no tasks
+  useEffect(() => {
+    if (!selected) return;
+    const childTasks = tasks.filter((t) => t.child_id === selected.id);
+    if (childTasks.length === 0 && !generating && !loading) {
+      handleGenerateMissions();
+    }
+  }, [selected, tasks, loading]);
 
   function handleSelect(child: Child) {
     // Check if parent has set a PIN for this child
@@ -394,6 +458,8 @@ export default function ChildPage() {
           rewards={rewards}
           onBack={() => setSelected(null)}
           onTaskToggle={handleTaskToggle}
+          onGenerateMissions={handleGenerateMissions}
+          generating={generating}
         />
       ) : (
         <ChildPicker children={children} onSelect={handleSelect} />

@@ -36,6 +36,7 @@ export default function TasksPage() {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [generating, setGenerating] = useState<string | null>(null); // child id being generated
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,6 +138,27 @@ export default function TasksPage() {
     }
   }
 
+  async function generateMissions(child: Child) {
+    setGenerating(child.id);
+    try {
+      const res = await fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ childId: child.id, childName: child.name, count: 5 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Generated ${data.generated} missions for ${child.name}!`);
+        fetchData();
+      } else {
+        toast.error('Generation failed: ' + data.error);
+      }
+    } catch {
+      toast.error('Could not reach AI service.');
+    }
+    setGenerating(null);
+  }
+
   if (fetching) {
     return (
       <div className="p-6 space-y-4 animate-pulse">
@@ -152,6 +174,35 @@ export default function TasksPage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Tasks</h1>
+
+      {/* AI Mission Generator */}
+      {children.length > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-5 max-w-md mb-6">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">✨</span>
+            <div className="flex-1">
+              <p className="font-semibold text-green-900 text-sm">AI Mission Generator</p>
+              <p className="text-xs text-green-700 mt-0.5 mb-3">Let AI instantly create 5 age-appropriate missions for a child.</p>
+              <div className="space-y-2">
+                {children.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    onClick={() => generateMissions(child)}
+                    disabled={generating === child.id}
+                    className="flex items-center justify-between w-full bg-white border border-green-200 rounded-lg px-3 py-2 text-sm hover:bg-green-50 disabled:opacity-60 transition-colors"
+                  >
+                    <span className="font-medium text-gray-800">{child.name}</span>
+                    <span className="text-green-600 text-xs font-medium">
+                      {generating === child.id ? '✨ Generating…' : 'Generate missions →'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Task Form */}
       <form
