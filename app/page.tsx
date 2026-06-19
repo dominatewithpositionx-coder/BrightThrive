@@ -58,7 +58,7 @@ export default function HomePage() {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            href="/login"
+            href="/onboarding"
             className="text-white px-8 py-3.5 rounded-full font-semibold text-base transition-opacity hover:opacity-90 shadow-sm"
             style={{ background: brandGradient }}
           >
@@ -186,7 +186,7 @@ export default function HomePage() {
           Join families building healthy habits, one mission at a time.
         </p>
         <Link
-          href="/login"
+          href="/onboarding"
           className="inline-block text-white px-10 py-4 rounded-full font-semibold text-base transition-opacity hover:opacity-90 shadow-md"
           style={{ background: brandGradient }}
         >
