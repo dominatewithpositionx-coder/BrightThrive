@@ -2,19 +2,10 @@
 'use client';
 
 import type { User } from '@supabase/supabase-js';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { useCallback } from 'react';
 
-// Create a browser client only when the public env vars exist
-const supabase =
-  typeof window !== 'undefined' &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      )
-    : null;
+const supabase = getSupabase();
 
 type HeaderProps = {
   user?: User | null;
@@ -24,7 +15,7 @@ export default function Header({ user }: HeaderProps) {
   const onLogout = useCallback(async () => {
     try {
       // Best effort: sign out from Supabase if a client is available
-      await supabase?.auth.signOut();
+      await supabase.auth.signOut();
     } catch {
       // no-op — still continue with local cleanup & redirect
     }
