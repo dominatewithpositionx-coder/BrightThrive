@@ -3,291 +3,487 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { Sparkles, CheckCircle } from 'lucide-react';
+import { CheckCircle, Sparkles } from 'lucide-react';
 
 const brandGradient = 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)';
+const heroBg = 'linear-gradient(180deg, #F9FCFC 0%, #F3FBFA 45%, #EDF8F8 100%)';
 
-type Step = 'goals' | 'kids' | 'ages' | 'account' | 'done';
+// ── Question data ────────────────────────────────────────────────────────────
 
-const GOALS = [
-  { id: 'screen', label: 'Reduce screen time battles' },
-  { id: 'chores', label: 'Build responsibility & chores' },
-  { id: 'mood', label: 'Support emotional well-being' },
-  { id: 'learning', label: 'Encourage reading & learning' },
-  { id: 'movement', label: 'Get kids moving more' },
-  { id: 'routine', label: 'Establish healthy daily routines' },
-];
+const QUESTIONS = [
+  {
+    key: 'primary_goal',
+    question: 'What would you most like help with right now?',
+    subtitle: 'We\'ll build your family plan around this.',
+    multi: false,
+    options: [
+      { label: 'Healthy routines',          icon: '🌅' },
+      { label: 'Less screen time battles',  icon: '📵' },
+      { label: 'More independence',         icon: '🦋' },
+      { label: 'Homework and learning',     icon: '📚' },
+      { label: 'Kindness and responsibility', icon: '💛' },
+      { label: 'Better family balance',     icon: '⚖️' },
+    ],
+  },
+  {
+    key: 'child_description',
+    question: 'What best describes your child?',
+    subtitle: 'We\'ll tailor missions to fit their personality.',
+    multi: false,
+    options: [
+      { label: 'Easily distracted',         icon: '🌀' },
+      { label: 'Highly energetic',          icon: '⚡' },
+      { label: 'Loves learning',            icon: '🔭' },
+      { label: 'Needs encouragement',       icon: '🤗' },
+      { label: 'Creative and imaginative',  icon: '🎨' },
+      { label: 'Strong-willed',             icon: '💪' },
+    ],
+  },
+  {
+    key: 'parent_involvement',
+    question: 'How involved do you want to be?',
+    subtitle: 'You can always adjust this later.',
+    multi: false,
+    options: [
+      { label: 'Very involved',             icon: '🙋' },
+      { label: 'Some reminders are okay',   icon: '🔔' },
+      { label: 'Mostly independent',        icon: '🪁' },
+    ],
+  },
+  {
+    key: 'motivation_preference',
+    question: 'What motivates your child most?',
+    subtitle: 'We\'ll use this to make rewards feel exciting.',
+    multi: false,
+    options: [
+      { label: 'Screen time',               icon: '📱' },
+      { label: 'Roblox',                    icon: '🎮' },
+      { label: 'Time with family',          icon: '👨‍👩‍👧' },
+      { label: 'Small rewards',             icon: '🎁' },
+      { label: 'Achievements and streaks',  icon: '🏆' },
+      { label: 'Praise and encouragement',  icon: '⭐' },
+    ],
+  },
+  {
+    key: 'selected_habits',
+    question: 'What habits matter most?',
+    subtitle: 'Pick up to 3 — these become your child\'s daily missions.',
+    multi: true,
+    maxSelect: 3,
+    options: [
+      { label: 'Morning routine',           icon: '🌞' },
+      { label: 'Homework',                  icon: '✏️' },
+      { label: 'Reading',                   icon: '📖' },
+      { label: 'Chores',                    icon: '🧹' },
+      { label: 'Physical activity',         icon: '🏃' },
+      { label: 'Gratitude',                 icon: '🙏' },
+      { label: 'Kindness',                  icon: '💚' },
+      { label: 'Bedtime routine',           icon: '🌙' },
+      { label: 'Healthy eating',            icon: '🥦' },
+    ],
+  },
+  {
+    key: 'screen_time_preference',
+    question: 'How many minutes of earned screen time feels right?',
+    subtitle: 'Kids unlock this by completing their missions.',
+    multi: false,
+    options: [
+      { label: '30 minutes',                icon: '⏱️' },
+      { label: '60 minutes',                icon: '⏰' },
+      { label: '90 minutes',                icon: '🕐' },
+      { label: 'Parent decides daily',      icon: '🎛️' },
+    ],
+  },
+  {
+    key: 'routine_timing',
+    question: 'When do routines matter most?',
+    subtitle: 'We\'ll schedule missions around your family\'s rhythm.',
+    multi: false,
+    options: [
+      { label: 'Before school',             icon: '🌄' },
+      { label: 'After school',              icon: '🎒' },
+      { label: 'Evening',                   icon: '🌆' },
+      { label: 'Weekends',                  icon: '🏡' },
+    ],
+  },
+  {
+    key: 'success_definition',
+    question: 'What does success look like for your family?',
+    subtitle: 'This helps us keep your plan focused on what matters.',
+    multi: false,
+    options: [
+      { label: 'Less arguing',              icon: '🕊️' },
+      { label: 'More responsibility',       icon: '🌱' },
+      { label: 'Better routines',           icon: '📅' },
+      { label: 'More confidence',           icon: '🌟' },
+      { label: 'More family connection',    icon: '🤝' },
+      { label: 'Happier days',              icon: '😊' },
+    ],
+  },
+] as const;
 
-const AGE_RANGES = ['Under 5', '5–7', '8–10', '11–13', '14+'];
+type QuestionKey = typeof QUESTIONS[number]['key'];
+
+type Answers = {
+  primary_goal: string;
+  child_description: string;
+  parent_involvement: string;
+  motivation_preference: string;
+  selected_habits: string[];
+  screen_time_preference: string;
+  routine_timing: string;
+  success_definition: string;
+};
+
+const TOTAL_STEPS = QUESTIONS.length + 2; // questions + plan summary + account
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function ProgressBar({ step }: { step: number }) {
+  const pct = Math.round(((step - 1) / (TOTAL_STEPS - 1)) * 100);
+  return (
+    <div className="mb-8">
+      <div className="flex justify-between text-xs mb-2" style={{ color: '#94A3B8' }}>
+        <span>{step < TOTAL_STEPS ? `Step ${step} of ${QUESTIONS.length}` : 'Almost there'}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-1.5 rounded-full" style={{ background: '#E2E8F0' }}>
+        <div
+          className="h-1.5 rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, background: brandGradient }}
+        />
+      </div>
+    </div>
+  );
+}
+
+type OptionCardProps = {
+  icon: string;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+};
+
+function OptionCard({ icon, label, selected, onClick, disabled }: OptionCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled && !selected}
+      className="flex items-center gap-3 w-full text-left px-4 py-4 rounded-2xl border-2 transition-all duration-150 font-medium text-sm"
+      style={{
+        borderColor: selected ? '#14B8A6' : '#E2E8F0',
+        background: selected ? '#F0FDFA' : 'white',
+        color: selected ? '#0F766E' : '#0F172A',
+        opacity: disabled && !selected ? 0.45 : 1,
+        boxShadow: selected ? '0 0 0 1px #14B8A6' : '0 1px 4px rgba(0,0,0,0.05)',
+      }}
+    >
+      <span className="text-2xl w-8 text-center shrink-0">{icon}</span>
+      <span className="leading-snug">{label}</span>
+      {selected && (
+        <span className="ml-auto shrink-0" style={{ color: '#14B8A6' }}>✓</span>
+      )}
+    </button>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('goals');
-  const [goals, setGoals] = useState<string[]>([]);
-  const [numKids, setNumKids] = useState<number | null>(null);
-  const [ages, setAges] = useState<string[]>([]);
+  const [step, setStep] = useState(1); // 1–8 = questions, 9 = plan, 10 = account
+  const [answers, setAnswers] = useState<Partial<Answers>>({});
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  const steps: Step[] = ['goals', 'kids', 'ages', 'account'];
-  const stepIndex = steps.indexOf(step);
-  const progress = step === 'done' ? 100 : ((stepIndex) / steps.length) * 100;
+  const qIndex = step - 1; // 0-indexed into QUESTIONS
+  const q = step <= QUESTIONS.length ? QUESTIONS[qIndex] : null;
 
-  function toggleGoal(id: string) {
-    setGoals(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+  function getSelected(key: QuestionKey): string | string[] {
+    if (key === 'selected_habits') return (answers.selected_habits ?? []);
+    return (answers as Record<string, string>)[key] ?? '';
   }
 
-  function toggleAge(age: string) {
-    setAges(prev => prev.includes(age) ? prev.filter(a => a !== age) : [...prev, age]);
+  function handleSelect(key: QuestionKey, label: string) {
+    if (key === 'selected_habits') {
+      const current = answers.selected_habits ?? [];
+      const q5 = QUESTIONS.find(q => q.key === 'selected_habits')!;
+      const max = (q5 as { maxSelect?: number }).maxSelect ?? 3;
+      if (current.includes(label)) {
+        setAnswers(a => ({ ...a, selected_habits: current.filter(h => h !== label) }));
+      } else if (current.length < max) {
+        setAnswers(a => ({ ...a, selected_habits: [...current, label] }));
+      }
+    } else {
+      setAnswers(a => ({ ...a, [key]: label }));
+    }
+  }
+
+  function canAdvance(): boolean {
+    if (!q) return true;
+    const key = q.key as QuestionKey;
+    if (key === 'selected_habits') return (answers.selected_habits?.length ?? 0) > 0;
+    return !!((answers as Record<string, string>)[key]);
+  }
+
+  function saveToSession() {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bt_onboarding', JSON.stringify(answers));
+    }
   }
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
+    setAuthError('');
+    setAuthLoading(true);
+    saveToSession();
     const supabase = getSupabase();
-
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          onboarding_goals: goals,
-          onboarding_num_kids: numKids,
-          onboarding_age_ranges: ages,
-        },
-      },
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setAuthError(error.message);
+      setAuthLoading(false);
       return;
     }
-
-    setStep('done');
+    if (data.user) {
+      await saveOnboardingRow(data.user.id);
+    }
+    router.push('/dashboard');
   }
 
   async function handleGoogle() {
+    saveToSession();
     const supabase = getSupabase();
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
     });
   }
 
-  if (step === 'done') {
+  async function saveOnboardingRow(parentId: string) {
+    const supabase = getSupabase();
+    await supabase.from('family_onboarding').upsert({
+      parent_id: parentId,
+      primary_goal: answers.primary_goal ?? null,
+      child_description: answers.child_description ?? null,
+      parent_involvement: answers.parent_involvement ?? null,
+      motivation_preference: answers.motivation_preference ?? null,
+      selected_habits: answers.selected_habits ?? [],
+      screen_time_preference: answers.screen_time_preference ?? null,
+      routine_timing: answers.routine_timing ?? null,
+      success_definition: answers.success_definition ?? null,
+      completed_at: new Date().toISOString(),
+    }, { onConflict: 'parent_id' });
+  }
+
+  // ── Plan summary screen ─────────────────────────────────────────────────
+
+  if (step === QUESTIONS.length + 1) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: brandGradient }}>
-          <CheckCircle size={32} color="white" />
-        </div>
-        <h2 className="text-2xl font-bold mb-3" style={{ color: '#0F172A' }}>You&apos;re all set!</h2>
-        <p className="text-base mb-2" style={{ color: '#64748B' }}>Check your email to confirm your account.</p>
-        <p className="text-sm mb-8" style={{ color: '#94A3B8' }}>Once confirmed, you can log in and set up your family.</p>
-        <button
-          onClick={() => router.push('/login')}
-          className="text-white px-8 py-3 rounded-full font-semibold transition-opacity hover:opacity-90"
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center py-12">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm"
           style={{ background: brandGradient }}
         >
-          Go to Login
+          <Sparkles size={30} color="white" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#0F172A' }}>
+          Your BrightThrive Family Plan Is Ready
+        </h1>
+        <p className="text-sm mb-8 max-w-sm" style={{ color: '#64748B' }}>
+          Based on your answers, here&apos;s what BrightThrive will help your family do:
+        </p>
+
+        <div className="w-full max-w-sm mb-8 space-y-3 text-left">
+          {[
+            { icon: '🌱', text: 'Build healthy habits' },
+            { icon: '🏆', text: 'Earn rewards' },
+            { icon: '⭐', text: 'Stay motivated' },
+            { icon: '🦋', text: 'Develop independence' },
+            { icon: '📅', text: 'Create positive routines' },
+          ].map(({ icon, text }) => (
+            <div
+              key={text}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              style={{ background: '#F0FDFA', border: '1px solid #CCFBF1' }}
+            >
+              <span className="text-xl">{icon}</span>
+              <span className="text-sm font-medium" style={{ color: '#0F766E' }}>{text}</span>
+              <CheckCircle size={16} className="ml-auto shrink-0" style={{ color: '#14B8A6' }} />
+            </div>
+          ))}
+        </div>
+
+        {answers.primary_goal && (
+          <div
+            className="w-full max-w-sm px-4 py-3 rounded-xl mb-8 text-sm"
+            style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
+          >
+            Your focus: <strong>{answers.primary_goal}</strong>
+          </div>
+        )}
+
+        <p className="text-xs mb-8 font-medium" style={{ color: '#94A3B8' }}>
+          Parents stay in control. Kids stay motivated.
+        </p>
+
+        <button
+          onClick={() => setStep(QUESTIONS.length + 2)}
+          className="w-full max-w-sm text-white py-4 rounded-full font-semibold text-base transition-opacity hover:opacity-90 shadow-md"
+          style={{ background: brandGradient }}
+        >
+          Create My Free Account →
         </button>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-lg mx-auto px-4 py-12">
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex justify-between text-xs mb-2" style={{ color: '#94A3B8' }}>
-          <span>Step {stepIndex + 1} of {steps.length}</span>
-          <span>{Math.round(progress)}% complete</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-gray-100">
-          <div
-            className="h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: brandGradient }}
-          />
-        </div>
-      </div>
+  // ── Account creation screen ─────────────────────────────────────────────
 
-      {/* Step: Goals */}
-      {step === 'goals' && (
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles size={16} style={{ color: '#14B8A6' }} />
-            <span className="text-xs font-medium" style={{ color: '#0F766E' }}>Let&apos;s personalize your plan</span>
-          </div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>What are your goals?</h1>
-          <p className="text-sm mb-6" style={{ color: '#64748B' }}>Select all that apply — we&apos;ll tailor missions to match.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-            {GOALS.map(g => (
-              <button
-                key={g.id}
-                onClick={() => toggleGoal(g.id)}
-                className="text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all"
-                style={{
-                  borderColor: goals.includes(g.id) ? '#14B8A6' : '#E2E8F0',
-                  background: goals.includes(g.id) ? '#F0FDFA' : 'white',
-                  color: goals.includes(g.id) ? '#0F766E' : '#0F172A',
-                }}
-              >
-                {goals.includes(g.id) && <span className="mr-2">✓</span>}
-                {g.label}
-              </button>
-            ))}
-          </div>
+  if (step === QUESTIONS.length + 2) {
+    return (
+      <div className="max-w-sm mx-auto px-4 py-12">
+        <h1 className="text-2xl font-bold mb-1 text-center" style={{ color: '#0F172A' }}>
+          Create your free account
+        </h1>
+        <p className="text-sm text-center mb-8" style={{ color: '#64748B' }}>
+          Your personalized plan is saved and ready.
+        </p>
+
+        <button
+          onClick={handleGoogle}
+          className="w-full border-2 py-3.5 rounded-full flex items-center justify-center gap-2 text-sm font-medium mb-5 hover:bg-gray-50 transition-colors"
+          style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
+        >
+          <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
+          Continue with Google
+        </button>
+
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+          <span className="text-xs" style={{ color: '#94A3B8' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+        </div>
+
+        <form onSubmit={handleSignUp} className="space-y-3">
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="w-full border-2 rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-colors"
+            style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
+          />
+          <input
+            type="password"
+            placeholder="Create a password (6+ characters)"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full border-2 rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-colors"
+            style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
+          />
+          {authError && (
+            <p className="text-sm text-red-500 text-center">{authError}</p>
+          )}
           <button
-            onClick={() => setStep('kids')}
-            disabled={goals.length === 0}
-            className="w-full text-white py-3 rounded-full font-semibold transition-opacity hover:opacity-90 disabled:opacity-40"
+            type="submit"
+            disabled={authLoading}
+            className="w-full text-white py-4 rounded-full font-semibold text-base transition-opacity hover:opacity-90 disabled:opacity-60 shadow-md"
             style={{ background: brandGradient }}
           >
-            Continue
+            {authLoading ? 'Creating account…' : 'Create Free Account'}
           </button>
+        </form>
+
+        <p className="text-xs text-center mt-5" style={{ color: '#94A3B8' }}>
+          Already have an account?{' '}
+          <a href="/login" style={{ color: '#0F766E' }} className="underline font-medium">Log in</a>
+        </p>
+
+        <button
+          onClick={() => setStep(QUESTIONS.length + 1)}
+          className="w-full mt-3 text-xs text-center py-2"
+          style={{ color: '#CBD5E1' }}
+        >
+          ← Back to your plan
+        </button>
+      </div>
+    );
+  }
+
+  // ── Question screen ─────────────────────────────────────────────────────
+
+  if (!q) return null;
+  const key = q.key as QuestionKey;
+  const selected = getSelected(key);
+  const isMulti = q.multi;
+  const maxSelect = (q as { maxSelect?: number }).maxSelect;
+
+  return (
+    <div className="max-w-lg mx-auto px-4 py-10" style={{ minHeight: '80vh' }}>
+      <ProgressBar step={step} />
+
+      <div className="mb-2">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={14} style={{ color: '#14B8A6' }} />
+          <span className="text-xs font-medium" style={{ color: '#0F766E' }}>
+            {isMulti && maxSelect ? `Select up to ${maxSelect}` : 'Choose one'}
+          </span>
         </div>
-      )}
+        <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#0F172A' }}>
+          {q.question}
+        </h1>
+        <p className="text-sm mb-6" style={{ color: '#64748B' }}>
+          {q.subtitle}
+        </p>
+      </div>
 
-      {/* Step: Number of kids */}
-      {step === 'kids' && (
-        <div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>How many children?</h1>
-          <p className="text-sm mb-6" style={{ color: '#64748B' }}>You can always add more later.</p>
-          <div className="flex gap-3 flex-wrap mb-8">
-            {[1, 2, 3, 4, '5+'].map(n => (
-              <button
-                key={n}
-                onClick={() => setNumKids(typeof n === 'number' ? n : 5)}
-                className="w-16 h-16 rounded-2xl border text-lg font-bold transition-all"
-                style={{
-                  borderColor: numKids === (typeof n === 'number' ? n : 5) ? '#14B8A6' : '#E2E8F0',
-                  background: numKids === (typeof n === 'number' ? n : 5) ? '#F0FDFA' : 'white',
-                  color: numKids === (typeof n === 'number' ? n : 5) ? '#0F766E' : '#0F172A',
-                }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setStep('goals')} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: '#E2E8F0', color: '#64748B' }}>
-              Back
-            </button>
-            <button
-              onClick={() => setStep('ages')}
-              disabled={numKids === null}
-              className="flex-[2] text-white py-3 rounded-full font-semibold transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ background: brandGradient }}
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="space-y-3 mb-8">
+        {q.options.map(opt => {
+          const isSelected = isMulti
+            ? (selected as string[]).includes(opt.label)
+            : selected === opt.label;
+          const atLimit = isMulti && maxSelect
+            ? (selected as string[]).length >= maxSelect
+            : false;
 
-      {/* Step: Ages */}
-      {step === 'ages' && (
-        <div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>What are their ages?</h1>
-          <p className="text-sm mb-6" style={{ color: '#64748B' }}>We&apos;ll match missions to the right age group.</p>
-          <div className="flex flex-wrap gap-3 mb-8">
-            {AGE_RANGES.map(age => (
-              <button
-                key={age}
-                onClick={() => toggleAge(age)}
-                className="px-5 py-2.5 rounded-full border text-sm font-medium transition-all"
-                style={{
-                  borderColor: ages.includes(age) ? '#14B8A6' : '#E2E8F0',
-                  background: ages.includes(age) ? '#F0FDFA' : 'white',
-                  color: ages.includes(age) ? '#0F766E' : '#0F172A',
-                }}
-              >
-                {ages.includes(age) && '✓ '}{age}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setStep('kids')} className="flex-1 py-3 rounded-full border font-semibold text-sm" style={{ borderColor: '#E2E8F0', color: '#64748B' }}>
-              Back
-            </button>
-            <button
-              onClick={() => setStep('account')}
-              disabled={ages.length === 0}
-              className="flex-[2] text-white py-3 rounded-full font-semibold transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ background: brandGradient }}
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
+          return (
+            <OptionCard
+              key={opt.label}
+              icon={opt.icon}
+              label={opt.label}
+              selected={isSelected}
+              disabled={atLimit}
+              onClick={() => handleSelect(key, opt.label)}
+            />
+          );
+        })}
+      </div>
 
-      {/* Step: Create account */}
-      {step === 'account' && (
-        <div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>Create your free account</h1>
-          <p className="text-sm mb-6" style={{ color: '#64748B' }}>Your personalized plan is ready — let&apos;s save it.</p>
-
+      <div className="flex gap-3">
+        {step > 1 && (
           <button
-            onClick={handleGoogle}
-            className="w-full border py-3 rounded-full flex items-center justify-center gap-2 text-sm font-medium mb-5 hover:bg-gray-50 transition-colors"
-            style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
+            onClick={() => setStep(s => s - 1)}
+            className="flex-1 py-3.5 rounded-full border-2 text-sm font-semibold transition-colors hover:bg-gray-50"
+            style={{ borderColor: '#E2E8F0', color: '#64748B' }}
           >
-            <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
-            Continue with Google
+            Back
           </button>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs" style={{ color: '#94A3B8' }}>or</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <form onSubmit={handleSignUp} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2"
-              style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Create a password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2"
-              style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
-              required
-              minLength={6}
-            />
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full text-white py-3 rounded-full font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ background: brandGradient }}
-            >
-              {loading ? 'Creating account…' : 'Create Free Account'}
-            </button>
-          </form>
-
-          <p className="text-xs text-center mt-4" style={{ color: '#94A3B8' }}>
-            Already have an account?{' '}
-            <a href="/login" className="underline" style={{ color: '#0F766E' }}>Log in</a>
-          </p>
-
-          <button onClick={() => setStep('ages')} className="w-full mt-3 text-xs text-center" style={{ color: '#94A3B8' }}>
-            ← Back
-          </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={() => setStep(s => s + 1)}
+          disabled={!canAdvance()}
+          className="flex-[2] text-white py-3.5 rounded-full font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-40 shadow-sm"
+          style={{ background: brandGradient }}
+        >
+          {step === QUESTIONS.length ? 'See my plan →' : 'Continue →'}
+        </button>
+      </div>
     </div>
   );
 }

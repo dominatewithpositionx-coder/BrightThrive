@@ -30,10 +30,34 @@ export default function DashboardPage() {
     init();
   }, []);
 
+  async function saveOnboardingFromSession(parentId: string) {
+    if (typeof window === 'undefined') return;
+    const raw = sessionStorage.getItem('bt_onboarding');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      await supabase.from('family_onboarding').upsert({
+        parent_id: parentId,
+        ...data,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: 'parent_id' });
+      sessionStorage.removeItem('bt_onboarding');
+    } catch (_) {}
+  }
+
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push('/login'); return; }
     setUser(user);
+
+    // If redirected from Google OAuth after onboarding, persist the answers
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('onboarding') === '1') {
+        await saveOnboardingFromSession(user.id);
+        router.replace('/dashboard');
+      }
+    }
 
     const [{ data: childData }, { data: taskData }, { data: rewardData }, { data: historyData }] = await Promise.all([
       supabase.from('children').select('id, name, points').order('created_at', { ascending: true }),
