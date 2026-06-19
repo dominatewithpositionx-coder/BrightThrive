@@ -4,6 +4,17 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
+const TASK_TEMPLATES = [
+  'Make your bed',
+  'Do homework',
+  'Read for 20 minutes',
+  'Clean your room',
+  'Help with dishes',
+  'Practice instrument',
+  'Get ready on time',
+  'Feed the pet',
+];
+
 type Task = {
   id: string;
   child_id: string;
@@ -152,9 +163,26 @@ export default function TasksPage() {
             </option>
           ))}
         </select>
+        {/* Template pills */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {TASK_TEMPLATES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTitle(t)}
+              className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                title === t
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
         <input
           className="border rounded-md px-3 py-2 w-full mb-3"
-          placeholder="Task description (e.g. Finish homework)"
+          placeholder="Or write your own task…"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
