@@ -28,16 +28,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Image
               src="/brand/BrightThrive.png"
               alt="BrightThrive"
-              width={180}
-              height={48}
+              width={220}
+              height={60}
               priority
-              className="h-10 w-auto"
+              className="h-14 w-auto"
             />
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-700">
             <Link href="/child" className="hover:text-gray-900 font-medium">Child Login</Link>
             <Link href="/login" className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full hover:bg-gray-50 font-medium">Parent Login</Link>
-            <Link href="/login" className="bg-teal-600 text-white px-4 py-1.5 rounded-full hover:bg-teal-700 font-medium">Get Started</Link>
+            <Link href="/login" className="bg-green-500 text-white px-4 py-1.5 rounded-full hover:bg-green-600 font-medium">Get Started</Link>
           </nav>
         </header>
 
