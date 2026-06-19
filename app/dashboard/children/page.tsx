@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-import { Flame, Clock, Star, ChevronDown, ChevronUp, Trash2, Plus, Minus } from 'lucide-react';
+import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound } from 'lucide-react';
 
 type Child = {
   id: string;
@@ -71,6 +71,9 @@ export default function ChildrenPage() {
   const [limit, setLimit] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [pins, setPins] = useState<Record<string, string>>({});
+  const [editingPin, setEditingPin] = useState<string | null>(null);
+  const [pinInput, setPinInput] = useState('');
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,7 +91,31 @@ export default function ChildrenPage() {
 
   useEffect(() => {
     fetchData();
+    // Load PINs from localStorage
+    const stored: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('bt_pin_')) stored[key.replace('bt_pin_', '')] = localStorage.getItem(key)!;
+    }
+    setPins(stored);
   }, []);
+
+  function savePin(childName: string) {
+    if (pinInput.length !== 4) { toast.error('PIN must be 4 digits'); return; }
+    const key = childName.toLowerCase();
+    localStorage.setItem(`bt_pin_${key}`, pinInput);
+    setPins((p) => ({ ...p, [key]: pinInput }));
+    setPinInput('');
+    setEditingPin(null);
+    toast.success(`PIN set for ${childName}`);
+  }
+
+  function clearPin(childName: string) {
+    const key = childName.toLowerCase();
+    localStorage.removeItem(`bt_pin_${key}`);
+    setPins((p) => { const n = { ...p }; delete n[key]; return n; });
+    toast.success(`PIN removed for ${childName}`);
+  }
 
   async function addChild(e: React.FormEvent) {
     e.preventDefault();
@@ -281,6 +308,45 @@ export default function ChildrenPage() {
                         <Plus size={13} /> 15 min
                       </button>
                     </div>
+                  </div>
+
+                  {/* Kid View PIN */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <KeyRound size={15} className="text-gray-400" />
+                        <span>Kid View PIN</span>
+                      </div>
+                      {pins[child.name.toLowerCase()] ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Set ✓</span>
+                          <button onClick={() => clearPin(child.name)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingPin(child.id); setPinInput(''); }}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium"
+                        >
+                          Set PIN
+                        </button>
+                      )}
+                    </div>
+                    {editingPin === child.id && (
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="number"
+                          maxLength={4}
+                          placeholder="4-digit PIN"
+                          value={pinInput}
+                          onChange={(e) => setPinInput(e.target.value.slice(0, 4))}
+                          className="border rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                          onKeyDown={(e) => e.key === 'Enter' && savePin(child.name)}
+                          autoFocus
+                        />
+                        <button onClick={() => savePin(child.name)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700">Save</button>
+                        <button onClick={() => setEditingPin(null)} className="text-gray-400 px-2 text-sm hover:text-gray-600">✕</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

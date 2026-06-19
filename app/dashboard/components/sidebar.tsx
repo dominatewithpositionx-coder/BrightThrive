@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Users, BarChart3, Gift, Settings, ClipboardList } from 'lucide-react';
+import { Home, Users, BarChart3, Gift, Settings, ClipboardList, Gamepad2 } from 'lucide-react';
 
 const brand = {
   name: 'BrightThrive',
@@ -27,6 +27,8 @@ const navLinks: NavItem[] = [
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
+const kidLink = { name: 'Kid View', href: '/child', icon: Gamepad2 };
+
 export default function Sidebar() {
   const pathname = usePathname();
 
@@ -44,29 +46,45 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="mt-2 space-y-1">
-        {navLinks.map(({ name, href, icon: Icon }) => {
-          const isActive =
-            pathname === href ||
-            (href !== '/dashboard' && pathname?.startsWith(href));
+      <nav className="mt-2 space-y-1 flex flex-col h-[calc(100vh-80px)]">
+        <div className="space-y-1 flex-1">
+          {navLinks.map(({ name, href, icon: Icon }) => {
+            const isActive =
+              pathname === href ||
+              (href !== '/dashboard' && pathname?.startsWith(href));
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive ? 'page' : undefined}
-              className={[
-                'flex items-center gap-3 px-6 py-3 rounded-md transition-colors duration-150',
-                isActive
-                  ? 'bg-gray-200 font-semibold text-black'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-black',
-              ].join(' ')}
-            >
-              <Icon size={18} />
-              <span>{name}</span>
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive ? 'page' : undefined}
+                className={[
+                  'flex items-center gap-3 px-6 py-3 rounded-md transition-colors duration-150',
+                  isActive
+                    ? 'bg-gray-200 font-semibold text-black'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-black',
+                ].join(' ')}
+              >
+                <Icon size={18} />
+                <span>{name}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Kid View launcher */}
+        <div className="px-4 pb-4 border-t pt-3">
+          <Link
+            href={kidLink.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 font-medium text-sm transition-colors"
+          >
+            <kidLink.icon size={18} />
+            <span>{kidLink.name}</span>
+            <span className="ml-auto text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">New tab</span>
+          </Link>
+        </div>
       </nav>
     </aside>
   );
