@@ -24,14 +24,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen text-navy bg-white">
         {/* Header */}
         <header className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 font-bold text-xl">
+          <Link href="/" className="flex items-center">
             <Image
-              src="/brand/brainthrive/BrainThrive_FullLogo_Gradient.png"
+              src="/brand/BrightThrive_FullLogo.png"
               alt="BrightThrive"
-              width={200}
-              height={50}
+              width={180}
+              height={48}
               priority
-              className="h-12 w-auto"
+              className="h-10 w-auto"
             />
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-700">
