@@ -11,26 +11,46 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+// Brand gradient shared across buttons and accents
+const brandGradient = 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)';
+const heroGradient  = 'linear-gradient(180deg, #F9FCFC 0%, #F3FBFA 45%, #EDF8F8 100%)';
+
 export default function HomePage() {
   return (
-    <div className="bg-white text-gray-900">
+    <div className="bg-white" style={{ color: '#0F172A' }}>
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="bg-teal-50 pb-20 pt-16 text-center px-4">
+      <section className="pb-20 pt-16 text-center px-4" style={{ background: heroGradient }}>
+
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-white text-green-700 text-sm font-medium px-4 py-1.5 rounded-full mb-7 shadow-sm border border-green-100">
-          <Sparkles size={13} className="text-green-500" />
+        <div
+          className="inline-flex items-center gap-2 bg-white text-sm font-medium px-4 py-1.5 rounded-full mb-7 shadow-sm"
+          style={{ border: '1px solid #E2E8F0', color: '#0F766E' }}
+        >
+          <Sparkles size={13} style={{ color: '#14B8A6' }} />
           Helping families thrive together
         </div>
 
         {/* H1 */}
-        <h1 className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight mb-5 max-w-3xl mx-auto">
+        <h1
+          className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight mb-5 max-w-3xl mx-auto"
+          style={{ color: '#0F172A' }}
+        >
           Help Your Kids Build{' '}
-          <span className="text-green-600">Healthy Habits</span>
+          <span
+            style={{
+              background: brandGradient,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Healthy Habits
+          </span>
         </h1>
 
         {/* Subheadline */}
-        <p className="text-xl text-gray-500 max-w-xl mx-auto mb-9 leading-relaxed">
+        <p className="text-xl max-w-xl mx-auto mb-9 leading-relaxed" style={{ color: '#64748B' }}>
           BrightThrive turns daily routines into fun missions. Children earn screen time
           through mood check-ins, chores, learning, and kindness.
         </p>
@@ -39,13 +59,15 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/login"
-            className="bg-teal-500 text-white px-8 py-3.5 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-sm"
+            className="text-white px-8 py-3.5 rounded-full font-semibold text-base transition-opacity hover:opacity-90 shadow-sm"
+            style={{ background: brandGradient }}
           >
             Start Free Today
           </Link>
           <Link
             href="/login"
-            className="bg-white text-gray-700 px-8 py-3.5 rounded-full font-semibold text-base hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm"
+            className="bg-white px-8 py-3.5 rounded-full font-semibold text-base hover:bg-gray-50 transition-colors shadow-sm"
+            style={{ border: '1px solid #E2E8F0', color: '#0F172A' }}
           >
             I already have an account
           </Link>
@@ -54,8 +76,10 @@ export default function HomePage() {
 
       {/* ── FEATURE CARDS ────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 py-20">
-        <h2 className="text-3xl font-bold text-center mb-3">Everything Your Family Needs</h2>
-        <p className="text-center text-gray-500 mb-14 max-w-xl mx-auto">
+        <h2 className="text-3xl font-bold text-center mb-3" style={{ color: '#0F172A' }}>
+          Everything Your Family Needs
+        </h2>
+        <p className="text-center mb-14 max-w-xl mx-auto" style={{ color: '#64748B' }}>
           A complete system for building habits, not just blocking screens.
         </p>
 
@@ -85,7 +109,7 @@ export default function HomePage() {
             {
               icon: Brain,
               bg: 'bg-teal-50',
-              color: 'text-green-500',
+              color: 'text-teal-500',
               title: 'Age-Appropriate',
               desc: 'Missions adapt to each child, perfect for kids ages 5–14.',
             },
@@ -98,7 +122,7 @@ export default function HomePage() {
             },
             {
               icon: CheckCircle,
-              bg: 'bg-teal-50',
+              bg: 'bg-green-50',
               color: 'text-green-500',
               title: 'Simple & Calm',
               desc: 'No gamification bloat — just clear, encouraging daily progress.',
@@ -106,56 +130,46 @@ export default function HomePage() {
           ].map(({ icon: Icon, bg, color, title, desc }) => (
             <div
               key={title}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              className="bg-white rounded-2xl p-6 hover:shadow-md transition-shadow"
+              style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.07)', border: '1px solid #F1F5F9' }}
             >
               <div className={`w-12 h-12 ${bg} rounded-xl flex items-center justify-center mb-4`}>
                 <Icon size={22} className={color} />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+              <h3 className="font-semibold mb-2" style={{ color: '#0F172A' }}>{title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#64748B' }}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section className="bg-teal-50 py-20 px-4">
+      <section className="py-20 px-4" style={{ background: heroGradient }}>
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-3">How It Works</h2>
-          <p className="text-center text-gray-500 mb-14">
+          <h2 className="text-3xl font-bold text-center mb-3" style={{ color: '#0F172A' }}>
+            How It Works
+          </h2>
+          <p className="text-center mb-14" style={{ color: '#64748B' }}>
             A simple daily loop that builds real habits over time.
           </p>
 
           <div className="space-y-8">
             {[
-              {
-                n: '1',
-                title: 'Child checks in',
-                desc: 'Start the day by selecting how they feel.',
-              },
-              {
-                n: '2',
-                title: 'Missions unlock',
-                desc: 'Personalized tasks appear based on age and mood.',
-              },
-              {
-                n: '3',
-                title: 'Complete & earn',
-                desc: 'Each mission earns screen time minutes.',
-              },
-              {
-                n: '4',
-                title: 'Parents track',
-                desc: 'View progress and celebrate wins together.',
-              },
+              { n: '1', title: 'Child checks in',  desc: 'Start the day by selecting how they feel.' },
+              { n: '2', title: 'Missions unlock',  desc: 'Personalized tasks appear based on age and mood.' },
+              { n: '3', title: 'Complete & earn',  desc: 'Each mission earns screen time minutes.' },
+              { n: '4', title: 'Parents track',    desc: 'View progress and celebrate wins together.' },
             ].map(({ n, title, desc }) => (
               <div key={n} className="flex items-start gap-5">
-                <div className="w-11 h-11 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                <div
+                  className="w-11 h-11 text-white rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-sm"
+                  style={{ background: brandGradient }}
+                >
                   {n}
                 </div>
                 <div className="pt-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
-                  <p className="text-sm text-gray-500">{desc}</p>
+                  <h3 className="font-semibold mb-1" style={{ color: '#0F172A' }}>{title}</h3>
+                  <p className="text-sm" style={{ color: '#64748B' }}>{desc}</p>
                 </div>
               </div>
             ))}
@@ -165,13 +179,16 @@ export default function HomePage() {
 
       {/* ── FINAL CTA ────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-3xl font-bold mb-3">Ready to Help Your Kids Thrive?</h2>
-        <p className="text-gray-500 mb-9 max-w-md mx-auto">
+        <h2 className="text-3xl font-bold mb-3" style={{ color: '#0F172A' }}>
+          Ready to Help Your Kids Thrive?
+        </h2>
+        <p className="mb-9 max-w-md mx-auto" style={{ color: '#64748B' }}>
           Join families building healthy habits, one mission at a time.
         </p>
         <Link
           href="/login"
-          className="inline-block bg-teal-500 text-white px-10 py-4 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-md"
+          className="inline-block text-white px-10 py-4 rounded-full font-semibold text-base transition-opacity hover:opacity-90 shadow-md"
+          style={{ background: brandGradient }}
         >
           Create Your Free Account
         </Link>

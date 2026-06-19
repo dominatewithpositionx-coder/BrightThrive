@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="flex items-center gap-4 text-sm text-gray-700">
             <Link href="/child" className="hover:text-gray-900 font-medium">Child Login</Link>
             <Link href="/login" className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full hover:bg-gray-50 font-medium">Parent Login</Link>
-            <Link href="/login" className="bg-green-500 text-white px-4 py-1.5 rounded-full hover:bg-green-600 font-medium">Get Started</Link>
+            <Link href="/login" className="text-white px-4 py-1.5 rounded-full font-medium transition-opacity hover:opacity-90" style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)' }}>Get Started</Link>
           </nav>
         </header>
 
