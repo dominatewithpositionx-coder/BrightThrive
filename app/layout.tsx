@@ -34,10 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               className="h-12 w-auto"
             />
           </Link>
-          <nav className="flex gap-6 text-sm text-gray-700">
-            <Link href="/how-it-works" className="hover:text-gray-900">How it works</Link>
-            <Link href="/parents" className="hover:text-gray-900">For Parents</Link>
-            <Link href="/login" className="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700">Sign in</Link>
+          <nav className="flex items-center gap-4 text-sm text-gray-700">
+            <Link href="/child" className="hover:text-gray-900 font-medium">Child Login</Link>
+            <Link href="/login" className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full hover:bg-gray-50 font-medium">Parent Login</Link>
+            <Link href="/login" className="bg-teal-600 text-white px-4 py-1.5 rounded-full hover:bg-teal-700 font-medium">Get Started</Link>
           </nav>
         </header>
 
