@@ -134,6 +134,11 @@ export default function TasksPage() {
         className="bg-white p-6 rounded-lg shadow-sm border w-full max-w-md mb-8"
       >
         <h2 className="text-lg font-semibold mb-4">Add a Task</h2>
+        {children.length === 0 && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+            You need to <a href="/dashboard/children" className="underline font-medium">add a child</a> before creating tasks.
+          </p>
+        )}
         <select
           className="border rounded-md px-3 py-2 w-full mb-3"
           value={childId}
@@ -166,8 +171,17 @@ export default function TasksPage() {
       {/* Task List */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Active Tasks</h2>
-        {tasks.length === 0 ? (
-          <p className="text-gray-500">No tasks yet.</p>
+        {tasks.length === 0 && children.length === 0 ? (
+          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <p className="font-medium text-gray-700 mb-1">No children added yet</p>
+            <p className="text-sm text-gray-500 mb-4">Add a child first, then you can assign tasks to them.</p>
+            <a href="/dashboard/children" className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">Add a Child</a>
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <p className="font-medium text-gray-700 mb-1">No tasks yet</p>
+            <p className="text-sm text-gray-500">Create your first task above — kids earn 10 points each time they complete one.</p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {tasks.map((task) => (
