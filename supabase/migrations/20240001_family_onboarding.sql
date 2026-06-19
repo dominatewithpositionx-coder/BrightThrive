@@ -36,3 +36,16 @@ create policy "Parents can update their own onboarding data"
   on family_onboarding for update
   using (auth.uid() = parent_id)
   with check (auth.uid() = parent_id);
+
+-- Auto-update updated_at on row changes
+create or replace function update_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger family_onboarding_updated_at
+  before update on family_onboarding
+  for each row execute function update_updated_at();

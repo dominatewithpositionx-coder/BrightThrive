@@ -50,11 +50,12 @@ export default function DashboardPage() {
     if (!user) { router.push('/login'); return; }
     setUser(user);
 
-    // If redirected from Google OAuth after onboarding, persist the answers
+    // Persist onboarding answers from sessionStorage on any first load.
+    // Covers both Google OAuth (?onboarding=1) and email signup after confirmation.
+    await saveOnboardingFromSession(user.id);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('onboarding') === '1') {
-        await saveOnboardingFromSession(user.id);
         router.replace('/dashboard');
       }
     }

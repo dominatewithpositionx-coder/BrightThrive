@@ -6,7 +6,6 @@ import { getSupabase } from '@/lib/supabase';
 import { CheckCircle, Sparkles } from 'lucide-react';
 
 const brandGradient = 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)';
-const heroBg = 'linear-gradient(180deg, #F9FCFC 0%, #F3FBFA 45%, #EDF8F8 100%)';
 
 // ── Question data ────────────────────────────────────────────────────────────
 
