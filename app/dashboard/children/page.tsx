@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound } from 'lucide-react';
+import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound, ChevronUp } from 'lucide-react';
 
 type Child = {
   id: string;
