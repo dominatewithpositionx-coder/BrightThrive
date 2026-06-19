@@ -8,9 +8,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Home, Users, BarChart3, Gift, Settings, ClipboardList } from 'lucide-react';
 
 const brand = {
-  name: 'BrainThrive',
-  // Make sure this file exists in /public/brand/brainthrive/
-  logo: '/brand/brainthrive/BrainThrive-logo.svg',
+  name: 'BrightThrive',
+  logo: '/brand/brightthrive/BrightThrive-logo.svg',
 };
 
 type NavItem = {

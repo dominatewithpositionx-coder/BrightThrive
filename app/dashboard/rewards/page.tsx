@@ -34,6 +34,7 @@ export default function RewardsPage() {
   const [cost, setCost] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [parentEmail, setParentEmail] = useState<string | null>(null);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,6 +58,9 @@ export default function RewardsPage() {
   }
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setParentEmail(data.session?.user?.email ?? null);
+    });
     fetchData();
 
     // 👂 Live updates for rewards & history
@@ -153,6 +157,7 @@ export default function RewardsPage() {
           rewardTitle: reward.title,
           cost: reward.cost,
           pointsRemaining: child.points - reward.cost,
+          parentEmail,
         }),
       });
       const result = await response.json();
