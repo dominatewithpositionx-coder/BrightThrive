@@ -132,6 +132,7 @@ export default function RewardsPage() {
     const { error: pointsError } = await supabase.rpc('increment_points', {
       child_id: child.id,
       points_change: -reward.cost,
+      reason: `Redeemed reward: ${reward.title}`,
     });
     if (pointsError) {
       toast.error('Error deducting points.');

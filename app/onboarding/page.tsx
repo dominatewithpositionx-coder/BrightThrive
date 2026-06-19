@@ -197,6 +197,8 @@ export default function OnboardingPage() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [confirmSent, setConfirmSent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const qIndex = step - 1; // 0-indexed into QUESTIONS
   const q = step <= QUESTIONS.length ? QUESTIONS[qIndex] : null;
@@ -246,10 +248,22 @@ export default function OnboardingPage() {
       setAuthLoading(false);
       return;
     }
-    if (data.user) {
-      await saveOnboardingRow(data.user.id);
+    // If a session exists, email confirmation is disabled — go straight to dashboard
+    if (data.session) {
+      if (data.user) await saveOnboardingRow(data.user.id);
+      router.push('/dashboard');
+      return;
     }
-    router.push('/dashboard');
+    // No session = email confirmation required
+    setAuthLoading(false);
+    setConfirmSent(true);
+  }
+
+  async function handleResend() {
+    setResendLoading(true);
+    const supabase = getSupabase();
+    await supabase.auth.resend({ type: 'signup', email });
+    setResendLoading(false);
   }
 
   async function handleGoogle() {
@@ -335,6 +349,52 @@ export default function OnboardingPage() {
         >
           Create My Free Account →
         </button>
+      </div>
+    );
+  }
+
+  // ── Email confirmation waiting screen ───────────────────────────────────
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center py-12">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm"
+          style={{ background: brandGradient }}
+        >
+          <span className="text-3xl">✉️</span>
+        </div>
+        <h1 className="text-2xl font-bold mb-3" style={{ color: '#0F172A' }}>
+          Check your email
+        </h1>
+        <p className="text-sm mb-2 max-w-sm" style={{ color: '#64748B' }}>
+          We sent a confirmation link to <strong>{email}</strong>.
+        </p>
+        <p className="text-sm mb-8 max-w-sm" style={{ color: '#64748B' }}>
+          Click the link in that email to activate your account. Your onboarding information has been saved and will be ready when you log in.
+        </p>
+
+        <div className="w-full max-w-xs space-y-3">
+          <a
+            href="/login"
+            className="block w-full text-white py-3.5 rounded-full font-semibold text-sm text-center transition-opacity hover:opacity-90 shadow-sm"
+            style={{ background: brandGradient }}
+          >
+            Go to Login
+          </a>
+          <button
+            onClick={handleResend}
+            disabled={resendLoading}
+            className="w-full py-3.5 rounded-full border-2 text-sm font-semibold transition-colors hover:bg-gray-50 disabled:opacity-50"
+            style={{ borderColor: '#E2E8F0', color: '#64748B' }}
+          >
+            {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+          </button>
+        </div>
+
+        <p className="text-xs mt-6" style={{ color: '#94A3B8' }}>
+          Didn&apos;t receive it? Check your spam folder.
+        </p>
       </div>
     );
   }

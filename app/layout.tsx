@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description:
     'BrightThrive helps families build better screen habits with rewards, tasks, and positive routines.',
   icons: {
-    icon: '/brand/brainthrive/favicon.ico',
+    icon: '/favicon.png',
   },
 };
 
