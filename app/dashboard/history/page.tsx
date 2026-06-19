@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type PointsHistory = {
@@ -26,10 +26,7 @@ export default function PointsHistoryPage() {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('all');
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   // 🔄 Fetch children and history
   useEffect(() => {

@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -348,10 +348,7 @@ export default function ChildPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   const fetchData = useCallback(async () => {
     const [{ data: childData }, { data: taskData }, { data: rewardData }] = await Promise.all([

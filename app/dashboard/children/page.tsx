@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound, ChevronUp } from 'lucide-react';
 
@@ -77,10 +77,7 @@ export default function ChildrenPage() {
   const [editingPin, setEditingPin] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   async function fetchData() {
     const [{ data: childData }, { data: histData }] = await Promise.all([

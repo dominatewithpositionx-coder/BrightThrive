@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 const TASK_TEMPLATES = [
@@ -40,10 +40,7 @@ export default function TasksPage() {
   const [fetching, setFetching] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null); // child id being generated
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   async function fetchData() {
     setFetching(true);

@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Bell, Mail, User, Shield } from 'lucide-react';
 
@@ -60,10 +60,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   async function fetchUser() {
     const { data: { user }, error } = await supabase.auth.getUser();

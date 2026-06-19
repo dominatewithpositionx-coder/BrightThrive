@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import {
   Home, Users, BarChart3, Gift, Settings, ClipboardList,
   Gamepad2, History, Menu, X, LogOut, ChevronRight,
@@ -108,10 +108,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [firstName, setFirstName] = useState('there');
 
   useEffect(() => {
-    const sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const sb = getSupabase();
     sb.auth.getUser().then(({ data }) => {
       const email = data.user?.email || '';
       setFirstName(email.split('@')[0] || 'there');
@@ -120,10 +117,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   async function handleLogout() {
     try {
-      const sb = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const sb = getSupabase();
       await sb.auth.signOut();
     } catch {}
     try { localStorage.clear(); } catch {}

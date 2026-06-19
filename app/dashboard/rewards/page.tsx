@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -39,10 +39,7 @@ export default function RewardsPage() {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [parentEmail, setParentEmail] = useState<string | null>(null);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabase();
 
   async function fetchData() {
     const [{ data: rewardData }, { data: childData }, { data: historyData }] = await Promise.all([
