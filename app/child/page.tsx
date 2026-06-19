@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react';

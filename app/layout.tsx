@@ -32,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               height={50}
               priority
               className="h-12 w-auto"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           </Link>
           <nav className="flex gap-6 text-sm text-gray-700">
