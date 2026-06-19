@@ -15,3 +15,4 @@ Make sure you have:
 ## 🗄️ 2) Create the Supabase Table
 In your Supabase dashboard, open the **SQL Editor** and run the SQL found in:
 
+
