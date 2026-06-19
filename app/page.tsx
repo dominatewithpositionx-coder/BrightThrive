@@ -16,7 +16,7 @@ export default function HomePage() {
     <div className="bg-white text-gray-900">
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="bg-green-50 pb-20 pt-16 text-center px-4">
+      <section className="bg-teal-50 pb-20 pt-16 text-center px-4">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-white text-green-700 text-sm font-medium px-4 py-1.5 rounded-full mb-7 shadow-sm border border-green-100">
           <Sparkles size={13} className="text-green-500" />
@@ -39,7 +39,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/login"
-            className="bg-green-500 text-white px-8 py-3.5 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-sm"
+            className="bg-teal-500 text-white px-8 py-3.5 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-sm"
           >
             Start Free Today
           </Link>
@@ -84,7 +84,7 @@ export default function HomePage() {
             },
             {
               icon: Brain,
-              bg: 'bg-green-50',
+              bg: 'bg-teal-50',
               color: 'text-green-500',
               title: 'Age-Appropriate',
               desc: 'Missions adapt to each child, perfect for kids ages 5–14.',
@@ -98,7 +98,7 @@ export default function HomePage() {
             },
             {
               icon: CheckCircle,
-              bg: 'bg-green-50',
+              bg: 'bg-teal-50',
               color: 'text-green-500',
               title: 'Simple & Calm',
               desc: 'No gamification bloat — just clear, encouraging daily progress.',
@@ -119,7 +119,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section className="bg-green-50 py-20 px-4">
+      <section className="bg-teal-50 py-20 px-4">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-3">How It Works</h2>
           <p className="text-center text-gray-500 mb-14">
@@ -171,7 +171,7 @@ export default function HomePage() {
         </p>
         <Link
           href="/login"
-          className="inline-block bg-green-500 text-white px-10 py-4 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-md"
+          className="inline-block bg-teal-500 text-white px-10 py-4 rounded-full font-semibold text-base hover:bg-green-600 transition-colors shadow-md"
         >
           Create Your Free Account
         </Link>
