@@ -35,14 +35,15 @@ export default function TasksPage() {
   const [childId, setChildId] = useState('');
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 🧠 Fetch all children and tasks
   async function fetchData() {
+    setFetching(true);
     const { data: childData } = await supabase
       .from('children')
       .select('id, name, points')
@@ -54,6 +55,7 @@ export default function TasksPage() {
       .select('*')
       .order('created_at', { ascending: false });
     setTasks(taskData || []);
+    setFetching(false);
   }
 
   useEffect(() => {
@@ -133,6 +135,18 @@ export default function TasksPage() {
       toast.success('Task deleted.');
       fetchData();
     }
+  }
+
+  if (fetching) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-24" />
+        <div className="h-48 bg-gray-200 rounded-xl max-w-md" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-gray-200 rounded-lg" />)}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -3,12 +3,55 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import { Bell, Mail, User, Shield } from 'lucide-react';
 
 type NotificationSettings = {
   parent_email: string;
   reward_notifications: boolean;
   weekly_summary: boolean;
 };
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+  description,
+  icon: Icon,
+}: {
+  checked: boolean;
+  onChange: (val: boolean) => void;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 p-2 bg-gray-100 rounded-lg">
+          <Icon size={16} className="text-gray-600" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-900">{label}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+        </div>
+      </div>
+      <button
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 ${
+          checked ? 'bg-green-500' : 'bg-gray-200'
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+            checked ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -20,25 +63,17 @@ export default function SettingsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 🧠 Get logged-in user's email
   async function fetchUser() {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) {
-      console.error('⚠️ No logged-in user:', error);
       toast.error('You must be logged in to manage settings.');
       setLoading(false);
       return;
     }
-
     setUserEmail(user.email || null);
     await fetchSettings(user.email!);
   }
 
-  // 🧠 Fetch or create settings for this user
   async function fetchSettings(email: string) {
     const { data, error } = await supabase
       .from('notification_settings')
@@ -47,95 +82,116 @@ export default function SettingsPage() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching settings:', error);
       toast.error('Error loading settings.');
     }
 
     if (!data) {
-      // Create default settings for new users
       const { data: newSettings, error: insertError } = await supabase
         .from('notification_settings')
         .insert([{ parent_email: email }])
         .select()
         .single();
-
-      if (insertError) {
-        console.error('Error creating settings:', insertError);
-        toast.error('Could not create settings record.');
-      } else {
-        setSettings(newSettings);
-      }
+      if (insertError) toast.error('Could not create settings record.');
+      else setSettings(newSettings);
     } else {
       setSettings(data);
     }
-
     setLoading(false);
   }
 
-  // 💾 Update setting toggle
   async function updateSetting(field: keyof NotificationSettings, value: boolean) {
     if (!userEmail) return;
-
     const { error } = await supabase
       .from('notification_settings')
       .update({ [field]: value })
       .eq('parent_email', userEmail);
 
-    if (error) {
-      console.error('Error updating setting:', error);
-      toast.error('Failed to update settings.');
-    } else {
+    if (error) toast.error('Failed to update settings.');
+    else {
       setSettings((prev) => (prev ? { ...prev, [field]: value } : prev));
-      toast.success('Settings updated!');
+      toast.success('Settings saved!');
     }
   }
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
+  useEffect(() => { fetchUser(); }, []);
 
-  if (loading) return <p className="p-6">Loading settings...</p>;
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse max-w-lg">
+        <div className="h-8 bg-gray-200 rounded w-32" />
+        <div className="h-40 bg-gray-200 rounded-xl" />
+        <div className="h-24 bg-gray-200 rounded-xl" />
+      </div>
+    );
+  }
 
-  if (!userEmail)
+  if (!userEmail) {
     return (
       <div className="p-6 text-center">
         <p className="text-gray-600">
-          Please <a href="/login" className="underline text-blue-600">log in</a> to access your settings.
+          Please <a href="/login" className="underline text-green-600">log in</a> to access your settings.
         </p>
       </div>
     );
+  }
 
   return (
     <div className="p-6 max-w-lg space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Notification Settings</h1>
-      <p className="text-gray-600 mb-4">
-        Manage when BrainThrive sends you email updates and progress reports.
-      </p>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage your account preferences</p>
+      </div>
 
-      <div className="space-y-4 bg-white p-6 rounded-lg shadow-sm border">
-        <div className="flex justify-between items-center">
-          <span>🎁 Reward Redemption Notifications</span>
-          <input
-            type="checkbox"
-            checked={settings?.reward_notifications ?? false}
-            onChange={(e) => updateSetting('reward_notifications', e.target.checked)}
-            className="w-5 h-5 accent-blue-600 cursor-pointer"
-          />
+      {/* Account info */}
+      <div className="bg-white rounded-xl border shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Account</h2>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+            {userEmail[0].toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">{userEmail}</p>
+            <p className="text-xs text-gray-400">Parent account</p>
+          </div>
         </div>
+      </div>
 
-        <div className="flex justify-between items-center">
-          <span>📅 Weekly Summary Emails</span>
-          <input
-            type="checkbox"
+      {/* Notifications */}
+      <div className="bg-white rounded-xl border shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Notifications</h2>
+        <div className="divide-y">
+          <Toggle
+            icon={Bell}
+            label="Reward Redemption Alerts"
+            description="Get an email when a child redeems a reward"
+            checked={settings?.reward_notifications ?? false}
+            onChange={(v) => updateSetting('reward_notifications', v)}
+          />
+          <Toggle
+            icon={Mail}
+            label="Weekly Summary"
+            description="Receive a weekly digest of your family's activity"
             checked={settings?.weekly_summary ?? false}
-            onChange={(e) => updateSetting('weekly_summary', e.target.checked)}
-            className="w-5 h-5 accent-blue-600 cursor-pointer"
+            onChange={(v) => updateSetting('weekly_summary', v)}
           />
         </div>
       </div>
 
-      <div className="text-sm text-gray-500 pt-4 border-t">
-        Logged in as <span className="font-medium text-gray-700">{userEmail}</span>
+      {/* Privacy */}
+      <div className="bg-white rounded-xl border shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Privacy</h2>
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-gray-100 rounded-lg mt-0.5">
+            <Shield size={16} className="text-gray-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">Your data stays private</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              BrightThrive never shares your family's data. See our{' '}
+              <a href="/privacy" className="text-green-600 underline">Privacy Policy</a>.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

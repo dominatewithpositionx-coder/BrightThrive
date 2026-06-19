@@ -33,6 +33,7 @@ export default function RewardsPage() {
   const [title, setTitle] = useState('');
   const [cost, setCost] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [parentEmail, setParentEmail] = useState<string | null>(null);
 
@@ -41,7 +42,6 @@ export default function RewardsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 🧠 Fetch rewards, children, and points history
   async function fetchData() {
     const [{ data: rewardData }, { data: childData }, { data: historyData }] = await Promise.all([
       supabase.from('rewards').select('*').order('created_at', { ascending: false }),
@@ -55,6 +55,7 @@ export default function RewardsPage() {
     setRewards(rewardData || []);
     setChildren(childData || []);
     setHistory(historyData?.filter(h => h.reason?.startsWith('Redeemed reward')) || []);
+    setFetching(false);
   }
 
   useEffect(() => {
@@ -172,6 +173,18 @@ export default function RewardsPage() {
 
   const getChildName = (id: string) =>
     children.find((c) => c.id === id)?.name || 'Unknown';
+
+  if (fetching) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-24" />
+        <div className="h-48 bg-gray-200 rounded-xl max-w-md" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-gray-200 rounded-lg" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-10">

@@ -5,16 +5,16 @@ import { Analytics } from '@vercel/analytics/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Poppins } from 'next/font/google';
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from 'sonner';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
 export const metadata: Metadata = {
-  title: 'BrainThrive — Empowering Smarter Play and Focus',
+  title: 'BrightThrive — Earn your play. Enjoy your day.',
   description:
-    'BrainThrive helps families balance screen time, boost focus, and reward positive habits — because thriving brains grow through balance.',
+    'BrightThrive helps families build better screen habits with rewards, tasks, and positive routines.',
   icons: {
-    icon: '/brand/brainthrive/favicon.ico',
+    icon: '/brand/brightthrive/favicon.ico',
   },
 };
 
@@ -26,17 +26,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 font-bold text-xl">
             <Image
-              src="/brand/brainthrive/BrainThrive_FullLogo_Gradient.png"
-              alt="BrainThrive Logo"
+              src="/brand/brightthrive/BrightThrive-logo.svg"
+              alt="BrightThrive"
               width={160}
               height={40}
               priority
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           </Link>
           <nav className="flex gap-6 text-sm text-gray-700">
-            <Link href="/how-it-works">How it works</Link>
-            <Link href="/parents">For Parents</Link>
-            <Link href="/science">Science</Link>
+            <Link href="/how-it-works" className="hover:text-gray-900">How it works</Link>
+            <Link href="/parents" className="hover:text-gray-900">For Parents</Link>
+            <Link href="/login" className="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700">Sign in</Link>
           </nav>
         </header>
 
@@ -44,32 +45,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
 
         {/* Footer */}
-        <footer className="max-w-5xl mx-auto px-4 py-12 text-sm text-gray-600">
+        <footer className="max-w-5xl mx-auto px-4 py-12 text-sm text-gray-600 border-t mt-12">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <p>© {new Date().getFullYear()} BrainThrive</p>
+            <p>© {new Date().getFullYear()} BrightThrive. All rights reserved.</p>
             <div className="flex gap-6">
-              <Link href="/privacy">Privacy</Link>
-              <Link href="/how-it-works">How it works</Link>
-              <Link href="/science">Science</Link>
+              <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
+              <Link href="/how-it-works" className="hover:text-gray-900">How it works</Link>
             </div>
           </div>
         </footer>
 
-        {/* Toast notifications */}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#00e08a',
-              color: '#fff',
-              borderRadius: '8px',
-              fontWeight: 500,
-            },
-          }}
-        />
-
-        {/* Analytics */}
+        <Toaster position="top-right" richColors />
         <Analytics />
       </body>
     </html>
