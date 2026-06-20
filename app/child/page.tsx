@@ -159,6 +159,7 @@ function ChildView({
   onTaskToggle,
   onGenerateMissions,
   generating,
+  taskError,
 }: {
   child: Child;
   tasks: Task[];
@@ -167,6 +168,7 @@ function ChildView({
   onTaskToggle: (task: Task) => void;
   onGenerateMissions: () => void;
   generating: boolean;
+  taskError: string | null;
 }) {
   const colors = getColors(child.name);
   const pending = tasks.filter((t) => !t.completed);
@@ -296,6 +298,11 @@ function ChildView({
               )}
             </div>
           )}
+          {taskError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 text-center">
+              {taskError}
+            </div>
+          )}
           <div className="space-y-3">
             {pending.map((task) => (
               <button
@@ -347,6 +354,7 @@ export default function ChildPage() {
   const [pendingChild, setPendingChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
@@ -410,18 +418,37 @@ export default function ChildPage() {
   async function handleTaskToggle(task: Task) {
     if (!selected) return;
 
-    await supabase.from('tasks').update({ completed: !task.completed }).eq('id', task.id);
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .update({ completed: !task.completed })
+      .eq('id', task.id);
+
+    if (taskError) {
+      console.error('[ChildView] task update failed:', taskError.message);
+      setTaskError('Oops! Could not save that. Try again.');
+      return;
+    }
 
     const pointsChange = task.completed ? -10 : +10;
     const reason = task.completed ? `Undid task: ${task.title}` : `Completed task: ${task.title}`;
 
-    await supabase.rpc('increment_points', { child_id: selected.id, points_change: pointsChange, reason });
+    const { error: pointsError } = await supabase.rpc('increment_points', {
+      child_id: selected.id,
+      points_change: pointsChange,
+      reason,
+    });
+
+    if (pointsError) {
+      console.error('[ChildView] increment_points failed:', pointsError.message);
+      setTaskError('Points could not be updated. Ask a parent.');
+      return;
+    }
 
     if (!task.completed) {
       fireConfetti();
     }
 
-    // Optimistically update local state
+    setTaskError(null);
     setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, completed: !t.completed } : t));
     setSelected((prev) => prev ? { ...prev, points: prev.points + pointsChange } : prev);
     setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: c.points + pointsChange } : c));
@@ -459,6 +486,7 @@ export default function ChildPage() {
           onTaskToggle={handleTaskToggle}
           onGenerateMissions={handleGenerateMissions}
           generating={generating}
+          taskError={taskError}
         />
       ) : (
         <ChildPicker children={children} onSelect={handleSelect} />

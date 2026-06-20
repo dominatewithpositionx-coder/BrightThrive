@@ -1,6 +1,11 @@
+-- ⚠️  DO NOT RUN THIS FILE. It is superseded by 20260002_align_schema.sql.
+-- This file uses `user_id` which conflicts with the production DB column `parent_id`.
+-- Running this will break RLS policies and all auth-gated queries.
+-- Use: supabase/migrations/20260002_align_schema.sql instead.
+--
+-- Original header (kept for reference):
 -- BrightThrive: Core schema migration
--- Run in Supabase Dashboard → SQL Editor → paste all → Run
--- Safe to re-run: uses CREATE IF NOT EXISTS and ADD COLUMN IF NOT EXISTS
+-- DEPRECATED — superseded by 20260002_align_schema.sql
 
 -- ─────────────────────────────────────────────
 -- CHILDREN (patch existing table)
