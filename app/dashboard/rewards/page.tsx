@@ -101,9 +101,13 @@ export default function RewardsPage() {
       return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error('Session expired. Please log in again.'); return; }
+
     setLoading(true);
     const { error } = await supabase.from('rewards').insert([
       {
+        user_id: user.id,
         title,
         cost: Number(cost),
       },

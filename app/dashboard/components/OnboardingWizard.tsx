@@ -100,7 +100,15 @@ export default function OnboardingWizard({ onComplete }: Props) {
   async function saveReward() {
     if (rewardTitle.trim() && rewardCost) {
       setSaving(true);
-      await supabase.from('rewards').insert([{ title: rewardTitle.trim(), cost: Number(rewardCost) }]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase.from('rewards').insert([{
+          user_id: user.id,
+          title: rewardTitle.trim(),
+          cost: Number(rewardCost),
+        }]);
+        if (error) console.error('[OnboardingWizard] saveReward error:', error.message);
+      }
       setSaving(false);
     }
     setDone(true);
