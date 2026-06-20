@@ -25,3 +25,7 @@ turbo/
 .vercel/
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Playwright test artifacts
+tests/screenshots/
+tests/report/
