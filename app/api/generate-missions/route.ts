@@ -26,6 +26,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'childId and childName are required' }, { status: 400 });
   }
 
+  // Verify the caller is the authenticated parent of this child.
+  // Uses the anon key so RLS (parent_id = auth.uid()) enforces ownership.
+  const authHeader = req.headers.get('authorization') ?? '';
+  const callerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!callerToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const anonSupabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${callerToken}` } } }
+  );
+  const { data: { user } } = await anonSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Confirm this child belongs to the authenticated parent (RLS also enforces this,
+  // but explicit check gives a clear 403 rather than a silent empty result).
+  const { data: childRow } = await anonSupabase
+    .from('children')
+    .select('id')
+    .eq('id', childId)
+    .eq('parent_id', user.id)
+    .single();
+  if (!childRow) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

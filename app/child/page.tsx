@@ -384,9 +384,13 @@ export default function ChildPage() {
     if (!selected || generating) return;
     setGenerating(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/generate-missions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ childId: selected.id, childName: selected.name, childAge: null, count: 5 }),
       });
       if (res.ok) await fetchData();
