@@ -107,7 +107,7 @@ export default function RewardsPage() {
     setLoading(true);
     const { error } = await supabase.from('rewards').insert([
       {
-        user_id: user.id,
+        parent_id: user.id,
         title,
         cost: Number(cost),
       },

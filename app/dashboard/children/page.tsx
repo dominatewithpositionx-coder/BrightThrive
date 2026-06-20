@@ -123,7 +123,7 @@ export default function ChildrenPage() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('children').insert([
-      { name, age: age ? Number(age) : null, screen_time_limit: limit ? Number(limit) : 60, user_id: user?.id },
+      { name, age: age ? Number(age) : null, screen_time_limit: limit ? Number(limit) : 60, parent_id: user?.id },
     ]);
 
     if (error) toast.error('Error adding child: ' + error.message);

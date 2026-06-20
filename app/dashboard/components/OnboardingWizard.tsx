@@ -65,7 +65,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
         name: childName.trim(),
         age: childAge ? Number(childAge) : null,
         points: 0,
-        user_id: user.id,
+        parent_id: user.id,
       }])
       .select('id')
       .single();
@@ -103,7 +103,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { error } = await supabase.from('rewards').insert([{
-          user_id: user.id,
+          parent_id: user.id,
           title: rewardTitle.trim(),
           cost: Number(rewardCost),
         }]);
