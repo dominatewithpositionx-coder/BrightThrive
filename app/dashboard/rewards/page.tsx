@@ -38,6 +38,7 @@ export default function RewardsPage() {
   const [fetching, setFetching] = useState(true);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [parentEmail, setParentEmail] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
@@ -59,6 +60,7 @@ export default function RewardsPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setParentEmail(data.session?.user?.email ?? null);
+      setParentId(data.session?.user?.id ?? null);
     });
     fetchData();
 
@@ -141,7 +143,7 @@ export default function RewardsPage() {
       const res = await fetch('/api/notify-reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ childName: child.name, rewardTitle: reward.title, cost: reward.coin_cost, pointsRemaining: child.points - reward.coin_cost, parentEmail }),
+        body: JSON.stringify({ childName: child.name, rewardTitle: reward.title, cost: reward.coin_cost, pointsRemaining: child.points - reward.coin_cost, parentEmail, parentId }),
       });
       const result = await res.json();
       if (result.success) console.log('Parent notified via email');
