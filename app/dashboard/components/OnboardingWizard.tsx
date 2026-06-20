@@ -49,17 +49,41 @@ export default function OnboardingWizard({ onComplete }: Props) {
     if (!childName.trim()) return;
     setSaving(true);
     setSaveError('');
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from('children')
-      .insert([{ name: childName.trim(), age: childAge ? Number(childAge) : null, points: 0, user_id: user?.id }])
-      .select('id')
-      .single();
-    setSaving(false);
-    if (error || !data) {
-      setSaveError(error?.message || 'Could not save. Please try again.');
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('[OnboardingWizard] Auth error:', authError);
+      setSaveError('Session expired. Please refresh and log in again.');
+      setSaving(false);
       return;
     }
+
+    console.log('[OnboardingWizard] Inserting child for user:', user.id);
+    const { data, error } = await supabase
+      .from('children')
+      .insert([{
+        name: childName.trim(),
+        age: childAge ? Number(childAge) : null,
+        points: 0,
+        user_id: user.id,
+      }])
+      .select('id')
+      .single();
+
+    setSaving(false);
+
+    if (error) {
+      console.error('[OnboardingWizard] Insert error:', error.code, error.message, error.details);
+      setSaveError(`Could not save child: ${error.message}`);
+      return;
+    }
+    if (!data) {
+      console.error('[OnboardingWizard] No data returned after insert');
+      setSaveError('Something went wrong. Please try again.');
+      return;
+    }
+
+    console.log('[OnboardingWizard] Child saved:', data.id);
     setChildId(data.id);
     setStep(2);
   }
