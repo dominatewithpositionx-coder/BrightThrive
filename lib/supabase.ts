@@ -3,6 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
+// Safe startup log — prints config status without exposing key values
+if (typeof window !== 'undefined') {
+  console.log(
+    '[BrightThrive] Supabase config check — URL configured:',
+    !!(url && !url.includes('placeholder')),
+    '| Key configured:',
+    !!(key && key !== 'placeholder'),
+  );
+}
+
 // Detect missing or placeholder values baked in at build time
 export function getSupabaseConfigStatus(): { ok: boolean; reason?: string } {
   if (!url || url.includes('placeholder')) {
