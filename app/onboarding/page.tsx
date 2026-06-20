@@ -336,17 +336,11 @@ export default function OnboardingPage() {
     console.log('[Onboarding] Saving onboarding row for parent:', parentId);
     try {
       const supabase = getSupabase();
-      const { error } = await supabase.from('family_onboarding').upsert({
+      const { error } = await supabase.from('family_plans').upsert({
         parent_id: parentId,
-        primary_goal: answers.primary_goal ?? null,
-        child_description: answers.child_description ?? null,
-        parent_involvement: answers.parent_involvement ?? null,
-        motivation_preference: answers.motivation_preference ?? null,
-        selected_habits: answers.selected_habits ?? [],
-        screen_time_preference: answers.screen_time_preference ?? null,
-        routine_timing: answers.routine_timing ?? null,
-        success_definition: answers.success_definition ?? null,
-        completed_at: new Date().toISOString(),
+        onboarding_completed: true,
+        personalization_data: { ...answers, completed_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
       }, { onConflict: 'parent_id' });
       if (error) console.error('[Onboarding] saveOnboardingRow error:', error.message);
       else console.log('[Onboarding] Onboarding row saved');

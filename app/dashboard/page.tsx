@@ -12,16 +12,16 @@ import OnboardingWizard from './components/OnboardingWizard';
 const supabase = getSupabase();
 
 type Child = { id: string; name: string; points: number };
-type Task = { id: string; child_id: string; title: string; completed: boolean };
-type Reward = { id: string; title: string; cost: number };
-type HistoryEntry = { id: string; child_id: string; change: number; reason: string; created_at: string };
+type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
+type Reward = { id: string; title: string; coin_cost: number };
+type LedgerEntry = { id: string; child_id: string; amount: number; description: string; created_at: string };
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [children, setChildren] = useState<Child[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [recentHistory, setRecentHistory] = useState<HistoryEntry[]>([]);
+  const [recentLedger, setRecentLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const router = useRouter();
@@ -36,10 +36,11 @@ export default function DashboardPage() {
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
-      await supabase.from('family_onboarding').upsert({
+      await supabase.from('family_plans').upsert({
         parent_id: parentId,
-        ...data,
-        completed_at: new Date().toISOString(),
+        onboarding_completed: true,
+        personalization_data: { ...data, completed_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
       }, { onConflict: 'parent_id' });
       sessionStorage.removeItem('bt_onboarding');
     } catch (_) {}
@@ -60,18 +61,20 @@ export default function DashboardPage() {
       }
     }
 
-    const [{ data: childData }, { data: taskData }, { data: rewardData }, { data: historyData }] = await Promise.all([
-      supabase.from('children').select('id, name, points').order('created_at', { ascending: true }),
-      supabase.from('tasks').select('id, child_id, title, completed'),
-      supabase.from('rewards').select('id, title, cost'),
-      supabase.from('points_history').select('id, child_id, change, reason, created_at').order('created_at', { ascending: false }).limit(5),
+    const [{ data: childData }, { data: walletData }, { data: missionData }, { data: rewardData }, { data: ledgerData }] = await Promise.all([
+      supabase.from('children').select('id, name').order('created_at', { ascending: true }),
+      supabase.from('bt_coin_wallet').select('child_id, balance'),
+      supabase.from('missions').select('id, child_id, title, is_completed'),
+      supabase.from('rewards').select('id, title, coin_cost'),
+      supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }).limit(5),
     ]);
 
-    const kids = childData || [];
+    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
+    const kids = (childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
     setChildren(kids);
-    setTasks(taskData || []);
+    setMissions(missionData || []);
     setRewards(rewardData || []);
-    setRecentHistory(historyData || []);
+    setRecentLedger(ledgerData || []);
     setLoading(false);
 
     // Show onboarding if this is a fresh account with no children
@@ -88,8 +91,8 @@ export default function DashboardPage() {
   }
 
   const firstName = user?.email?.split('@')[0] ?? 'there';
-  const totalTasksDone = tasks.filter((t) => t.completed).length;
-  const totalPending = tasks.filter((t) => !t.completed).length;
+  const totalTasksDone = missions.filter((m) => m.is_completed).length;
+  const totalPending = missions.filter((m) => !m.is_completed).length;
   const childName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
 
   if (loading) {
@@ -154,10 +157,10 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child) => {
-                const childTasks = tasks.filter((t) => t.child_id === child.id);
-                const done = childTasks.filter((t) => t.completed).length;
-                const pending = childTasks.filter((t) => !t.completed).length;
-                const affordable = rewards.filter((r) => r.cost <= child.points).length;
+                const childMissions = missions.filter((m) => m.child_id === child.id);
+                const done = childMissions.filter((m) => m.is_completed).length;
+                const pending = childMissions.filter((m) => !m.is_completed).length;
+                const affordable = rewards.filter((r) => r.coin_cost <= child.points).length;
 
                 return (
                   <div key={child.id} className="bg-white rounded-xl border shadow-sm p-5">
@@ -192,7 +195,7 @@ export default function DashboardPage() {
         )}
 
         {/* Recent activity */}
-        {recentHistory.length > 0 && (
+        {recentLedger.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Recent Activity</h2>
@@ -201,14 +204,14 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="bg-white rounded-xl border shadow-sm divide-y">
-              {recentHistory.map((entry) => (
+              {recentLedger.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{childName(entry.child_id)}</p>
-                    <p className="text-xs text-gray-500">{entry.reason}</p>
+                    <p className="text-xs text-gray-500">{entry.description}</p>
                   </div>
-                  <span className={`text-sm font-semibold ${entry.change > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {entry.change > 0 ? `+${entry.change}` : entry.change}
+                  <span className={`text-sm font-semibold ${entry.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    {entry.amount > 0 ? `+${entry.amount}` : entry.amount}
                   </span>
                 </div>
               ))}

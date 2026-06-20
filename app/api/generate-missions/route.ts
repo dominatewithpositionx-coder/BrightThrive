@@ -4,6 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
 const SYSTEM_PROMPT = `You are a helpful assistant that generates age-appropriate daily tasks/missions for children.
 Tasks should be:
 - Quick to complete (10–30 minutes each)
@@ -47,7 +51,6 @@ export async function POST(req: NextRequest) {
     missions = JSON.parse(text);
   } catch (err) {
     console.error('Claude generation failed:', err);
-    // Fallback set if AI call fails
     missions = [
       { title: 'Make your bed', description: 'Start the day with a tidy room' },
       { title: 'Read for 15 minutes', description: 'Pick any book you enjoy' },
@@ -57,23 +60,21 @@ export async function POST(req: NextRequest) {
     ].slice(0, count);
   }
 
-  // Archive completed tasks first (mark them as archived so they don't clutter)
-  await supabase
-    .from('tasks')
-    .update({ completed: false })
-    .eq('child_id', childId)
-    .eq('completed', true);
-
-  // Delete existing incomplete tasks for this child
-  await supabase.from('tasks').delete().eq('child_id', childId).eq('completed', false);
+  // Delete existing incomplete missions for this child
+  await supabase.from('missions').delete().eq('child_id', childId).eq('is_completed', false);
 
   // Insert new missions
+  const missionDate = today();
   const { data, error } = await supabase
-    .from('tasks')
+    .from('missions')
     .insert(missions.map((m) => ({
       child_id: childId,
       title: m.title,
-      completed: false,
+      category: 'general',
+      screen_time_reward: 0,
+      is_completed: false,
+      mission_date: missionDate,
+      status: 'active',
     })))
     .select();
 

@@ -7,6 +7,10 @@ import { CheckCircle, ChevronRight, Users, ClipboardList, Gift, Sparkles } from 
 
 const supabase = getSupabase();
 
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
 const TASK_TEMPLATES = [
   'Make your bed',
   'Do homework',
@@ -16,11 +20,11 @@ const TASK_TEMPLATES = [
 ];
 
 const REWARD_TEMPLATES = [
-  { title: '30 min extra screen time', cost: 50 },
-  { title: 'Choose dinner tonight', cost: 75 },
-  { title: 'Movie night pick', cost: 100 },
-  { title: 'Stay up 30 min later', cost: 100 },
-  { title: 'Ice cream trip', cost: 150 },
+  { title: '30 min extra screen time', coin_cost: 50 },
+  { title: 'Choose dinner tonight', coin_cost: 75 },
+  { title: 'Movie night pick', coin_cost: 100 },
+  { title: 'Stay up 30 min later', coin_cost: 100 },
+  { title: 'Ice cream trip', coin_cost: 150 },
 ];
 
 type Props = {
@@ -37,7 +41,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
   const [childName, setChildName] = useState('');
   const [childAge, setChildAge] = useState('');
 
-  // Step 2 — task
+  // Step 2 — mission
   const [taskTitle, setTaskTitle] = useState('');
   const [childId, setChildId] = useState('');
 
@@ -52,19 +56,16 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[OnboardingWizard] Auth error:', authError);
       setSaveError('Session expired. Please refresh and log in again.');
       setSaving(false);
       return;
     }
 
-    console.log('[OnboardingWizard] Inserting child for user:', user.id);
     const { data, error } = await supabase
       .from('children')
       .insert([{
         name: childName.trim(),
         age: childAge ? Number(childAge) : null,
-        points: 0,
         parent_id: user.id,
       }])
       .select('id')
@@ -73,17 +74,14 @@ export default function OnboardingWizard({ onComplete }: Props) {
     setSaving(false);
 
     if (error) {
-      console.error('[OnboardingWizard] Insert error:', error.code, error.message, error.details);
       setSaveError(`Could not save child: ${error.message}`);
       return;
     }
     if (!data) {
-      console.error('[OnboardingWizard] No data returned after insert');
       setSaveError('Something went wrong. Please try again.');
       return;
     }
 
-    console.log('[OnboardingWizard] Child saved:', data.id);
     setChildId(data.id);
     setStep(2);
   }
@@ -91,7 +89,15 @@ export default function OnboardingWizard({ onComplete }: Props) {
   async function saveTask() {
     if (!taskTitle.trim() || !childId) { setStep(3); return; }
     setSaving(true);
-    const { error } = await supabase.from('tasks').insert([{ child_id: childId, title: taskTitle.trim(), completed: false }]);
+    const { error } = await supabase.from('missions').insert([{
+      child_id: childId,
+      title: taskTitle.trim(),
+      category: 'general',
+      screen_time_reward: 0,
+      is_completed: false,
+      mission_date: today(),
+      status: 'active',
+    }]);
     if (error) console.error('[OnboardingWizard] saveTask error:', error.message);
     setSaving(false);
     setStep(3);
@@ -105,7 +111,10 @@ export default function OnboardingWizard({ onComplete }: Props) {
         const { error } = await supabase.from('rewards').insert([{
           parent_id: user.id,
           title: rewardTitle.trim(),
-          cost: Number(rewardCost),
+          coin_cost: Number(rewardCost),
+          reward_type: 'standard',
+          is_active: true,
+          sort_order: 0,
         }]);
         if (error) console.error('[OnboardingWizard] saveReward error:', error.message);
       }
@@ -256,12 +265,12 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   {REWARD_TEMPLATES.map((r) => (
                     <button
                       key={r.title}
-                      onClick={() => { setRewardTitle(r.title); setRewardCost(r.cost); }}
+                      onClick={() => { setRewardTitle(r.title); setRewardCost(r.coin_cost); }}
                       className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                         rewardTitle === r.title ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
                       }`}
                     >
-                      {r.title} <span className="opacity-70">· {r.cost}pts</span>
+                      {r.title} <span className="opacity-70">· {r.coin_cost}pts</span>
                     </button>
                   ))}
                 </div>

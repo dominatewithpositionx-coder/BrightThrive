@@ -8,26 +8,28 @@ export async function POST(req: Request) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   try {
-    const { childName, rewardTitle, cost, pointsRemaining, parentEmail } = await req.json();
+    const { childName, rewardTitle, cost, pointsRemaining, parentEmail, parentId } = await req.json();
 
     if (!childName || !rewardTitle || !cost || !parentEmail) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
-    const { data: prefs, error: prefsError } = await supabase
-      .from('notification_settings')
-      .select('reward_notifications')
-      .eq('parent_email', parentEmail)
-      .single();
-
-    if (prefsError) {
-      console.error('Error checking notification settings:', prefsError);
+    // Check notification prefs from family_plans.personalization_data
+    let rewardNotificationsEnabled = false;
+    if (parentId) {
+      const { data: plan } = await supabase
+        .from('family_plans')
+        .select('personalization_data')
+        .eq('parent_id', parentId)
+        .single();
+      const pd = (plan?.personalization_data ?? {}) as Record<string, unknown>;
+      rewardNotificationsEnabled = Boolean(pd.reward_notifications);
     }
 
-    if (!prefs?.reward_notifications) {
+    if (!rewardNotificationsEnabled) {
       return NextResponse.json({ success: true, skipped: true });
     }
 

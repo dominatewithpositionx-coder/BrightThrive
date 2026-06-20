@@ -5,10 +5,9 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Bell, Mail, User, Shield } from 'lucide-react';
+import { Bell, Mail, Shield } from 'lucide-react';
 
-type NotificationSettings = {
-  parent_email: string;
+type NotifPrefs = {
   reward_notifications: boolean;
   weekly_summary: boolean;
 };
@@ -56,11 +55,15 @@ function Toggle({
 }
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [prefs, setPrefs] = useState<NotifPrefs>({ reward_notifications: false, weekly_summary: false });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = getSupabase();
+
+  useEffect(() => { fetchUser(); }, []);
 
   async function fetchUser() {
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -70,49 +73,47 @@ export default function SettingsPage() {
       return;
     }
     setUserEmail(user.email || null);
-    await fetchSettings(user.email!);
-  }
+    setUserId(user.id);
 
-  async function fetchSettings(email: string) {
-    const { data, error } = await supabase
-      .from('notification_settings')
-      .select('*')
-      .eq('parent_email', email)
+    const { data } = await supabase
+      .from('family_plans')
+      .select('personalization_data')
+      .eq('parent_id', user.id)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      toast.error('Error loading settings.');
-    }
-
-    if (!data) {
-      const { data: newSettings, error: insertError } = await supabase
-        .from('notification_settings')
-        .insert([{ parent_email: email }])
-        .select()
-        .single();
-      if (insertError) toast.error('Could not create settings record.');
-      else setSettings(newSettings);
-    } else {
-      setSettings(data);
+    if (data?.personalization_data) {
+      const pd = data.personalization_data as Record<string, unknown>;
+      setPrefs({
+        reward_notifications: Boolean(pd.reward_notifications),
+        weekly_summary: Boolean(pd.weekly_summary),
+      });
     }
     setLoading(false);
   }
 
-  async function updateSetting(field: keyof NotificationSettings, value: boolean) {
-    if (!userEmail) return;
+  async function updatePref(field: keyof NotifPrefs, value: boolean) {
+    if (!userId) return;
+    setSaving(true);
+    const next = { ...prefs, [field]: value };
+
     const { error } = await supabase
-      .from('notification_settings')
-      .update({ [field]: value })
-      .eq('parent_email', userEmail);
+      .from('family_plans')
+      .upsert(
+        {
+          parent_id: userId,
+          personalization_data: next,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'parent_id' }
+      );
 
     if (error) toast.error('Failed to update settings.');
     else {
-      setSettings((prev) => (prev ? { ...prev, [field]: value } : prev));
+      setPrefs(next);
       toast.success('Settings saved!');
     }
+    setSaving(false);
   }
-
-  useEffect(() => { fetchUser(); }, []);
 
   if (loading) {
     return (
@@ -163,17 +164,18 @@ export default function SettingsPage() {
             icon={Bell}
             label="Reward Redemption Alerts"
             description="Get an email when a child redeems a reward"
-            checked={settings?.reward_notifications ?? false}
-            onChange={(v) => updateSetting('reward_notifications', v)}
+            checked={prefs.reward_notifications}
+            onChange={(v) => updatePref('reward_notifications', v)}
           />
           <Toggle
             icon={Mail}
             label="Weekly Summary"
             description="Receive a weekly digest of your family's activity"
-            checked={settings?.weekly_summary ?? false}
-            onChange={(v) => updateSetting('weekly_summary', v)}
+            checked={prefs.weekly_summary}
+            onChange={(v) => updatePref('weekly_summary', v)}
           />
         </div>
+        {saving && <p className="text-xs text-gray-400 mt-2">Saving…</p>}
       </div>
 
       {/* Privacy */}

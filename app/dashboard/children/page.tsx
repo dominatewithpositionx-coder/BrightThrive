@@ -10,17 +10,17 @@ import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound, ChevronUp } from 'lu
 type Child = {
   id: string;
   name: string;
-  age: number;
-  screen_time_limit: number;
+  age: number | null;
+  daily_screen_time_goal: number | null;
   points: number;
   created_at: string;
 };
 
-type HistoryEntry = {
+type LedgerEntry = {
   id: string;
   child_id: string;
-  change: number;
-  reason: string;
+  amount: number;
+  description: string;
   created_at: string;
 };
 
@@ -39,9 +39,9 @@ function getAvatarColor(name: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-function computeStreak(history: HistoryEntry[], childId: string): number {
-  const completions = history.filter(
-    (h) => h.child_id === childId && h.reason?.startsWith('Completed task:')
+function computeStreak(ledger: LedgerEntry[], childId: string): number {
+  const completions = ledger.filter(
+    (h) => h.child_id === childId && h.description?.startsWith('Completed task:')
   );
   const uniqueDays = Array.from(
     new Set(completions.map((h) => new Date(h.created_at).toLocaleDateString()))
@@ -67,7 +67,7 @@ function computeStreak(history: HistoryEntry[], childId: string): number {
 
 export default function ChildrenPage() {
   const [children, setChildren] = useState<Child[]>([]);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [name, setName] = useState('');
   const [age, setAge] = useState<number | ''>('');
   const [limit, setLimit] = useState<number | ''>('');
@@ -80,12 +80,14 @@ export default function ChildrenPage() {
   const supabase = getSupabase();
 
   async function fetchData() {
-    const [{ data: childData }, { data: histData }] = await Promise.all([
-      supabase.from('children').select('*').order('created_at', { ascending: true }),
-      supabase.from('points_history').select('id, child_id, change, reason, created_at').order('created_at', { ascending: false }),
+    const [{ data: childData }, { data: walletData }, { data: ledgerData }] = await Promise.all([
+      supabase.from('children').select('id, name, age, daily_screen_time_goal, created_at').order('created_at', { ascending: true }),
+      supabase.from('bt_coin_wallet').select('child_id, balance'),
+      supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }),
     ]);
-    setChildren(childData || []);
-    setHistory(histData || []);
+    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
+    setChildren((childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
+    setLedger(ledgerData || []);
   }
 
   useEffect(() => {
@@ -122,9 +124,12 @@ export default function ChildrenPage() {
 
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('children').insert([
-      { name, age: age ? Number(age) : null, screen_time_limit: limit ? Number(limit) : 60, parent_id: user?.id },
-    ]);
+    const { error } = await supabase.from('children').insert([{
+      name,
+      age: age ? Number(age) : null,
+      daily_screen_time_goal: limit ? Number(limit) : 60,
+      parent_id: user?.id,
+    }]);
 
     if (error) toast.error('Error adding child: ' + error.message);
     else {
@@ -140,7 +145,7 @@ export default function ChildrenPage() {
 
   async function adjustScreenTime(id: string, current: number, delta: number) {
     const next = Math.max(0, current + delta);
-    const { error } = await supabase.from('children').update({ screen_time_limit: next }).eq('id', id);
+    const { error } = await supabase.from('children').update({ daily_screen_time_goal: next }).eq('id', id);
     if (error) toast.error('Error updating screen time.');
     else {
       toast.success(delta > 0 ? `+${delta} min added!` : `${Math.abs(delta)} min removed.`);
@@ -228,12 +233,11 @@ export default function ChildrenPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {children.map((child, idx) => {
-            const streak = computeStreak(history, child.id);
+          {children.map((child) => {
+            const streak = computeStreak(ledger, child.id);
             const avatarColor = getAvatarColor(child.name);
-            const screenPct = child.screen_time_limit
-              ? Math.min(100, Math.round((child.screen_time_limit / 120) * 100))
-              : 0;
+            const screenGoal = child.daily_screen_time_goal ?? 60;
+            const screenPct = Math.min(100, Math.round((screenGoal / 120) * 100));
 
             return (
               <div key={child.id} className="bg-white border rounded-2xl shadow-sm overflow-hidden">
@@ -286,7 +290,7 @@ export default function ChildrenPage() {
                         <Clock size={15} className="text-blue-400" />
                         <span>Daily Screen Time</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-700">{child.screen_time_limit ?? 60} min</span>
+                      <span className="text-sm font-semibold text-gray-700">{screenGoal} min</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -296,13 +300,13 @@ export default function ChildrenPage() {
                     </div>
                     <div className="flex gap-2 mt-2">
                       <button
-                        onClick={() => adjustScreenTime(child.id, child.screen_time_limit ?? 60, -15)}
+                        onClick={() => adjustScreenTime(child.id, screenGoal, -15)}
                         className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-sm text-gray-600 hover:bg-gray-50"
                       >
                         <Minus size={13} /> 15 min
                       </button>
                       <button
-                        onClick={() => adjustScreenTime(child.id, child.screen_time_limit ?? 60, +15)}
+                        onClick={() => adjustScreenTime(child.id, screenGoal, +15)}
                         className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-lg py-1.5 text-sm text-green-700 hover:bg-green-100"
                       >
                         <Plus size={13} /> 15 min

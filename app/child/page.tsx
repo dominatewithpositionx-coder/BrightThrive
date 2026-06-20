@@ -8,8 +8,8 @@ import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react'
 import confetti from 'canvas-confetti';
 
 type Child = { id: string; name: string; points: number };
-type Task = { id: string; child_id: string; title: string; completed: boolean };
-type Reward = { id: string; title: string; cost: number };
+type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
+type Reward = { id: string; title: string; coin_cost: number };
 
 const AVATAR_COLORS = [
   { bg: 'bg-green-400', ring: 'ring-green-300', text: 'text-green-900', light: 'bg-green-50' },
@@ -49,7 +49,6 @@ function PinDialog({
     setDigits(next);
     setError(false);
     if (next.length === 4) {
-      // Check PIN stored in localStorage by parent
       const stored = localStorage.getItem(`bt_pin_${childName.toLowerCase()}`);
       if (!stored || stored === next) {
         onUnlock();
@@ -153,33 +152,32 @@ function ChildPicker({ children, onSelect }: { children: Child[]; onSelect: (c: 
 // Main child view
 function ChildView({
   child,
-  tasks,
+  missions,
   rewards,
   onBack,
-  onTaskToggle,
+  onMissionToggle,
   onGenerateMissions,
   generating,
-  taskError,
+  missionError,
 }: {
   child: Child;
-  tasks: Task[];
+  missions: Mission[];
   rewards: Reward[];
   onBack: () => void;
-  onTaskToggle: (task: Task) => void;
+  onMissionToggle: (mission: Mission) => void;
   onGenerateMissions: () => void;
   generating: boolean;
-  taskError: string | null;
+  missionError: string | null;
 }) {
   const colors = getColors(child.name);
-  const pending = tasks.filter((t) => !t.completed);
-  const done = tasks.filter((t) => t.completed);
-  const allDone = tasks.length > 0 && pending.length === 0;
+  const pending = missions.filter((m) => !m.is_completed);
+  const done = missions.filter((m) => m.is_completed);
+  const allDone = missions.length > 0 && pending.length === 0;
 
-  // Next reward the child can almost afford
-  const sortedRewards = [...rewards].sort((a, b) => a.cost - b.cost);
-  const nextReward = sortedRewards.find((r) => r.cost > child.points) || null;
-  const affordableRewards = sortedRewards.filter((r) => r.cost <= child.points);
-  const progress = nextReward ? Math.min(100, Math.round((child.points / nextReward.cost) * 100)) : 100;
+  const sortedRewards = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
+  const nextReward = sortedRewards.find((r) => r.coin_cost > child.points) || null;
+  const affordableRewards = sortedRewards.filter((r) => r.coin_cost <= child.points);
+  const progress = nextReward ? Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100)) : 100;
 
   const encouragements = ['Amazing work!', 'You\'re on fire!', 'Keep it up!', 'Super star!', 'Crushing it!'];
   const encouragement = encouragements[done.length % encouragements.length];
@@ -222,7 +220,7 @@ function ChildView({
                 <Gift size={18} className="text-purple-500" />
                 <span className="font-semibold text-gray-800 text-sm">Next reward</span>
               </div>
-              <span className="text-xs text-gray-500">{child.points} / {nextReward.cost} pts</span>
+              <span className="text-xs text-gray-500">{child.points} / {nextReward.coin_cost} pts</span>
             </div>
             <p className="font-bold text-gray-900 mb-3">{nextReward.title}</p>
             <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
@@ -232,7 +230,7 @@ function ChildView({
               />
             </div>
             <p className="text-xs text-gray-400 mt-1.5 text-right">
-              {nextReward.cost - child.points} pts to go!
+              {nextReward.coin_cost - child.points} pts to go!
             </p>
           </div>
         )}
@@ -247,7 +245,7 @@ function ChildView({
               {affordableRewards.map((r) => (
                 <div key={r.id} className="flex justify-between items-center text-sm">
                   <span className="text-green-900 font-medium">{r.title}</span>
-                  <span className="text-green-600 font-semibold">{r.cost} pts</span>
+                  <span className="text-green-600 font-semibold">{r.coin_cost} pts</span>
                 </div>
               ))}
             </div>
@@ -255,13 +253,12 @@ function ChildView({
           </div>
         )}
 
-        {/* Tasks to do */}
+        {/* Missions to do */}
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-3">
-            {allDone ? '🎉 All done for today!' : tasks.length === 0 ? 'Your Missions' : `Missions to do (${pending.length})`}
+            {allDone ? '🎉 All done for today!' : missions.length === 0 ? 'Your Missions' : `Missions to do (${pending.length})`}
           </h2>
 
-          {/* All done — celebrate + offer new missions */}
           {allDone && (
             <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-2xl p-6 text-center mb-4">
               <div className="text-4xl mb-2">🏆</div>
@@ -277,8 +274,7 @@ function ChildView({
             </div>
           )}
 
-          {/* No tasks at all — auto-generate or prompt */}
-          {tasks.length === 0 && (
+          {missions.length === 0 && (
             <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-8 text-center">
               {generating ? (
                 <div className="space-y-2 animate-pulse">
@@ -298,43 +294,43 @@ function ChildView({
               )}
             </div>
           )}
-          {taskError && (
+          {missionError && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 text-center">
-              {taskError}
+              {missionError}
             </div>
           )}
           <div className="space-y-3">
-            {pending.map((task) => (
+            {pending.map((mission) => (
               <button
-                key={task.id}
-                onClick={() => onTaskToggle(task)}
+                key={mission.id}
+                onClick={() => onMissionToggle(mission)}
                 className="w-full bg-white rounded-2xl border-2 border-gray-100 p-4 flex items-center gap-4 text-left hover:border-green-300 hover:shadow-md active:scale-[0.98] transition-all group"
               >
                 <div className="w-10 h-10 rounded-full border-2 border-gray-200 group-hover:border-green-400 flex items-center justify-center shrink-0 transition-colors">
                   <div className="w-5 h-5 rounded-full bg-gray-100 group-hover:bg-green-100 transition-colors" />
                 </div>
-                <span className="text-gray-900 font-medium text-base">{task.title}</span>
+                <span className="text-gray-900 font-medium text-base">{mission.title}</span>
                 <span className="ml-auto text-green-500 font-bold text-sm whitespace-nowrap">+10 pts</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Completed tasks */}
+        {/* Completed missions */}
         {done.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-gray-400 mb-2">Completed ✓</h2>
             <div className="space-y-2">
-              {done.map((task) => (
+              {done.map((mission) => (
                 <button
-                  key={task.id}
-                  onClick={() => onTaskToggle(task)}
+                  key={mission.id}
+                  onClick={() => onMissionToggle(mission)}
                   className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-4 flex items-center gap-4 text-left opacity-70 hover:opacity-100 active:scale-[0.98] transition-all"
                 >
                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                     <CheckCircle size={20} className="text-green-500" />
                   </div>
-                  <span className="text-gray-500 font-medium line-through text-base">{task.title}</span>
+                  <span className="text-gray-500 font-medium line-through text-base">{mission.title}</span>
                   <span className="ml-auto text-xs text-gray-400">Undo</span>
                 </button>
               ))}
@@ -348,30 +344,34 @@ function ChildView({
 
 export default function ChildPage() {
   const [children, setChildren] = useState<Child[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [selected, setSelected] = useState<Child | null>(null);
   const [pendingChild, setPendingChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [taskError, setTaskError] = useState<string | null>(null);
+  const [missionError, setMissionError] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
   const fetchData = useCallback(async () => {
-    const [{ data: childData }, { data: taskData }, { data: rewardData }] = await Promise.all([
-      supabase.from('children').select('id, name, points').order('created_at', { ascending: true }),
-      supabase.from('tasks').select('id, child_id, title, completed'),
-      supabase.from('rewards').select('id, title, cost').order('cost', { ascending: true }),
+    const [{ data: childData }, { data: walletData }, { data: missionData }, { data: rewardData }] = await Promise.all([
+      supabase.from('children').select('id, name').order('created_at', { ascending: true }),
+      supabase.from('bt_coin_wallet').select('child_id, balance'),
+      supabase.from('missions').select('id, child_id, title, is_completed'),
+      supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
     ]);
-    setChildren(childData || []);
-    setTasks(taskData || []);
+
+    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
+    const kids = (childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
+
+    setChildren(kids);
+    setMissions(missionData || []);
     setRewards(rewardData || []);
     setLoading(false);
 
-    // Update selected child's points if viewing
     if (selected) {
-      const fresh = childData?.find((c) => c.id === selected.id);
+      const fresh = kids.find((c) => c.id === selected.id);
       if (fresh) setSelected(fresh);
     }
   }, [selected]);
@@ -396,17 +396,15 @@ export default function ChildPage() {
     setGenerating(false);
   }
 
-  // Auto-generate missions when a child is selected and has no tasks
   useEffect(() => {
     if (!selected) return;
-    const childTasks = tasks.filter((t) => t.child_id === selected.id);
-    if (childTasks.length === 0 && !generating && !loading) {
+    const childMissions = missions.filter((m) => m.child_id === selected.id);
+    if (childMissions.length === 0 && !generating && !loading) {
       handleGenerateMissions();
     }
-  }, [selected, tasks, loading]);
+  }, [selected, missions, loading]);
 
   function handleSelect(child: Child) {
-    // Check if parent has set a PIN for this child
     const pin = localStorage.getItem(`bt_pin_${child.name.toLowerCase()}`);
     if (pin) {
       setPendingChild(child);
@@ -415,43 +413,49 @@ export default function ChildPage() {
     }
   }
 
-  async function handleTaskToggle(task: Task) {
+  async function handleMissionToggle(mission: Mission) {
     if (!selected) return;
 
-    const { error: taskError } = await supabase
-      .from('tasks')
-      .update({ completed: !task.completed })
-      .eq('id', task.id);
+    const nowCompleted = !mission.is_completed;
+    const { error: missionErr } = await supabase
+      .from('missions')
+      .update({ is_completed: nowCompleted, status: nowCompleted ? 'completed' : 'active' })
+      .eq('id', mission.id);
 
-    if (taskError) {
-      console.error('[ChildView] task update failed:', taskError.message);
-      setTaskError('Oops! Could not save that. Try again.');
+    if (missionErr) {
+      console.error('[ChildView] mission update failed:', missionErr.message);
+      setMissionError('Oops! Could not save that. Try again.');
       return;
     }
 
-    const pointsChange = task.completed ? -10 : +10;
-    const reason = task.completed ? `Undid task: ${task.title}` : `Completed task: ${task.title}`;
+    const pointsChange = mission.is_completed ? -10 : +10;
+    const description = mission.is_completed
+      ? `Undid task: ${mission.title}`
+      : `Completed task: ${mission.title}`;
 
-    const { error: pointsError } = await supabase.rpc('increment_points', {
-      child_id: selected.id,
-      points_change: pointsChange,
-      reason,
+    const { error: coinsError } = await supabase.rpc('add_coins', {
+      p_child_id: selected.id,
+      p_amount: pointsChange,
+      p_type: pointsChange > 0 ? 'earned' : 'deducted',
+      p_description: description,
+      p_mission_id: mission.id,
     });
 
-    if (pointsError) {
-      console.error('[ChildView] increment_points failed:', pointsError.message);
-      setTaskError('Points could not be updated. Ask a parent.');
+    if (coinsError) {
+      console.error('[ChildView] add_coins failed:', coinsError.message);
+      setMissionError('Points could not be updated. Ask a parent.');
       return;
     }
 
-    if (!task.completed) {
+    if (nowCompleted) {
       fireConfetti();
     }
 
-    setTaskError(null);
-    setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, completed: !t.completed } : t));
-    setSelected((prev) => prev ? { ...prev, points: prev.points + pointsChange } : prev);
-    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: c.points + pointsChange } : c));
+    setMissionError(null);
+    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: nowCompleted } : m));
+    const newPoints = selected.points + pointsChange;
+    setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
+    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
   }
 
   if (loading) {
@@ -465,7 +469,7 @@ export default function ChildPage() {
     );
   }
 
-  const childTasks = selected ? tasks.filter((t) => t.child_id === selected.id) : [];
+  const childMissions = selected ? missions.filter((m) => m.child_id === selected.id) : [];
 
   return (
     <>
@@ -480,13 +484,13 @@ export default function ChildPage() {
       {selected ? (
         <ChildView
           child={selected}
-          tasks={childTasks}
+          missions={childMissions}
           rewards={rewards}
           onBack={() => setSelected(null)}
-          onTaskToggle={handleTaskToggle}
+          onMissionToggle={handleMissionToggle}
           onGenerateMissions={handleGenerateMissions}
           generating={generating}
-          taskError={taskError}
+          missionError={missionError}
         />
       ) : (
         <ChildPicker children={children} onSelect={handleSelect} />

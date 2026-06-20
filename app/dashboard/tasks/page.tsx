@@ -17,11 +17,11 @@ const TASK_TEMPLATES = [
   'Feed the pet',
 ];
 
-type Task = {
+type Mission = {
   id: string;
   child_id: string;
   title: string;
-  completed: boolean;
+  is_completed: boolean;
   created_at: string;
 };
 
@@ -31,38 +31,37 @@ type Child = {
   points: number;
 };
 
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [childId, setChildId] = useState('');
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [generating, setGenerating] = useState<string | null>(null); // child id being generated
+  const [generating, setGenerating] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
   async function fetchData() {
     setFetching(true);
-    const { data: childData } = await supabase
-      .from('children')
-      .select('id, name, points')
-      .order('created_at', { ascending: false });
-    setChildren(childData || []);
+    const [{ data: childData }, { data: walletData }, { data: missionData }] = await Promise.all([
+      supabase.from('children').select('id, name').order('created_at', { ascending: false }),
+      supabase.from('bt_coin_wallet').select('child_id, balance'),
+      supabase.from('missions').select('id, child_id, title, is_completed, created_at').order('created_at', { ascending: false }),
+    ]);
 
-    const { data: taskData } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setTasks(taskData || []);
+    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
+    setChildren((childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
+    setMissions(missionData || []);
     setFetching(false);
   }
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // ➕ Add a new task
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
     if (!childId || !title) {
@@ -71,13 +70,15 @@ export default function TasksPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.from('tasks').insert([
-      {
-        child_id: childId,
-        title,
-        completed: false,
-      },
-    ]);
+    const { error } = await supabase.from('missions').insert([{
+      child_id: childId,
+      title,
+      category: 'general',
+      screen_time_reward: 0,
+      is_completed: false,
+      mission_date: today(),
+      status: 'active',
+    }]);
 
     if (error) toast.error('Error adding task: ' + error.message);
     else {
@@ -88,53 +89,43 @@ export default function TasksPage() {
     setLoading(false);
   }
 
-  // ✅ Toggle task completion + update points + log reason
-  async function toggleTaskCompletion(id: string, completed: boolean, child_id: string, taskTitle: string) {
+  async function toggleTaskCompletion(mission: Mission) {
+    const nowCompleted = !mission.is_completed;
     const { error } = await supabase
-      .from('tasks')
-      .update({ completed: !completed })
-      .eq('id', id);
+      .from('missions')
+      .update({ is_completed: nowCompleted, status: nowCompleted ? 'completed' : 'active' })
+      .eq('id', mission.id);
 
-    if (error) {
-      toast.error('Error updating task.');
-      return;
-    }
+    if (error) { toast.error('Error updating task.'); return; }
 
-    // 🧮 Update child points (+10 for complete, -10 for undo)
-    const pointsChange = completed ? -10 : +10;
-    const reason = completed
-      ? `Undid task: ${taskTitle}`
-      : `Completed task: ${taskTitle}`;
+    const pointsChange = mission.is_completed ? -10 : +10;
+    const description = mission.is_completed
+      ? `Undid task: ${mission.title}`
+      : `Completed task: ${mission.title}`;
 
-    const { error: pointsError } = await supabase.rpc('increment_points', {
-      child_id,
-      points_change: pointsChange,
-      reason,
+    const { error: coinError } = await supabase.rpc('add_coins', {
+      p_child_id: mission.child_id,
+      p_amount: pointsChange,
+      p_type: pointsChange > 0 ? 'earned' : 'deducted',
+      p_description: description,
+      p_mission_id: mission.id,
     });
 
-    if (pointsError) {
-      console.error('Error updating points:', pointsError);
+    if (coinError) {
+      console.error('Error updating coins:', coinError);
       toast.error('Error updating points.');
     } else {
-      toast.success(
-        completed
-          ? 'Task undone. Points removed.'
-          : 'Task completed! +10 pts logged.'
-      );
+      toast.success(mission.is_completed ? 'Task undone. Points removed.' : 'Task completed! +10 pts logged.');
     }
 
     fetchData();
   }
 
-  // ❌ Delete a task
   async function deleteTask(id: string) {
     if (!confirm('Are you sure you want to delete this task?')) return;
-    const { error } = await supabase.from('tasks').delete().eq('id', id);
+    const { error } = await supabase.from('missions').delete().eq('id', id);
     if (error) toast.error('Error deleting task.');
-    else {
-      toast.success('Task deleted.');
-      fetchData();
-    }
+    else { toast.success('Task deleted.'); fetchData(); }
   }
 
   async function generateMissions(child: Child) {
@@ -204,10 +195,7 @@ export default function TasksPage() {
       )}
 
       {/* Add Task Form */}
-      <form
-        onSubmit={addTask}
-        className="bg-white p-6 rounded-lg shadow-sm border w-full max-w-md mb-8"
-      >
+      <form onSubmit={addTask} className="bg-white p-6 rounded-lg shadow-sm border w-full max-w-md mb-8">
         <h2 className="text-lg font-semibold mb-4">Add a Task</h2>
         {children.length === 0 && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
@@ -223,11 +211,10 @@ export default function TasksPage() {
           <option value="">Select a child</option>
           {children.map((child) => (
             <option key={child.id} value={child.id}>
-              {child.name} ({child.points ?? 0} pts)
+              {child.name} ({child.points} pts)
             </option>
           ))}
         </select>
-        {/* Template pills */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           {TASK_TEMPLATES.map((t) => (
             <button
@@ -235,9 +222,7 @@ export default function TasksPage() {
               type="button"
               onClick={() => setTitle(t)}
               className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
-                title === t
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                title === t ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
               }`}
             >
               {t}
@@ -251,11 +236,7 @@ export default function TasksPage() {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full"
-        >
+        <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full">
           {loading ? 'Adding...' : 'Add Task'}
         </button>
       </form>
@@ -263,54 +244,41 @@ export default function TasksPage() {
       {/* Task List */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Active Tasks</h2>
-        {tasks.length === 0 && children.length === 0 ? (
+        {missions.length === 0 && children.length === 0 ? (
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
             <p className="font-medium text-gray-700 mb-1">No children added yet</p>
             <p className="text-sm text-gray-500 mb-4">Add a child first, then you can assign tasks to them.</p>
             <a href="/dashboard/children" className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">Add a Child</a>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : missions.length === 0 ? (
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
             <p className="font-medium text-gray-700 mb-1">No tasks yet</p>
             <p className="text-sm text-gray-500">Create your first task above — kids earn 10 points each time they complete one.</p>
           </div>
         ) : (
           <ul className="space-y-3">
-            {tasks.map((task) => (
+            {missions.map((mission) => (
               <li
-                key={task.id}
-                className={`p-4 bg-white rounded-lg shadow-sm border flex justify-between items-center ${
-                  task.completed ? 'opacity-70' : ''
-                }`}
+                key={mission.id}
+                className={`p-4 bg-white rounded-lg shadow-sm border flex justify-between items-center ${mission.is_completed ? 'opacity-70' : ''}`}
               >
                 <div>
-                  <p className="font-medium">{task.title}</p>
+                  <p className="font-medium">{mission.title}</p>
                   <p className="text-sm text-gray-600">
-                    Child:{' '}
-                    {children.find((c) => c.id === task.child_id)?.name ||
-                      'Unknown'}
+                    Child: {children.find((c) => c.id === mission.child_id)?.name || 'Unknown'}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() =>
-                      toggleTaskCompletion(
-                        task.id,
-                        task.completed,
-                        task.child_id,
-                        task.title
-                      )
-                    }
+                    onClick={() => toggleTaskCompletion(mission)}
                     className={`px-3 py-1 rounded-md text-white ${
-                      task.completed
-                        ? 'bg-yellow-500 hover:bg-yellow-600'
-                        : 'bg-green-500 hover:bg-green-600'
+                      mission.is_completed ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'
                     }`}
                   >
-                    {task.completed ? 'Undo' : 'Complete'}
+                    {mission.is_completed ? 'Undo' : 'Complete'}
                   </button>
                   <button
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() => deleteTask(mission.id)}
                     className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
                   >
                     Delete
