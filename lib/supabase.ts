@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -24,9 +24,15 @@ export function getSupabaseConfigStatus(): { ok: boolean; reason?: string } {
   return { ok: true };
 }
 
-export function getSupabase() {
-  return createClient(
-    url || 'https://placeholder.supabase.co',
-    key || 'placeholder',
-  );
+// Singleton — prevents "Multiple GoTrueClient instances" warning
+let _client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (!_client) {
+    _client = createClient(
+      url || 'https://placeholder.supabase.co',
+      key || 'placeholder',
+    );
+  }
+  return _client;
 }
