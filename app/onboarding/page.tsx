@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase, getSupabaseConfigStatus } from '@/lib/supabase';
 import { CheckCircle, Sparkles } from 'lucide-react';
 
 const brandGradient = 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)';
@@ -236,59 +236,124 @@ export default function OnboardingPage() {
     }
   }
 
+  function friendlyError(err: unknown): string {
+    if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
+      return 'Unable to connect to the server. Please check your internet connection and try again in a few minutes.';
+    }
+    if (err instanceof Error) return err.message;
+    return 'Something went wrong. Please try again.';
+  }
+
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setAuthError('');
     setAuthLoading(true);
     saveToSession();
-    const supabase = getSupabase();
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      setAuthError(error.message);
+
+    // Check env config before making any network call
+    const config = getSupabaseConfigStatus();
+    if (!config.ok) {
+      console.error('[Onboarding] Supabase config invalid:', config.reason);
+      setAuthError('There may be a configuration issue with this app. Please try again later or contact support.');
       setAuthLoading(false);
       return;
     }
-    // If a session exists, email confirmation is disabled — go straight to dashboard
-    if (data.session) {
-      if (data.user) await saveOnboardingRow(data.user.id);
-      router.push('/dashboard');
-      return;
+
+    console.log('[Onboarding] Starting email signup for:', email);
+
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        console.error('[Onboarding] signUp error:', error.status, error.message);
+        setAuthError(error.message);
+        setAuthLoading(false);
+        return;
+      }
+
+      console.log('[Onboarding] signUp success. session:', !!data.session, 'user:', data.user?.id);
+
+      // Session present = email confirmation disabled → go straight to dashboard
+      if (data.session) {
+        if (data.user) await saveOnboardingRow(data.user.id);
+        router.push('/dashboard');
+        return;
+      }
+
+      // No session = email confirmation required
+      setAuthLoading(false);
+      setConfirmSent(true);
+    } catch (err) {
+      console.error('[Onboarding] signUp threw:', err);
+      setAuthError(friendlyError(err));
+      setAuthLoading(false);
     }
-    // No session = email confirmation required
-    setAuthLoading(false);
-    setConfirmSent(true);
   }
 
   async function handleResend() {
     setResendLoading(true);
-    const supabase = getSupabase();
-    await supabase.auth.resend({ type: 'signup', email });
+    console.log('[Onboarding] Resending confirmation to:', email);
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) console.error('[Onboarding] Resend error:', error.message);
+      else console.log('[Onboarding] Resend success');
+    } catch (err) {
+      console.error('[Onboarding] Resend threw:', err);
+    }
     setResendLoading(false);
   }
 
   async function handleGoogle() {
+    const config = getSupabaseConfigStatus();
+    if (!config.ok) {
+      console.error('[Onboarding] Supabase config invalid for Google OAuth:', config.reason);
+      setAuthError('There may be a configuration issue. Please try signing up with email instead.');
+      return;
+    }
+    console.log('[Onboarding] Starting Google OAuth');
     saveToSession();
-    const supabase = getSupabase();
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
-    });
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
+      });
+      if (error) {
+        console.error('[Onboarding] Google OAuth error:', error.message);
+        setAuthError(error.message.includes('not enabled')
+          ? 'Google sign-in is not yet enabled. Please use email and password below.'
+          : friendlyError(error));
+      }
+    } catch (err) {
+      console.error('[Onboarding] Google OAuth threw:', err);
+      setAuthError(friendlyError(err));
+    }
   }
 
   async function saveOnboardingRow(parentId: string) {
-    const supabase = getSupabase();
-    await supabase.from('family_onboarding').upsert({
-      parent_id: parentId,
-      primary_goal: answers.primary_goal ?? null,
-      child_description: answers.child_description ?? null,
-      parent_involvement: answers.parent_involvement ?? null,
-      motivation_preference: answers.motivation_preference ?? null,
-      selected_habits: answers.selected_habits ?? [],
-      screen_time_preference: answers.screen_time_preference ?? null,
-      routine_timing: answers.routine_timing ?? null,
-      success_definition: answers.success_definition ?? null,
-      completed_at: new Date().toISOString(),
-    }, { onConflict: 'parent_id' });
+    console.log('[Onboarding] Saving onboarding row for parent:', parentId);
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('family_onboarding').upsert({
+        parent_id: parentId,
+        primary_goal: answers.primary_goal ?? null,
+        child_description: answers.child_description ?? null,
+        parent_involvement: answers.parent_involvement ?? null,
+        motivation_preference: answers.motivation_preference ?? null,
+        selected_habits: answers.selected_habits ?? [],
+        screen_time_preference: answers.screen_time_preference ?? null,
+        routine_timing: answers.routine_timing ?? null,
+        success_definition: answers.success_definition ?? null,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: 'parent_id' });
+      if (error) console.error('[Onboarding] saveOnboardingRow error:', error.message);
+      else console.log('[Onboarding] Onboarding row saved');
+    } catch (err) {
+      // Non-fatal — don't block the signup flow
+      console.error('[Onboarding] saveOnboardingRow threw:', err);
+    }
   }
 
   // ── Plan summary screen ─────────────────────────────────────────────────

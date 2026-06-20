@@ -1,8 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Detect missing or placeholder values baked in at build time
+export function getSupabaseConfigStatus(): { ok: boolean; reason?: string } {
+  if (!url || url.includes('placeholder')) {
+    return { ok: false, reason: 'NEXT_PUBLIC_SUPABASE_URL is missing or invalid. Redeploy after setting it in Vercel.' };
+  }
+  if (!key || key === 'placeholder') {
+    return { ok: false, reason: 'NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid. Redeploy after setting it in Vercel.' };
+  }
+  return { ok: true };
+}
 
 export function getSupabase() {
-  return createClient(url, key);
+  return createClient(
+    url || 'https://placeholder.supabase.co',
+    key || 'placeholder',
+  );
 }
