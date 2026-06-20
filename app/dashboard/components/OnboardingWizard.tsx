@@ -31,6 +31,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   // Step 1 — child
   const [childName, setChildName] = useState('');
@@ -47,13 +48,18 @@ export default function OnboardingWizard({ onComplete }: Props) {
   async function saveChild() {
     if (!childName.trim()) return;
     setSaving(true);
+    setSaveError('');
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from('children')
-      .insert([{ name: childName.trim(), age: childAge ? Number(childAge) : null, points: 0 }])
+      .insert([{ name: childName.trim(), age: childAge ? Number(childAge) : null, points: 0, user_id: user?.id }])
       .select('id')
       .single();
     setSaving(false);
-    if (error || !data) return;
+    if (error || !data) {
+      setSaveError(error?.message || 'Could not save. Please try again.');
+      return;
+    }
     setChildId(data.id);
     setStep(2);
   }
@@ -157,6 +163,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     onChange={(e) => setChildAge(e.target.value)}
                   />
                 </div>
+                {saveError && <p className="mt-3 text-sm text-red-500">{saveError}</p>}
                 <button
                   onClick={saveChild}
                   disabled={!childName.trim() || saving}
