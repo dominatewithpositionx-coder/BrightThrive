@@ -5,11 +5,12 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Bell, Mail, Shield } from 'lucide-react';
+import { Bell, Mail, Shield, MapPin } from 'lucide-react';
 
 type NotifPrefs = {
   reward_notifications: boolean;
   weekly_summary: boolean;
+  location?: string;
 };
 
 function Toggle({
@@ -55,7 +56,9 @@ function Toggle({
 }
 
 export default function SettingsPage() {
-  const [prefs, setPrefs] = useState<NotifPrefs>({ reward_notifications: false, weekly_summary: false });
+  const [prefs, setPrefs] = useState<NotifPrefs>({ reward_notifications: false, weekly_summary: false, location: '' });
+  const [locationInput, setLocationInput] = useState('');
+  const [savingLocation, setSavingLocation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -83,10 +86,13 @@ export default function SettingsPage() {
 
     if (data?.personalization_data) {
       const pd = data.personalization_data as Record<string, unknown>;
+      const loc = (pd.location as string) ?? '';
       setPrefs({
         reward_notifications: Boolean(pd.reward_notifications),
         weekly_summary: Boolean(pd.weekly_summary),
+        location: loc,
       });
+      setLocationInput(loc);
     }
     setLoading(false);
   }
@@ -113,6 +119,19 @@ export default function SettingsPage() {
       toast.success('Settings saved!');
     }
     setSaving(false);
+  }
+
+  async function saveLocation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!userId) return;
+    setSavingLocation(true);
+    const next = { ...prefs, location: locationInput.trim() };
+    const { error } = await supabase
+      .from('family_plans')
+      .upsert({ parent_id: userId, personalization_data: next, updated_at: new Date().toISOString() }, { onConflict: 'parent_id' });
+    if (error) toast.error('Failed to save location.');
+    else { setPrefs(next); toast.success('Location saved!'); }
+    setSavingLocation(false);
   }
 
   if (loading) {
@@ -176,6 +195,37 @@ export default function SettingsPage() {
           />
         </div>
         {saving && <p className="text-xs text-gray-400 mt-2">Saving…</p>}
+      </div>
+
+      {/* Location for weather-aware missions */}
+      <div className="bg-white rounded-xl border shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Location</h2>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="p-2 bg-gray-100 rounded-lg mt-0.5">
+            <MapPin size={16} className="text-gray-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">City for weather-aware missions</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Optional. When set, AI missions will account for today's weather (sunny, rainy, snowy, hot).
+            </p>
+          </div>
+        </div>
+        <form onSubmit={saveLocation} className="flex gap-2">
+          <input
+            className="border rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="e.g. Toronto, Calgary, Vancouver"
+            value={locationInput}
+            onChange={(e) => setLocationInput(e.target.value)}
+          />
+          <button
+            type="submit"
+            disabled={savingLocation}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+          >
+            {savingLocation ? 'Saving…' : 'Save'}
+          </button>
+        </form>
       </div>
 
       {/* Privacy */}

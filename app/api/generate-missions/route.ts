@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
+import { getWeather, weatherMissionHint } from '@/lib/weather';
 
 export const runtime = 'nodejs';
 
@@ -8,7 +9,7 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
-const SYSTEM_PROMPT = `You are a helpful assistant that generates age-appropriate daily tasks/missions for children.
+const BASE_SYSTEM_PROMPT = `You are a helpful assistant that generates age-appropriate daily tasks/missions for children.
 Tasks should be:
 - Quick to complete (10–30 minutes each)
 - Educational, character-building, or helpful around the house
@@ -62,13 +63,33 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Fetch location from family_plans and get current weather (optional — fails gracefully)
+  let systemPrompt = BASE_SYSTEM_PROMPT;
+  try {
+    const { data: plan } = await anonSupabase
+      .from('family_plans')
+      .select('personalization_data')
+      .eq('parent_id', user.id)
+      .single();
+    const location = (plan?.personalization_data as Record<string, unknown>)?.location as string | undefined;
+    if (location) {
+      const weather = await getWeather(location);
+      if (weather) {
+        const hint = weatherMissionHint(weather);
+        systemPrompt = `${BASE_SYSTEM_PROMPT}\n\nContext: ${weather.summary} ${hint}`;
+      }
+    }
+  } catch {
+    // Weather is optional — proceed without it
+  }
+
   // Generate missions with Claude
   let missions: { title: string; description?: string }[] = [];
   try {
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [
         {
           role: 'user',
