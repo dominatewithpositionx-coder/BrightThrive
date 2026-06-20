@@ -2,21 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { getWeather, weatherMissionHint } from '@/lib/weather';
+import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 
 export const runtime = 'nodejs';
 
 function today() {
   return new Date().toISOString().split('T')[0];
 }
-
-const MOOD_HINTS: Record<string, string> = {
-  Happy:      'The child is feeling happy and energetic. Give them creative, social, or outdoor missions that match their positive energy.',
-  Calm:       'The child is feeling calm and peaceful. Give them gentle, mindful, or creative missions — reading, art, journaling, or quiet activities.',
-  Energetic:  'The child is feeling very energetic. Prioritize physical activity, movement challenges, or helping-around-the-house missions.',
-  Tired:      'The child is feeling tired. Give them very gentle, short missions — simple kindness acts, light stretching, or low-effort reading.',
-  Sad:        'The child is feeling sad. Give them warm, comforting missions — small wins they can definitely achieve, kindness acts, or connection activities.',
-  Frustrated: 'The child is feeling frustrated. Give them reset missions — short physical activity, deep breathing prompts, or simple creative tasks to redirect energy.',
-};
 
 const BASE_SYSTEM_PROMPT = `You are a warm, encouraging assistant that generates personalized daily missions for children.
 Missions should be:
@@ -88,8 +80,8 @@ export async function POST(req: NextRequest) {
     // Weather optional — proceed without it
   }
 
-  if (mood && MOOD_HINTS[mood]) {
-    contextParts.push(MOOD_HINTS[mood]);
+  if (mood && MOOD_MISSION_HINTS[mood as MoodKey]) {
+    contextParts.push(MOOD_MISSION_HINTS[mood as MoodKey]);
   }
 
   if (contextParts.length > 0) {

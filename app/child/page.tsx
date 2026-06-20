@@ -6,11 +6,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { type MoodKey, MOODS, EI_RESPONSES } from '@/lib/mood';
 
 type Child = { id: string; name: string; points: number };
 type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
 type Reward = { id: string; title: string; coin_cost: number };
-type MoodKey = 'Happy' | 'Calm' | 'Energetic' | 'Tired' | 'Sad' | 'Frustrated';
 
 const AVATAR_COLORS = [
   { bg: 'bg-green-400', ring: 'ring-green-300', text: 'text-green-900', light: 'bg-green-50' },
@@ -20,24 +20,6 @@ const AVATAR_COLORS = [
   { bg: 'bg-pink-400', ring: 'ring-pink-300', text: 'text-pink-900', light: 'bg-pink-50' },
   { bg: 'bg-teal-400', ring: 'ring-teal-300', text: 'text-teal-900', light: 'bg-teal-50' },
 ];
-
-const MOODS: { key: MoodKey; emoji: string; label: string; cardBg: string; cardBorder: string }[] = [
-  { key: 'Happy',      emoji: '😊', label: 'Happy',      cardBg: 'bg-amber-50',  cardBorder: 'border-amber-200' },
-  { key: 'Calm',       emoji: '😌', label: 'Calm',       cardBg: 'bg-sky-50',    cardBorder: 'border-sky-200' },
-  { key: 'Energetic',  emoji: '⚡', label: 'Energetic',  cardBg: 'bg-orange-50', cardBorder: 'border-orange-200' },
-  { key: 'Tired',      emoji: '😴', label: 'Tired',      cardBg: 'bg-purple-50', cardBorder: 'border-purple-200' },
-  { key: 'Sad',        emoji: '😔', label: 'Sad',        cardBg: 'bg-blue-50',   cardBorder: 'border-blue-200' },
-  { key: 'Frustrated', emoji: '😠', label: 'Frustrated', cardBg: 'bg-rose-50',   cardBorder: 'border-rose-200' },
-];
-
-const EI_RESPONSES: Record<MoodKey, { headline: string; message: string; cta: string; bg: string }> = {
-  Happy:      { headline: "I love seeing that smile!", message: "Let's use this amazing energy to do something awesome today.", cta: "Let's go! ✨", bg: 'from-amber-50 to-yellow-50' },
-  Calm:       { headline: "You seem peaceful right now.", message: "That's a wonderful feeling. Let's keep the good vibes going.", cta: "Ready! 🌿", bg: 'from-sky-50 to-blue-50' },
-  Energetic:  { headline: "You've got so much energy today!", message: "Let's put it to great use. Big things happen on days like this.", cta: "Let's do this! ⚡", bg: 'from-orange-50 to-amber-50' },
-  Tired:      { headline: "Sounds like your body needs a little kindness today.", message: "That's completely okay. Let's keep things gentle and simple — small steps still count.", cta: "Okay, let's try 💙", bg: 'from-purple-50 to-indigo-50' },
-  Sad:        { headline: "It's okay to have sad days.", message: "You don't have to fix everything right now. Let's do one small thing together — you've got this.", cta: "I'm ready 💛", bg: 'from-blue-50 to-sky-50' },
-  Frustrated: { headline: "That's okay — everybody feels frustrated sometimes.", message: "Take a deep breath. Let's do something small to help you reset. You're not alone.", cta: "Let's reset 🤝", bg: 'from-rose-50 to-pink-50' },
-};
 
 function getColors(name: string) {
   let h = 0;
