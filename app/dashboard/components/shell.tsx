@@ -110,7 +110,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   useEffect(() => {
     const sb = getSupabase();
     sb.auth.getUser().then(({ data }) => {
-      const email = data.user?.email || '';
+      if (!data.user) {
+        window.location.assign('/login');
+        return;
+      }
+      const email = data.user.email || '';
       setFirstName(email.split('@')[0] || 'there');
     });
   }, []);

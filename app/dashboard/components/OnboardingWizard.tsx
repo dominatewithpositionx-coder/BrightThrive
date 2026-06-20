@@ -91,7 +91,8 @@ export default function OnboardingWizard({ onComplete }: Props) {
   async function saveTask() {
     if (!taskTitle.trim() || !childId) { setStep(3); return; }
     setSaving(true);
-    await supabase.from('tasks').insert([{ child_id: childId, title: taskTitle.trim(), completed: false }]);
+    const { error } = await supabase.from('tasks').insert([{ child_id: childId, title: taskTitle.trim(), completed: false }]);
+    if (error) console.error('[OnboardingWizard] saveTask error:', error.message);
     setSaving(false);
     setStep(3);
   }
