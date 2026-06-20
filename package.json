@@ -7,7 +7,10 @@
   "prebuild": "node scripts/verify-env.js",
   "build": "next build",
   "start": "next start",
-  "lint": "next lint"
+  "lint": "next lint",
+  "test:e2e": "playwright test tests/smoke.spec.ts",
+  "test:e2e:headed": "playwright test tests/smoke.spec.ts --headed",
+  "test:e2e:report": "playwright show-report tests/report"
  },
  "dependencies": {
   "@anthropic-ai/sdk": "^0.105.0",
