@@ -213,7 +213,7 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
         <button
           onClick={onBack}
           aria-label="Switch child"
-          className="flex items-center gap-1 text-white/80 hover:text-white text-sm mb-5 mt-4 transition-colors"
+          className="flex items-center gap-1 min-h-[44px] text-white/80 hover:text-white text-sm mb-3 mt-2 transition-colors"
         >
           <ChevronLeft size={18} /> Switch child
         </button>

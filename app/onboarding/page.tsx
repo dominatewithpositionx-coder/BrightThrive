@@ -503,7 +503,7 @@ export default function OnboardingPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="w-full border-2 rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-colors"
+            className="w-full border-2 rounded-xl px-4 py-3.5 text-base focus:outline-none transition-colors"
             style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
           />
           <input
@@ -513,7 +513,7 @@ export default function OnboardingPage() {
             onChange={e => setPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full border-2 rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-colors"
+            className="w-full border-2 rounded-xl px-4 py-3.5 text-base focus:outline-none transition-colors"
             style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
           />
           {authError && (
