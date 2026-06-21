@@ -29,3 +29,4 @@ tsconfig.tsbuildinfo
 # Playwright test output
 tests/report/
 tests/screenshots/
+.claude/
