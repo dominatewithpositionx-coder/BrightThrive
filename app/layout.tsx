@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description:
     'BrightThrive helps families build better screen habits with rewards, tasks, and positive routines.',
   icons: {
-    icon: '/brand/brainthrive/favicon.ico',
+    icon: '/brand/favicon.png',
   },
 };
 
@@ -32,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               height={50}
               priority
               className="h-12 w-auto"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           </Link>
           <nav className="flex gap-6 text-sm text-gray-700">
