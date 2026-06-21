@@ -25,6 +25,14 @@ function checkRateLimit(key: string): boolean {
   return true;
 }
 
+function ageBand(age: number): string {
+  if (age <= 5) return '3–5';
+  if (age <= 7) return '6–7';
+  if (age <= 10) return '8–10';
+  if (age <= 13) return '11–13';
+  return '14+';
+}
+
 function today() {
   return new Date().toISOString().split('T')[0];
 }
@@ -127,7 +135,9 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Generate ${count} missions for ${childName}, who is ${childAge ? `${childAge} years old` : 'a child'}.`,
+          // Privacy: child's real name and exact age are not sent to Anthropic.
+          // Age is bucketed to a coarse band; only a generic descriptor is used.
+          content: `Generate ${count} missions for a child${childAge ? ` in the ${ageBand(childAge)} age range` : ''}.`,
         },
       ],
     });
