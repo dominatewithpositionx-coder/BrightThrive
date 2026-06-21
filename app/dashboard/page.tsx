@@ -218,7 +218,7 @@ export default function DashboardPage() {
                     {/* Progress bar */}
                     {childMissions.length > 0 && (
                       <div className="mb-4">
-                        <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1.5">
                           <span>Today's missions</span>
                           <span>{completionPct}%</span>
                         </div>
@@ -234,16 +234,16 @@ export default function DashboardPage() {
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className={`rounded-xl py-2 ${done > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
-                        <p className={`text-base font-bold ${done > 0 ? 'text-green-600' : 'text-gray-400'}`}>{done}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">done</p>
+                        <p className={`text-base font-bold ${done > 0 ? 'text-green-600' : 'text-gray-500'}`}>{done}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">done</p>
                       </div>
                       <div className={`rounded-xl py-2 ${pending > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
-                        <p className={`text-base font-bold ${pending > 0 ? 'text-amber-500' : 'text-gray-400'}`}>{pending}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">left</p>
+                        <p className={`text-base font-bold ${pending > 0 ? 'text-amber-500' : 'text-gray-500'}`}>{pending}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">left</p>
                       </div>
                       <div className={`rounded-xl py-2 ${affordable > 0 ? 'bg-purple-50' : 'bg-gray-50'}`}>
-                        <p className={`text-base font-bold ${affordable > 0 ? 'text-purple-500' : 'text-gray-400'}`}>{affordable}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">rewards</p>
+                        <p className={`text-base font-bold ${affordable > 0 ? 'text-purple-500' : 'text-gray-500'}`}>{affordable}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">rewards</p>
                       </div>
                     </div>
                   </div>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                   <div key={entry.id} className="flex items-center justify-between px-4 py-3.5">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-navy truncate">{childName(entry.child_id)}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{entry.description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{entry.description}</p>
                     </div>
                     <span className={`text-sm font-bold flex-shrink-0 ml-4 ${entry.amount > 0 ? 'text-green-600' : 'text-red-400'}`}>
                       {entry.amount > 0 ? `+${entry.amount}` : entry.amount}🪙
@@ -316,7 +316,7 @@ function StatCard({ emoji, label, value, href, accent }: {
     <Link href={href} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow text-center">
       <div className="text-2xl mb-1">{emoji}</div>
       <p className={`text-2xl font-bold ${accent}`}>{value}</p>
-      <p className="text-xs text-gray-400 mt-0.5 font-medium">{label}</p>
+      <p className="text-xs text-gray-500 mt-0.5 font-medium">{label}</p>
     </Link>
   );
 }
@@ -331,7 +331,7 @@ function QuickLink({ href, icon: Icon, label, desc }: {
       </div>
       <div>
         <p className="font-semibold text-navy text-sm">{label}</p>
-        <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
+        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{desc}</p>
       </div>
     </Link>
   );

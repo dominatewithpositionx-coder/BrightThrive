@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 
 type LedgerEntry = {
   id: string;
@@ -20,11 +21,27 @@ type Child = {
   points: number;
 };
 
+const AVATAR_COLORS = [
+  'bg-green-500', 'bg-blue-500', 'bg-purple-500',
+  'bg-orange-500', 'bg-pink-500', 'bg-teal-500',
+];
+function avatarColor(name: string) {
+  let h = 0; for (const c of name) h += c.charCodeAt(0);
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
 export default function PointsHistoryPage() {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
 
   const supabase = getSupabase();
 
@@ -38,6 +55,7 @@ export default function PointsHistoryPage() {
       const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
       setChildren((childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
       setLedger(ledgerData || []);
+      setLoading(false);
     }
 
     fetchData();
@@ -69,74 +87,109 @@ export default function PointsHistoryPage() {
   const getChildName = (child_id: string) => children.find((c) => c.id === child_id)?.name || 'Unknown';
   const filtered = selectedChild === 'all' ? ledger : ledger.filter((e) => e.child_id === selectedChild);
 
+  if (loading) {
+    return (
+      <div className="p-6 space-y-5 animate-pulse max-w-2xl">
+        <div className="h-8 bg-gray-100 rounded-lg w-40" />
+        <div className="h-16 bg-gray-100 rounded-xl" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-gray-100 rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-wrap gap-3 bg-white border rounded-lg shadow-sm p-4 justify-start items-center">
-        {children.length === 0 ? (
-          <p className="text-gray-500 text-sm italic">No children yet.</p>
-        ) : (
-          children.map((child) => (
-            <div key={child.id} className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-50 border hover:bg-gray-100 transition">
-              <span className="font-semibold text-gray-800">{child.name}:</span>
-              <span className="text-green-600 font-bold">{child.points} pts</span>
-            </div>
-          ))
-        )}
+    <div className="p-4 sm:p-6 max-w-2xl space-y-6">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-navy">Coin History</h1>
+        <p className="text-sm text-gray-500 mt-1">A log of every coin earned and spent by your family.</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Points History</h1>
-        <select
-          className="border px-3 py-2 rounded-md text-sm w-full sm:w-60"
-          value={selectedChild}
-          onChange={(e) => setSelectedChild(e.target.value)}
-        >
-          <option value="all">All Children</option>
+      {/* Wallet summary */}
+      {children.length > 0 && (
+        <div className="flex flex-wrap gap-2">
           {children.map((child) => (
-            <option key={child.id} value={child.id}>{child.name}</option>
+            <div key={child.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-100 shadow-sm">
+              <div className={`w-6 h-6 rounded-full ${avatarColor(child.name)} flex items-center justify-center text-white text-xs font-bold`}>
+                {child.name[0].toUpperCase()}
+              </div>
+              <span className="text-sm font-semibold text-navy">{child.name}</span>
+              <span className="text-sm font-bold text-amber-600">{child.points}🪙</span>
+            </div>
           ))}
-        </select>
-      </div>
+        </div>
+      )}
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100 text-left text-gray-600 uppercase">
-            <tr>
-              <th className="px-4 py-2">Child</th>
-              <th className="px-4 py-2">Change</th>
-              <th className="px-4 py-2">Reason</th>
-              <th className="px-4 py-2">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <AnimatePresence>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-6 text-gray-500 italic">No points history for this child.</td>
-                </tr>
-              ) : (
-                filtered.map((entry) => (
-                  <motion.tr
-                    key={entry.id}
-                    initial={{ backgroundColor: entry.amount > 0 ? '#d1fae5' : '#fee2e2' }}
-                    animate={{ backgroundColor: recentIds.includes(entry.id) ? (entry.amount > 0 ? '#bbf7d0' : '#fecaca') : 'white' }}
-                    transition={{ duration: 0.4 }}
-                    exit={{ opacity: 0 }}
-                    className="border-t"
-                  >
-                    <td className="px-4 py-2 font-medium">{getChildName(entry.child_id)}</td>
-                    <td className={`px-4 py-2 font-semibold ${entry.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {entry.amount > 0 ? `+${entry.amount}` : entry.amount}
-                    </td>
-                    <td className="px-4 py-2">{entry.description}</td>
-                    <td className="px-4 py-2">{new Date(entry.created_at).toLocaleString()}</td>
-                  </motion.tr>
-                ))
-              )}
-            </AnimatePresence>
-          </tbody>
-        </table>
-      </div>
+      {/* Filter */}
+      {children.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label htmlFor="child-filter" className="text-sm font-medium text-gray-700 shrink-0">Filter by</label>
+          <select
+            id="child-filter"
+            className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 flex-1 sm:flex-none sm:w-52"
+            value={selectedChild}
+            onChange={(e) => setSelectedChild(e.target.value)}
+          >
+            <option value="all">All children</option>
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>{child.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Entries */}
+      {children.length === 0 ? (
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
+          <EmptyState {...EMPTY_STATES.noHistory} />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
+          <EmptyState
+            emoji="📅"
+            headline="No activity yet"
+            body="Complete missions to start earning coins."
+            cta={{ label: 'Start a mission', href: '/child' }}
+          />
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-50 overflow-hidden">
+          <AnimatePresence initial={false}>
+            {filtered.map((entry) => {
+              const childName = getChildName(entry.child_id);
+              const isRecent = recentIds.includes(entry.id);
+              return (
+                <motion.div
+                  key={entry.id}
+                  layout
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0, backgroundColor: isRecent ? (entry.amount > 0 ? '#f0fdf4' : '#fef2f2') : '#ffffff' }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center gap-3 px-4 py-3.5"
+                >
+                  <div className={`w-9 h-9 rounded-full ${avatarColor(childName)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                    {childName[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-navy truncate">{childName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{entry.description}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {entry.amount > 0 ? `+${entry.amount}` : entry.amount}🪙
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(entry.created_at)}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+
     </div>
   );
 }

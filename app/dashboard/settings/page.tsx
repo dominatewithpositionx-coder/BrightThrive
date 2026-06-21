@@ -19,12 +19,14 @@ function Toggle({
   label,
   description,
   icon: Icon,
+  disabled,
 }: {
   checked: boolean;
   onChange: (val: boolean) => void;
   label: string;
   description: string;
   icon: React.ElementType;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 py-4">
@@ -40,10 +42,12 @@ function Toggle({
       <button
         role="switch"
         aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 ${
-          checked ? 'bg-green-500' : 'bg-gray-200'
-        }`}
+        aria-label={label}
+        onClick={() => !disabled && onChange(!checked)}
+        disabled={disabled}
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 disabled:opacity-50 ${
+          disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+        } ${checked ? 'bg-green-500' : 'bg-gray-200'}`}
       >
         <span
           className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
@@ -112,7 +116,7 @@ export default function SettingsPage() {
   }
 
   async function updatePref(field: 'reward_notifications' | 'weekly_summary', value: boolean) {
-    if (!userId) return;
+    if (!userId || saving) return;
     setSaving(true);
     const next = { ...prefs, [field]: value };
     const { error } = await persistPrefs(userId, next);
@@ -123,7 +127,7 @@ export default function SettingsPage() {
 
   async function saveLocation(e: React.FormEvent) {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId || savingLocation) return;
     setSavingLocation(true);
     const next = { ...prefs, location: locationInput.trim() };
     const { error } = await persistPrefs(userId, next);
@@ -131,6 +135,8 @@ export default function SettingsPage() {
     else { setPrefs(next); toast.success('Location saved!'); }
     setSavingLocation(false);
   }
+
+  const locationChanged = locationInput.trim() !== prefs.location;
 
   if (loading) {
     return (
@@ -155,7 +161,7 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-navy">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your account preferences</p>
       </div>
 
@@ -167,7 +173,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">{userEmail}</p>
-            <p className="text-xs text-gray-400">Parent account</p>
+            <p className="text-xs text-gray-500">Parent account</p>
           </div>
         </div>
       </div>
@@ -181,6 +187,7 @@ export default function SettingsPage() {
             description="Get an email when a child redeems a reward"
             checked={prefs.reward_notifications}
             onChange={(v) => updatePref('reward_notifications', v)}
+            disabled={saving}
           />
           <Toggle
             icon={Mail}
@@ -188,9 +195,15 @@ export default function SettingsPage() {
             description="Receive a weekly digest of your family's activity"
             checked={prefs.weekly_summary}
             onChange={(v) => updatePref('weekly_summary', v)}
+            disabled={saving}
           />
         </div>
-        {saving && <p className="text-xs text-gray-400 mt-2">Saving…</p>}
+        {saving && (
+          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+            <span className="w-3 h-3 border-2 border-gray-300 border-t-green-500 rounded-full animate-spin inline-block" />
+            Saving…
+          </p>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm p-5">
@@ -212,13 +225,19 @@ export default function SettingsPage() {
             placeholder="e.g. Sydney, Toronto, Vancouver"
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
+            aria-label="City for weather-aware missions"
           />
           <button
             type="submit"
-            disabled={savingLocation}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60 transition-colors"
+            disabled={savingLocation || !locationChanged}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[72px]"
           >
-            {savingLocation ? 'Saving…' : 'Save'}
+            {savingLocation ? (
+              <span className="flex items-center justify-center gap-1">
+                <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Saving
+              </span>
+            ) : 'Save'}
           </button>
         </form>
       </div>
