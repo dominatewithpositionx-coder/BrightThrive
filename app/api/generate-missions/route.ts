@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { getWeather, weatherMissionHint } from '@/lib/weather';
+import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 
 export const runtime = 'nodejs';
 
@@ -9,26 +10,25 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
-const BASE_SYSTEM_PROMPT = `You are a helpful assistant that generates age-appropriate daily tasks/missions for children.
-Tasks should be:
-- Quick to complete (10–30 minutes each)
-- Educational, character-building, or helpful around the house
-- Fun and encouraging — frame them as "missions" not chores
-- Varied across categories: learning, kindness, chores, creativity, physical activity
-- Appropriate for the child's age
+const BASE_SYSTEM_PROMPT = `You are a warm, encouraging assistant that generates personalized daily missions for children.
+Missions should be:
+- Quick to complete (5–20 minutes each)
+- Educational, character-building, or helpful
+- Fun and encouraging — framed as "missions" not chores
+- Varied: learning, kindness, movement, creativity, helping at home
+- Age-appropriate and emotionally supportive
 
 Respond ONLY with a valid JSON array. No explanation, no markdown, no backticks. Example:
 [{"title":"Read for 15 minutes","description":"Pick your favorite book and read quietly"},{"title":"Help set the table","description":"Set out plates, cups, and silverware before dinner"}]`;
 
 export async function POST(req: NextRequest) {
-  const { childId, childName, childAge, count = 5 } = await req.json();
+  const { childId, childName, childAge, count = 5, mood } = await req.json();
 
   if (!childId || !childName) {
     return NextResponse.json({ error: 'childId and childName are required' }, { status: 400 });
   }
 
-  // Verify the caller is the authenticated parent of this child.
-  // Uses the anon key so RLS (parent_id = auth.uid()) enforces ownership.
+  // Verify authenticated parent owns this child via RLS
   const authHeader = req.headers.get('authorization') ?? '';
   const callerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!callerToken) {
@@ -45,8 +45,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Confirm this child belongs to the authenticated parent (RLS also enforces this,
-  // but explicit check gives a clear 403 rather than a silent empty result).
   const { data: childRow } = await anonSupabase
     .from('children')
     .select('id')
@@ -63,8 +61,10 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Fetch location from family_plans and get current weather (optional — fails gracefully)
+  // Build context: weather + mood
   let systemPrompt = BASE_SYSTEM_PROMPT;
+  const contextParts: string[] = [];
+
   try {
     const { data: plan } = await anonSupabase
       .from('family_plans')
@@ -74,16 +74,21 @@ export async function POST(req: NextRequest) {
     const location = (plan?.personalization_data as Record<string, unknown>)?.location as string | undefined;
     if (location) {
       const weather = await getWeather(location);
-      if (weather) {
-        const hint = weatherMissionHint(weather);
-        systemPrompt = `${BASE_SYSTEM_PROMPT}\n\nContext: ${weather.summary} ${hint}`;
-      }
+      if (weather) contextParts.push(`${weather.summary} ${weatherMissionHint(weather)}`);
     }
   } catch {
-    // Weather is optional — proceed without it
+    // Weather optional — proceed without it
   }
 
-  // Generate missions with Claude
+  if (mood && MOOD_MISSION_HINTS[mood as MoodKey]) {
+    contextParts.push(MOOD_MISSION_HINTS[mood as MoodKey]);
+  }
+
+  if (contextParts.length > 0) {
+    systemPrompt = `${BASE_SYSTEM_PROMPT}\n\nContext: ${contextParts.join(' ')}`;
+  }
+
+  // Generate with Claude
   let missions: { title: string; description?: string }[] = [];
   try {
     const message = await anthropic.messages.create({
@@ -97,7 +102,6 @@ export async function POST(req: NextRequest) {
         },
       ],
     });
-
     const text = message.content[0].type === 'text' ? message.content[0].text : '';
     missions = JSON.parse(text);
   } catch (err) {
@@ -111,10 +115,8 @@ export async function POST(req: NextRequest) {
     ].slice(0, count);
   }
 
-  // Delete existing incomplete missions for this child
   await supabase.from('missions').delete().eq('child_id', childId).eq('is_completed', false);
 
-  // Insert new missions
   const missionDate = today();
   const { data, error } = await supabase
     .from('missions')

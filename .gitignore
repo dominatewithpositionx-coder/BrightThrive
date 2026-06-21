@@ -10,7 +10,6 @@ out/
 .env.*
 !.env.example
 !.env.local.example
-!.env.e2e.example
 
 # logs, caches
 npm-debug.log*
@@ -27,8 +26,6 @@ turbo/
 .DS_Store
 tsconfig.tsbuildinfo
 
-# Playwright test artifacts
-tests/screenshots/
+# Playwright test output
 tests/report/
-playwright-report/
-test-results/
+tests/screenshots/

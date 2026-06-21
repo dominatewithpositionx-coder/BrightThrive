@@ -7,10 +7,10 @@ import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Bell, Mail, Shield, MapPin } from 'lucide-react';
 
-type NotifPrefs = {
+type Prefs = {
   reward_notifications: boolean;
   weekly_summary: boolean;
-  location?: string;
+  location: string;
 };
 
 function Toggle({
@@ -56,11 +56,11 @@ function Toggle({
 }
 
 export default function SettingsPage() {
-  const [prefs, setPrefs] = useState<NotifPrefs>({ reward_notifications: false, weekly_summary: false, location: '' });
+  const [prefs, setPrefs] = useState<Prefs>({ reward_notifications: false, weekly_summary: false, location: '' });
   const [locationInput, setLocationInput] = useState('');
-  const [savingLocation, setSavingLocation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -70,11 +70,7 @@ export default function SettingsPage() {
 
   async function fetchUser() {
     const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) {
-      toast.error('You must be logged in to manage settings.');
-      setLoading(false);
-      return;
-    }
+    if (error || !user) { setLoading(false); return; }
     setUserEmail(user.email || null);
     setUserId(user.id);
 
@@ -82,7 +78,7 @@ export default function SettingsPage() {
       .from('family_plans')
       .select('personalization_data')
       .eq('parent_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (data?.personalization_data) {
       const pd = data.personalization_data as Record<string, unknown>;
@@ -97,27 +93,31 @@ export default function SettingsPage() {
     setLoading(false);
   }
 
-  async function updatePref(field: keyof NotifPrefs, value: boolean) {
+  async function persistPrefs(uid: string, next: Prefs) {
+    const { data: existing } = await supabase
+      .from('family_plans')
+      .select('parent_id')
+      .eq('parent_id', uid)
+      .maybeSingle();
+
+    if (existing) {
+      return supabase
+        .from('family_plans')
+        .update({ personalization_data: next, updated_at: new Date().toISOString() })
+        .eq('parent_id', uid);
+    }
+    return supabase
+      .from('family_plans')
+      .insert({ parent_id: uid, personalization_data: next, updated_at: new Date().toISOString() });
+  }
+
+  async function updatePref(field: 'reward_notifications' | 'weekly_summary', value: boolean) {
     if (!userId) return;
     setSaving(true);
     const next = { ...prefs, [field]: value };
-
-    const { error } = await supabase
-      .from('family_plans')
-      .upsert(
-        {
-          parent_id: userId,
-          personalization_data: next,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'parent_id' }
-      );
-
+    const { error } = await persistPrefs(userId, next);
     if (error) toast.error('Failed to update settings.');
-    else {
-      setPrefs(next);
-      toast.success('Settings saved!');
-    }
+    else { setPrefs(next); toast.success('Settings saved!'); }
     setSaving(false);
   }
 
@@ -126,9 +126,7 @@ export default function SettingsPage() {
     if (!userId) return;
     setSavingLocation(true);
     const next = { ...prefs, location: locationInput.trim() };
-    const { error } = await supabase
-      .from('family_plans')
-      .upsert({ parent_id: userId, personalization_data: next, updated_at: new Date().toISOString() }, { onConflict: 'parent_id' });
+    const { error } = await persistPrefs(userId, next);
     if (error) toast.error('Failed to save location.');
     else { setPrefs(next); toast.success('Location saved!'); }
     setSavingLocation(false);
@@ -161,11 +159,10 @@ export default function SettingsPage() {
         <p className="text-sm text-gray-500 mt-1">Manage your account preferences</p>
       </div>
 
-      {/* Account info */}
       <div className="bg-white rounded-xl border shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Account</h2>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg">
             {userEmail[0].toUpperCase()}
           </div>
           <div>
@@ -175,7 +172,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       <div className="bg-white rounded-xl border shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Notifications</h2>
         <div className="divide-y">
@@ -197,7 +193,6 @@ export default function SettingsPage() {
         {saving && <p className="text-xs text-gray-400 mt-2">Saving…</p>}
       </div>
 
-      {/* Location for weather-aware missions */}
       <div className="bg-white rounded-xl border shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Location</h2>
         <div className="flex items-start gap-3 mb-4">
@@ -207,28 +202,27 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium text-gray-900">City for weather-aware missions</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              Optional. When set, AI missions will account for today's weather (sunny, rainy, snowy, hot).
+              When set, missions will account for today's weather — sunny, rainy, snowy, or hot.
             </p>
           </div>
         </div>
         <form onSubmit={saveLocation} className="flex gap-2">
           <input
             className="border rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="e.g. Toronto, Calgary, Vancouver"
+            placeholder="e.g. Sydney, Toronto, Vancouver"
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
           />
           <button
             type="submit"
             disabled={savingLocation}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60 transition-colors"
           >
             {savingLocation ? 'Saving…' : 'Save'}
           </button>
         </form>
       </div>
 
-      {/* Privacy */}
       <div className="bg-white rounded-xl border shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Privacy</h2>
         <div className="flex items-start gap-3">
@@ -238,7 +232,7 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium text-gray-900">Your data stays private</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              BrightThrive never shares your family's data. See our{' '}
+              BrightThrive never sells or shares your family's data. All data is stored securely in Canada.{' '}
               <a href="/privacy" className="text-green-600 underline">Privacy Policy</a>.
             </p>
           </div>
