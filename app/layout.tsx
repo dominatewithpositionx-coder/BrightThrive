@@ -1,21 +1,40 @@
 // app/layout.tsx
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
+import ServiceWorkerRegistrar from '@/components/brightthrive/ServiceWorkerRegistrar';
+import InstallPrompt from '@/components/brightthrive/InstallPrompt';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
+
+export const viewport: Viewport = {
+  themeColor: '#22c55e',
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: 'BrightThrive — Earn your play. Enjoy your day.',
   description:
-    'BrightThrive helps families build better screen habits with rewards, tasks, and positive routines.',
+    'BrightThrive helps families build healthy habits, emotional intelligence, and calmer homes — one mission at a time.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'BrightThrive',
+  },
   icons: {
     icon: '/brand/favicon.png',
-    apple: '/brand/favicon.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  openGraph: {
+    title: 'BrightThrive — Turn Screen Time Into Growth Time',
+    description: 'Healthy habits. Emotional intelligence. Calmer homes.',
+    type: 'website',
   },
 };
 
@@ -58,6 +77,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <Toaster position="top-right" richColors />
         <Analytics />
+        <ServiceWorkerRegistrar />
+        <InstallPrompt />
       </body>
     </html>
   );

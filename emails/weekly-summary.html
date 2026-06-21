@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{childName}}'s week — BrightThrive</title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 16px;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);padding:36px 40px 28px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:1px;">Weekly Family Report</p>
+            <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;line-height:1.2;">
+              This week, {{childName}} had<br />{{totalWins}} wins 🌟
+            </h1>
+            <p style="margin:10px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Week of {{weekStartDate}} – {{weekEndDate}}</p>
+          </td>
+        </tr>
+
+        <!-- Stats row -->
+        <tr>
+          <td style="padding:0 40px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:-1px;border-top:1px solid #f1f5f9;">
+              <tr>
+                <td align="center" style="padding:20px 8px;border-right:1px solid #f1f5f9;">
+                  <p style="margin:0;font-size:28px;font-weight:700;color:#22c55e;">{{missionsCompleted}}</p>
+                  <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">missions<br/>completed</p>
+                </td>
+                <td align="center" style="padding:20px 8px;border-right:1px solid #f1f5f9;">
+                  <p style="margin:0;font-size:28px;font-weight:700;color:#f59e0b;">{{coinsEarned}}</p>
+                  <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">coins<br/>earned</p>
+                </td>
+                <td align="center" style="padding:20px 8px;border-right:1px solid #f1f5f9;">
+                  <p style="margin:0;font-size:28px;font-weight:700;color:#f97316;">{{currentStreak}}</p>
+                  <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">day<br/>streak 🔥</p>
+                </td>
+                <td align="center" style="padding:20px 8px;">
+                  <p style="margin:0;font-size:28px;font-weight:700;color:#8b5cf6;">{{activeDays}}</p>
+                  <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">active<br/>days</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px 40px 24px;">
+
+            <!-- Mood pattern section -->
+            <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Mood this week</p>
+            <div style="background:#f8fafc;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#334155;">{{moodSummary}}</p>
+            </div>
+
+            <!-- Top missions section -->
+            <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Top missions this week</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+              {{#each topMissions}}
+              <tr>
+                <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;vertical-align:top;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:24px;vertical-align:middle;">
+                        <span style="color:#22c55e;font-weight:700;font-size:14px;">✓</span>
+                      </td>
+                      <td style="vertical-align:middle;">
+                        <p style="margin:0;font-size:14px;color:#0f172a;">{{this}}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              {{/each}}
+              <!-- Fallback if no handlebars: use static placeholders -->
+              <!-- {{mission_1}} -->
+              <!-- {{mission_2}} -->
+              <!-- {{mission_3}} -->
+            </table>
+
+            <!-- Encouraging note from Wayne -->
+            <div style="background:#f0fdf4;border-left:3px solid #22c55e;border-radius:0 12px 12px 0;padding:16px 20px;margin-bottom:28px;">
+              <p style="margin:0;font-size:15px;line-height:1.7;color:#166534;">{{encouragingNote}}</p>
+            </div>
+
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td align="center">
+                  <a href="{{dashboardUrl}}" style="display:inline-block;background:#22c55e;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:50px;box-shadow:0 2px 8px rgba(34,197,94,0.3);">
+                    See {{childName}}'s full week →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Warm sign-off -->
+            <p style="margin:0 0 4px;font-size:15px;color:#334155;">Keep going,</p>
+            <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Wayne</p>
+            <p style="margin:0;font-size:13px;color:#94a3b8;">Founder, BrightThrive · Dad of two</p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;border-top:1px solid #f1f5f9;padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">
+              BrightThrive · 🇨🇦 Data stored in Canada · No ads · No tracking
+            </p>
+            <p style="margin:0;font-size:12px;color:#cbd5e1;">
+              You're receiving this weekly summary for {{parentEmail}}. <a href="{{unsubscribeUrl}}" style="color:#94a3b8;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
