@@ -6,50 +6,52 @@ import { useEffect, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Gift, Star, Plus, Check, AlertCircle } from 'lucide-react';
+import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
+import { trackRewardCreated, trackRewardRedeemed } from '@/lib/analytics';
 
-type Reward = {
-  id: string;
-  title: string;
-  coin_cost: number;
-  created_at: string;
-};
+type Reward = { id: string; title: string; coin_cost: number; created_at: string };
+type Child  = { id: string; name: string; points: number };
+type Redemption = { id: string; child_id: string; reward_title: string; coin_cost: number; requested_at: string };
+type ConfirmState = { child: Child; reward: Reward } | null;
 
-type Child = {
-  id: string;
-  name: string;
-  points: number;
-};
-
-type Redemption = {
-  id: string;
-  child_id: string;
-  reward_title: string;
-  coin_cost: number;
-  requested_at: string;
-};
+const AVATAR_COLORS = [
+  'bg-green-500', 'bg-blue-500', 'bg-purple-500',
+  'bg-orange-500', 'bg-pink-500', 'bg-teal-500',
+];
+function avatarColor(name: string) {
+  let h = 0; for (const c of name) h += c.charCodeAt(0);
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
 
 export default function RewardsPage() {
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [children, setChildren] = useState<Child[]>([]);
+  const [rewards, setRewards]         = useState<Reward[]>([]);
+  const [children, setChildren]       = useState<Child[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-  const [title, setTitle] = useState('');
-  const [cost, setCost] = useState<number | ''>('');
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [title, setTitle]             = useState('');
+  const [cost, setCost]               = useState<number | ''>('');
+  const [saving, setSaving]           = useState(false);
+  const [fetching, setFetching]       = useState(true);
+  const [recentIds, setRecentIds]     = useState<string[]>([]);
+  const [confirm, setConfirm]         = useState<ConfirmState>(null);
+  const [redeeming, setRedeeming]     = useState(false);
   const [parentEmail, setParentEmail] = useState<string | null>(null);
-  const [parentId, setParentId] = useState<string | null>(null);
+  const [parentId, setParentId]       = useState<string | null>(null);
 
   const supabase = getSupabase();
 
   async function fetchData() {
-    const [{ data: rewardData }, { data: childData }, { data: walletData }, { data: redemptionData }] = await Promise.all([
+    const [
+      { data: rewardData },
+      { data: childData },
+      { data: walletData },
+      { data: redemptionData },
+    ] = await Promise.all([
       supabase.from('rewards').select('id, title, coin_cost, created_at').order('created_at', { ascending: false }),
       supabase.from('children').select('id, name'),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('reward_redemptions').select('id, child_id, reward_title, coin_cost, requested_at').order('requested_at', { ascending: false }),
     ]);
-
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
     setRewards(rewardData || []);
     setChildren((childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
@@ -79,179 +81,305 @@ export default function RewardsPage() {
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(rewardsChannel);
-      supabase.removeChannel(redemptionsChannel);
-    };
+    return () => { supabase.removeChannel(rewardsChannel); supabase.removeChannel(redemptionsChannel); };
   }, []);
 
   async function addReward(e: React.FormEvent) {
     e.preventDefault();
-    if (!title || !cost) { toast.error('Please enter a reward name and cost.'); return; }
-
+    if (!title.trim() || !cost) { toast.error('Please enter a reward name and coin cost.'); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Session expired. Please log in again.'); return; }
-
-    setLoading(true);
+    setSaving(true);
     const { error } = await supabase.from('rewards').insert([{
       parent_id: user.id,
-      title,
+      title: title.trim(),
       coin_cost: Number(cost),
       reward_type: 'standard',
       is_active: true,
       sort_order: 0,
     }]);
-
-    if (error) toast.error('Error adding reward: ' + error.message);
-    else { toast.success('Reward added!'); setTitle(''); setCost(''); fetchData(); }
-    setLoading(false);
+    if (error) { toast.error('Could not add reward. Please try again.'); }
+    else {
+      toast.success('Reward added!');
+      trackRewardCreated({ coin_cost: Number(cost) });
+      setTitle(''); setCost('');
+      fetchData();
+    }
+    setSaving(false);
   }
 
-  async function redeemReward(child: Child, reward: Reward) {
-    if (child.points < reward.coin_cost) {
-      toast.error(`${child.name} doesn't have enough points for this reward.`);
-      return;
-    }
-    if (!confirm(`Redeem "${reward.title}" for ${child.name}? (${reward.coin_cost} pts)`)) return;
-
+  async function confirmRedeem() {
+    if (!confirm) return;
+    const { child, reward } = confirm;
+    setRedeeming(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error('Session expired.'); return; }
+    if (!user) { toast.error('Session expired.'); setRedeeming(false); setConfirm(null); return; }
 
     const { error: coinError } = await supabase.rpc('add_coins', {
-      p_child_id: child.id,
-      p_amount: -reward.coin_cost,
-      p_type: 'redeemed',
-      p_description: `Redeemed reward: ${reward.title}`,
-      p_reward_id: reward.id,
+      p_child_id: child.id, p_amount: -reward.coin_cost, p_type: 'redeemed',
+      p_description: `Redeemed reward: ${reward.title}`, p_reward_id: reward.id,
     });
-    if (coinError) { toast.error('Error deducting points.'); return; }
+    if (coinError) { toast.error('Could not deduct coins. Please try again.'); setRedeeming(false); setConfirm(null); return; }
 
     const { error: redemptionError } = await supabase.from('reward_redemptions').insert([{
-      child_id: child.id,
-      reward_id: reward.id,
-      parent_id: user.id,
-      reward_title: reward.title,
-      reward_type: 'standard',
-      coin_cost: reward.coin_cost,
-      status: 'fulfilled',
-      requested_at: new Date().toISOString(),
-      fulfilled_at: new Date().toISOString(),
+      child_id: child.id, reward_id: reward.id, parent_id: user.id,
+      reward_title: reward.title, reward_type: 'standard', coin_cost: reward.coin_cost,
+      status: 'fulfilled', requested_at: new Date().toISOString(), fulfilled_at: new Date().toISOString(),
     }]);
     if (redemptionError) console.error('[Rewards] redemption insert error:', redemptionError.message);
 
-    try {
-      const res = await fetch('/api/notify-reward', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ childName: child.name, rewardTitle: reward.title, cost: reward.coin_cost, pointsRemaining: child.points - reward.coin_cost, parentEmail, parentId }),
-      });
-      const result = await res.json();
-      if (result.success) console.log('Parent notified via email');
-    } catch (err) {
-      console.error('Failed to send email notification', err);
-    }
+    trackRewardRedeemed({ child_id: child.id, reward_title: reward.title, coin_cost: reward.coin_cost });
+
+    fetch('/api/notify-reward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        childName: child.name, rewardTitle: reward.title,
+        cost: reward.coin_cost, pointsRemaining: child.points - reward.coin_cost,
+        parentEmail, parentId,
+      }),
+    }).catch(() => {});
 
     toast.success(`${child.name} redeemed "${reward.title}" 🎉`);
+    setConfirm(null);
+    setRedeeming(false);
     fetchData();
   }
 
   const getChildName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
 
+  // ── Loading skeleton ──────────────────────────────────────────────────────
+
   if (fetching) {
     return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-24" />
-        <div className="h-48 bg-gray-200 rounded-xl max-w-md" />
+      <div className="p-6 max-w-2xl">
+        <div className="h-7 bg-gray-100 rounded-lg w-28 mb-8 animate-pulse" />
+        <div className="bg-gray-50 rounded-2xl p-6 mb-8 animate-pulse space-y-3">
+          <div className="h-5 bg-gray-200 rounded w-32" />
+          <div className="h-11 bg-gray-200 rounded-xl" />
+          <div className="h-11 bg-gray-200 rounded-xl" />
+          <div className="h-11 bg-gray-200 rounded-xl" />
+        </div>
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-gray-200 rounded-lg" />)}
+          {[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
         </div>
       </div>
     );
   }
 
+  // ── Confirmation modal ────────────────────────────────────────────────────
+
   return (
-    <div className="p-6 space-y-10">
-      <h1 className="text-2xl font-bold mb-6">Rewards</h1>
+    <>
+      <AnimatePresence>
+        {confirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setConfirm(null); }}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="bg-white rounded-3xl shadow-2xl p-7 w-full max-w-sm text-center"
+            >
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift size={26} className="text-green-600" />
+              </div>
+              <h2 className="text-xl font-bold text-navy mb-1">Redeem reward?</h2>
+              <p className="text-gray-500 text-sm mb-1">
+                <span className="font-semibold text-navy">{confirm.child.name}</span> will use{' '}
+                <span className="font-semibold text-amber-600">{confirm.reward.coin_cost} 🪙</span> for
+              </p>
+              <p className="text-lg font-bold text-navy mb-1">&ldquo;{confirm.reward.title}&rdquo;</p>
+              <p className="text-xs text-gray-400 mb-6">
+                Balance after: {confirm.child.points - confirm.reward.coin_cost} coins
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirm(null)}
+                  className="flex-1 py-3 rounded-2xl border-2 border-gray-100 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRedeem}
+                  disabled={redeeming}
+                  className="flex-[2] py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors disabled:opacity-60"
+                >
+                  {redeeming ? 'Redeeming…' : 'Yes, redeem it! 🎉'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <form onSubmit={addReward} className="bg-white p-6 rounded-lg shadow-sm border w-full max-w-md mb-8">
-        <h2 className="text-lg font-semibold mb-4">Add a Reward</h2>
-        <input className="border rounded-md px-3 py-2 w-full mb-3" placeholder="Reward name (e.g. Ice Cream Night)" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        <input className="border rounded-md px-3 py-2 w-full mb-3" type="number" placeholder="Cost (points)" value={cost} onChange={(e) => setCost(Number(e.target.value))} required />
-        <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full">
-          {loading ? 'Adding...' : 'Add Reward'}
-        </button>
-      </form>
+      {/* ── Page ── */}
+      <div className="p-4 sm:p-6 max-w-2xl space-y-8">
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Available Rewards</h2>
-        {rewards.length === 0 ? (
-          <p className="text-gray-500">No rewards yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {rewards.map((reward) => (
-              <li key={reward.id} className="p-4 bg-white rounded-lg shadow-sm border">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">{reward.title}</p>
-                    <p className="text-sm text-gray-600">Cost: {reward.coin_cost} pts</p>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-navy">Rewards</h1>
+          <p className="text-sm text-gray-500 mt-1">Create rewards. Kids earn them by completing missions.</p>
+        </div>
+
+        {/* Add reward form */}
+        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Add a Reward</h2>
+          <form onSubmit={addReward} className="space-y-3">
+            <input
+              className="w-full border border-gray-200 bg-white rounded-xl px-4 py-3 text-sm text-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500 transition"
+              placeholder="Reward name (e.g. Ice Cream Night)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              aria-label="Reward name"
+              required
+            />
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 text-base">🪙</span>
+                <input
+                  className="w-full border border-gray-200 bg-white rounded-xl pl-9 pr-4 py-3 text-sm text-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500 transition"
+                  type="number"
+                  min="1"
+                  placeholder="Coin cost"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value === '' ? '' : Number(e.target.value))}
+                  aria-label="Coin cost"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                aria-label="Add reward"
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-colors disabled:opacity-60"
+              >
+                {saving ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Plus size={16} />
+                )}
+                {saving ? 'Adding…' : 'Add'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Available rewards */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Available Rewards</h2>
+          {rewards.length === 0 ? (
+            <EmptyState {...EMPTY_STATES.noRewards} />
+          ) : (
+            <div className="space-y-3">
+              {rewards.map((reward) => (
+                <div key={reward.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4">
+                  {/* Reward header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+                        <Gift size={17} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-navy text-sm">{reward.title}</p>
+                        <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-0.5">
+                          🪙 {reward.coin_cost} coins
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {children.map((child) => (
-                      <button
-                        key={child.id}
-                        onClick={() => redeemReward(child, reward)}
-                        className={`px-3 py-1 rounded-md text-white text-sm ${child.points >= reward.coin_cost ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 cursor-not-allowed'}`}
-                        disabled={child.points < reward.coin_cost}
-                      >
-                        {child.name} ({child.points})
-                      </button>
-                    ))}
-                  </div>
+
+                  {/* Child redemption buttons */}
+                  {children.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">No children added yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {children.map((child) => {
+                        const canAfford = child.points >= reward.coin_cost;
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => canAfford ? setConfirm({ child, reward }) : undefined}
+                            disabled={!canAfford}
+                            aria-label={canAfford
+                              ? `Redeem ${reward.title} for ${child.name} (${child.points} coins available)`
+                              : `${child.name} cannot afford this reward (needs ${reward.coin_cost - child.points} more coins)`
+                            }
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                              canAfford
+                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white hover:border-green-600 active:scale-95'
+                                : 'bg-gray-50 text-gray-400 border border-gray-100 cursor-not-allowed'
+                            }`}
+                          >
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${avatarColor(child.name)}`}>
+                              {child.name[0].toUpperCase()}
+                            </div>
+                            {child.name}
+                            <span className={canAfford ? 'opacity-70' : ''}>
+                              · {child.points}🪙
+                            </span>
+                            {!canAfford && (
+                              <span className="text-gray-300 flex items-center" title="Not enough coins">
+                                <AlertCircle size={11} />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Rewards History</h2>
-        {redemptions.length === 0 ? (
-          <p className="text-gray-500 italic">No rewards redeemed yet.</p>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-100 text-left text-gray-600 uppercase">
-                <tr>
-                  <th className="px-4 py-2">Child</th>
-                  <th className="px-4 py-2">Reward</th>
-                  <th className="px-4 py-2">Cost</th>
-                  <th className="px-4 py-2">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence>
-                  {redemptions.map((entry) => (
-                    <motion.tr
-                      key={entry.id}
-                      initial={{ backgroundColor: '#f0fdf4' }}
-                      animate={{ backgroundColor: recentIds.includes(entry.id) ? '#bbf7d0' : 'white' }}
-                      transition={{ duration: 0.4 }}
-                      exit={{ opacity: 0 }}
-                      className="border-t"
-                    >
-                      <td className="px-4 py-2 font-medium">{getChildName(entry.child_id)}</td>
-                      <td className="px-4 py-2">{entry.reward_title}</td>
-                      <td className="px-4 py-2 text-red-600 font-semibold">-{entry.coin_cost}</td>
-                      <td className="px-4 py-2 text-gray-600">{new Date(entry.requested_at).toLocaleString()}</td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Redemption history */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Redemption History</h2>
+          {redemptions.length === 0 ? (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl px-6 py-10 text-center">
+              <div className="text-3xl mb-2">🎁</div>
+              <p className="text-sm text-gray-500">No rewards redeemed yet.</p>
+              <p className="text-xs text-gray-400 mt-1">When a child redeems a reward it will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <AnimatePresence>
+                {redemptions.map((entry) => (
+                  <motion.div
+                    key={entry.id}
+                    layout
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0, backgroundColor: recentIds.includes(entry.id) ? '#f0fdf4' : '#ffffff' }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3"
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${avatarColor(getChildName(entry.child_id))}`}>
+                      {getChildName(entry.child_id)[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-navy truncate">{entry.reward_title}</p>
+                      <p className="text-xs text-gray-400">{getChildName(entry.child_id)} · {new Date(entry.requested_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className="text-sm font-bold text-amber-600">-{entry.coin_cost}🪙</span>
+                      {recentIds.includes(entry.id) && <Check size={14} className="text-green-500" />}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+
       </div>
-    </div>
+    </>
   );
 }
