@@ -39,7 +39,7 @@ function buildHtml(parentEmail: string): string {
               </p>
 
               <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#334155;">
-                I&rsquo;m Wayne — founder of BrightThrive and a dad of two. I built this because I was tired of the
+                I&rsquo;m Wayne — founder of BrightThrive and a dad of three. I built this because I was tired of the
                 daily screen-time battle in my own home.
               </p>
 
@@ -107,7 +107,7 @@ function buildHtml(parentEmail: string): string {
 
               <p style="margin:0 0 4px;font-size:15px;color:#334155;">Here for you,</p>
               <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Wayne</p>
-              <p style="margin:0;font-size:13px;color:#94a3b8;">Founder, BrightThrive · Dad of two</p>
+              <p style="margin:0;font-size:13px;color:#94a3b8;">Founder, BrightThrive · Dad of three</p>
 
             </td>
           </tr>

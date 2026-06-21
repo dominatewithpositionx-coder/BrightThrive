@@ -222,7 +222,7 @@ export default function HomePage() {
             &ldquo;I built BrightThrive because I needed it for my own family. I didn&apos;t want to take screens away — I wanted to give my kids a reason to earn them. Everything we build starts with one question: does this make family life calmer?&rdquo;
           </blockquote>
           <p className="font-semibold text-gray-900">Wayne</p>
-          <p className="text-sm text-gray-500">Founder, BrightThrive · Dad of two</p>
+          <p className="text-sm text-gray-500">Founder, BrightThrive · Dad of three</p>
         </div>
       </section>
 
