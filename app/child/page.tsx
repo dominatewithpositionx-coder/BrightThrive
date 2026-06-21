@@ -451,6 +451,8 @@ export default function ChildPage() {
           count: 5,
         });
         await fetchData();
+      } else if (res.status === 429) {
+        setMissionError('Just a moment! Wait a few seconds before generating new missions.');
       } else {
         setMissionError('Could not load missions. Try again!');
       }

@@ -5,7 +5,12 @@ import fs from 'fs';
 import path from 'path';
 
 export async function POST(req: Request) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[notify-reward] RESEND_API_KEY not set — skipping reward notification email');
+    return NextResponse.json({ success: true, skipped: true });
+  }
+  const resend = new Resend(apiKey);
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

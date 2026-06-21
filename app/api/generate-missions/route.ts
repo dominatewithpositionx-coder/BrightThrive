@@ -6,6 +6,25 @@ import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 
 export const runtime = 'nodejs';
 
+// In-process rate limit: one generation per user+child per 60 seconds.
+// Resets on server restart — sufficient for pilot scale.
+const rateLimitMap = new Map<string, number>();
+const RATE_LIMIT_MS = 60_000;
+
+function checkRateLimit(key: string): boolean {
+  const last = rateLimitMap.get(key);
+  const now = Date.now();
+  if (last && now - last < RATE_LIMIT_MS) return false;
+  rateLimitMap.set(key, now);
+  // Prune old entries to prevent unbounded growth
+  if (rateLimitMap.size > 5000) {
+    for (const [k, ts] of rateLimitMap) {
+      if (now - ts > RATE_LIMIT_MS * 10) rateLimitMap.delete(k);
+    }
+  }
+  return true;
+}
+
 function today() {
   return new Date().toISOString().split('T')[0];
 }
@@ -53,6 +72,16 @@ export async function POST(req: NextRequest) {
     .single();
   if (!childRow) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Rate limit: 1 generation per user+child per 60 seconds
+  const rlKey = `${user.id}:${childId}`;
+  if (!checkRateLimit(rlKey)) {
+    console.warn(`[generate-missions] rate limited: ${rlKey}`);
+    return NextResponse.json(
+      { error: 'Please wait a moment before generating new missions.' },
+      { status: 429 }
+    );
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
