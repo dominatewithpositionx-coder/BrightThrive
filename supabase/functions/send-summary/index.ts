@@ -19,18 +19,18 @@ serve(async () => {
   for (const s of summaries ?? []) {
     const html = `
       <div style="font-family:sans-serif">
-        <h2>Weekly BrainThrive Summary</h2>
+        <h2>Your Weekly BrightThrive Summary</h2>
         <p>${s.summary_html}</p>
         <hr>
         <p style="font-size:12px;color:#777">
-          © ${new Date().getFullYear()} BrainThrive
+          © ${new Date().getFullYear()} BrightThrive — Earn your play. Enjoy your day.
         </p>
       </div>`;
 
     await resend.emails.send({
-      from: "BrainThrive <notifications@resend.dev>",
+      from: "BrightThrive <notifications@resend.dev>",
       to: s.parent_email,
-      subject: "Your Weekly BrainThrive Summary 🏆",
+      subject: "Your Weekly BrightThrive Summary 🏆",
       html,
     });
   }
