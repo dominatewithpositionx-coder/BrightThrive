@@ -277,11 +277,22 @@ export default function OnboardingPage() {
       // Session present = email confirmation disabled → go straight to dashboard
       if (data.session) {
         if (data.user) await saveOnboardingRow(data.user.id);
+        // Fire welcome email — non-blocking
+        fetch('/api/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }).catch(() => {});
         router.push('/dashboard');
         return;
       }
 
-      // No session = email confirmation required
+      // No session = email confirmation required — still send welcome email
+      fetch('/api/welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {});
       setAuthLoading(false);
       setConfirmSent(true);
     } catch (err) {
