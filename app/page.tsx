@@ -5,27 +5,44 @@ export default function HomePage() {
     <div className="text-navy">
 
       {/* ── 1. Hero ── */}
-      <section className="bg-gradient-to-b from-green-50 to-white py-24 px-4">
+      <section className="bg-gradient-to-b from-green-50 to-white py-16 md:py-24 px-4 animate-fade-in">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="text-sm font-semibold text-green-700 uppercase tracking-widest mb-4">
-            Positive Behavior Technology for families
+          {/* Eyebrow */}
+          <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-4">
+            Positive Behavior Technology For Families
           </p>
-          <h1 className="text-5xl sm:text-6xl font-bold leading-tight text-navy mb-6">
+
+          {/* H1 — max 2 lines on mobile */}
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight text-navy mb-6">
             Turn Screen Time<br />Into Growth Time
           </h1>
-          <p className="text-xl text-gray-600 mb-4 max-w-xl mx-auto">
-            Healthy habits. Emotional intelligence. Calmer homes.
+
+          {/* Subhead */}
+          <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-xl mx-auto leading-relaxed">
+            Healthy habits.{' '}
+            <span className="block sm:inline">Emotional intelligence.</span>{' '}
+            <span className="block sm:inline">Calmer homes.</span>
           </p>
-          <p className="text-base text-gray-500 mb-10 max-w-xl mx-auto">
-            BrightThrive is not a screen blocker. We motivate growth, not punishment.
-          </p>
+
+          {/* Primary CTA */}
           <Link
             href="/onboarding"
-            className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold text-lg px-10 py-4 rounded-2xl shadow-md transition-colors"
+            className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
+            style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
           >
-            Get started free
+            Get Started Free
           </Link>
+
+          {/* Caption */}
           <p className="mt-4 text-sm text-gray-400">No credit card required · Takes 2 minutes</p>
+
+          {/* Already have account */}
+          <p className="mt-3 text-sm text-gray-500">
+            Already have an account?{' '}
+            <Link href="/login" className="text-green-600 hover:text-green-700 font-medium underline">
+              Parent Login
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -45,10 +62,10 @@ export default function HomePage() {
       </section>
 
       {/* ── 2. Problem ── */}
-      <section className="py-24 px-4 bg-white">
+      <section className="py-16 md:py-24 px-4 bg-white">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">The problem isn&apos;t screens.</h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">The problem isn&apos;t screens.</h2>
+          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
             It&apos;s what screens replace. When kids go straight to YouTube or Roblox, they skip reading, movement, creativity, and connection — the building blocks of a thriving childhood.
           </p>
           <div className="grid sm:grid-cols-3 gap-6 text-left mt-12">
@@ -68,10 +85,10 @@ export default function HomePage() {
       </section>
 
       {/* ── 3. How it works ── */}
-      <section className="py-24 px-4 bg-green-50">
+      <section className="py-16 md:py-24 px-4 bg-green-50">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">How BrightThrive works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How BrightThrive works</h2>
             <p className="text-lg text-gray-600">Three simple steps. One calmer family.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
@@ -94,10 +111,10 @@ export default function HomePage() {
       </section>
 
       {/* ── 4. Mood + Weather missions ── */}
-      <section className="py-24 px-4 bg-white">
+      <section className="py-16 md:py-24 px-4 bg-white">
         <div className="max-w-4xl mx-auto grid sm:grid-cols-2 gap-16 items-center">
           <div>
-            <h2 className="text-4xl font-bold mb-6">Missions that meet your child where they are</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Missions that meet your child where they are</h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
               A tired child and an energetic child need different things. BrightThrive uses their mood and your local weather to generate missions that match how they&apos;re feeling right now.
             </p>
@@ -115,7 +132,7 @@ export default function HomePage() {
               ))}
             </ul>
           </div>
-          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-3xl p-8">
+          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-3xl p-6 md:p-8">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Today&apos;s missions for Mia</p>
             <p className="text-sm text-gray-400 mb-6 italic">Feeling happy · Sunny, 22°C</p>
             <div className="space-y-3">
@@ -137,9 +154,9 @@ export default function HomePage() {
       </section>
 
       {/* ── 5. Parent clarity / Child confidence ── */}
-      <section className="py-24 px-4 bg-gradient-to-b from-sky-50 to-white">
+      <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-sky-50 to-white">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
             Parents get clarity.<br />Kids get confidence.<br />Families get calm.
           </h2>
           <p className="text-gray-600 text-lg mb-16 max-w-xl mx-auto">
@@ -187,9 +204,9 @@ export default function HomePage() {
       </section>
 
       {/* ── 6. Trust + Data Promise ── */}
-      <section className="py-24 px-4 bg-navy text-white">
+      <section className="py-16 md:py-24 px-4 bg-navy text-white">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Your family&apos;s data is yours. Always.</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Your family&apos;s data is yours. Always.</h2>
           <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg">
             BrightThrive is built on a foundation of trust. We will never sell, share, or profit from your family&apos;s data.
           </p>
@@ -213,9 +230,9 @@ export default function HomePage() {
       </section>
 
       {/* ── 7. Founder note ── */}
-      <section className="py-24 px-4 bg-white">
+      <section className="py-16 md:py-24 px-4 bg-white">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto mb-6">
+          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto mb-6" aria-hidden="true">
             👋
           </div>
           <blockquote className="text-xl text-gray-700 leading-relaxed mb-8">
@@ -227,15 +244,16 @@ export default function HomePage() {
       </section>
 
       {/* ── 8. Final CTA ── */}
-      <section className="py-24 px-4 bg-gradient-to-b from-green-50 to-white">
+      <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-green-50 to-white">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to turn screen time into growth time?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to turn screen time into growth time?</h2>
           <p className="text-gray-600 text-lg mb-10 max-w-xl mx-auto">
             Join families using BrightThrive to build calmer routines, stronger kids, and fewer screen battles.
           </p>
           <Link
             href="/onboarding"
-            className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold text-lg px-10 py-4 rounded-2xl shadow-md transition-colors"
+            className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-10 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
+            style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
           >
             Start your free trial
           </Link>

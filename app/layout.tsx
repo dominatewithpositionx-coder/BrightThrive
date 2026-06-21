@@ -2,12 +2,13 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
 import ServiceWorkerRegistrar from '@/components/brightthrive/ServiceWorkerRegistrar';
 import InstallPrompt from '@/components/brightthrive/InstallPrompt';
+import MobileNav from '@/components/brightthrive/MobileNav';
+import Logo from '@/components/brightthrive/Logo';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
@@ -54,22 +55,44 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={poppins.className}>
       <body className="min-h-screen text-navy bg-white">
         {/* Header */}
-        <header className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/brand/BrightThrive.png"
-              alt="BrightThrive"
-              width={220}
-              height={60}
-              priority
-              className="h-14 w-auto"
-            />
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-gray-700">
-            <Link href="/child" className="hover:text-gray-900 font-medium">Child Login</Link>
-            <Link href="/login" className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full hover:bg-gray-50 font-medium">Parent Login</Link>
-            <Link href="/onboarding" className="text-white px-4 py-1.5 rounded-full font-medium transition-opacity hover:opacity-90" style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)' }}>Get Started</Link>
+        <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Mobile: hamburger | Logo | CTA */}
+          {/* Desktop: Logo | nav */}
+
+          {/* Hamburger — mobile only */}
+          <div className="flex md:hidden">
+            <MobileNav />
+          </div>
+
+          {/* Logo — centered on mobile, left on desktop */}
+          <div className="flex-1 flex justify-center md:justify-start">
+            <Logo variant="full" />
+          </div>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-4 text-sm text-gray-700" aria-label="Main navigation">
+            <Link href="/login" className="hover:text-gray-900 font-medium transition-colors">
+              Parent Login
+            </Link>
+            <Link
+              href="/onboarding"
+              className="text-white px-5 py-2.5 rounded-xl font-semibold min-h-[44px] flex items-center transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+            >
+              Get Started
+            </Link>
           </nav>
+
+          {/* Mobile: Get Started CTA */}
+          <div className="flex md:hidden">
+            <Link
+              href="/onboarding"
+              className="text-white text-sm font-semibold px-4 py-2.5 rounded-xl min-h-[44px] flex items-center transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+            >
+              Get Started
+            </Link>
+          </div>
         </header>
 
         {/* Main Content */}
