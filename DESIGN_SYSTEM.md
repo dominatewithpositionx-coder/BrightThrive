@@ -248,3 +248,53 @@ Never: "Error 500: Internal Server Error" ❌
 Always use skeleton loaders (`animate-pulse`) not spinners.
 Skeleton shapes should approximate the real content shape.
 Never show a blank white screen.
+
+---
+
+## App Icons
+
+### Source Asset
+- Master file: `public/brand/favicon.png` (1024×1024, RGB, white background)
+- Design: BrightThrive brain+orbit mark, green→teal→blue gradient
+- No text inside the app icon
+
+### Color Palette (icon gradient)
+- Green: `#22C55E`
+- Teal: `#14B8A6`
+- Blue: `#3B82F6` (→ `#0EA5E9`)
+
+### Safe Zone
+- Icon content must fit within **80% of canvas** (leave ≥10% padding on each side)
+- Current icon bounds: (157,169)→(871,838) on a 1024×1024 canvas ✅
+
+### Corner Radius (OS-applied)
+- iOS/macOS apply squircle mask automatically — do not pre-round the source PNG
+- Android adaptive icons use the `maskable` purpose on 192 and 512 sizes
+
+### Generated Sizes (`public/icons/`)
+| File | Size | Purpose |
+|------|------|---------|
+| icon-20x20.png | 20×20 | iOS small |
+| icon-32x32.png | 32×32 | Favicon / browser tab |
+| icon-40x40.png | 40×40 | iOS spotlight |
+| icon-60x60.png | 60×60 | iOS home screen |
+| icon-72x72.png | 72×72 | Android legacy |
+| icon-76x76.png | 76×76 | iPad |
+| icon-96x96.png | 96×96 | Android / install prompt |
+| icon-120x120.png | 120×120 | iOS retina |
+| icon-144x144.png | 144×144 | Android / Windows |
+| icon-152x152.png | 152×152 | iPad retina |
+| apple-touch-icon.png | 180×180 | iOS `<link rel="apple-touch-icon">` |
+| icon-192x192.png | 192×192 | PWA manifest (maskable) |
+| icon-384x384.png | 384×384 | Android Play Store |
+| icon-512x512.png | 512×512 | PWA manifest (maskable) |
+| icon-1024x1024.png | 1024×1024 | App Store / master |
+
+### Manifest Rules
+- 192 and 512 must include `"purpose": "any maskable"`
+- All other sizes use `"purpose": "any"`
+- `background_color` in manifest: `#ffffff`
+
+### Quality Check
+- Verify icon is recognizable at 20×20 (≥30% colored pixel coverage)
+- Run `python3 -c "from PIL import Image; img=Image.open('public/icons/icon-20x20.png').convert('RGB'); px=[p for r in img.getdata() for p in [r]]; colored=sum(1 for p in px if not (p[0]>230 and p[1]>230 and p[2]>230)); print(colored/len(px))"` to verify

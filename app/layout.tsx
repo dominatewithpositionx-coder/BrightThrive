@@ -26,15 +26,26 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'default',
     title: 'BrightThrive',
+    startupImage: '/icons/icon-1024x1024.png',
   },
   icons: {
-    icon: '/brand/favicon.png',
-    apple: '/icons/apple-touch-icon.png',
+    icon: [
+      { url: '/icons/icon-32x32.png',  sizes: '32x32',  type: 'image/png' },
+      { url: '/icons/icon-96x96.png',  sizes: '96x96',  type: 'image/png' },
+      { url: '/icons/icon-192x192.png',sizes: '192x192',type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      { rel: 'apple-touch-icon-precomposed', url: '/icons/apple-touch-icon.png' },
+    ],
   },
   openGraph: {
     title: 'BrightThrive — Turn Screen Time Into Growth Time',
     description: 'Healthy habits. Emotional intelligence. Calmer homes.',
     type: 'website',
+    images: [{ url: '/icons/icon-512x512.png', width: 512, height: 512 }],
   },
 };
 
