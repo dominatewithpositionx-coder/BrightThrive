@@ -198,7 +198,7 @@ components/
 - "BrytThrive is not a screen blocker. We motivate growth, not punishment."
 - "The problem isn't screens — it's what screens replace."
 - Trust bar: "🇨🇦 Data stored in Canada · No ads · No tracking · Parents own their data"
-- Science note: "Built on research from UCLA, Goleman, CASEL, and Atomic Habits"
+- Trust note: "Built by parents, informed by lived experience, and designed to help families navigate the challenges of raising children in today's digital world—one small win at a time."
 - Founder note: Wayne's letter (2–3 sentences)
 
 ### Build 2: Onboarding Email — Email 1 via Resend

@@ -57,7 +57,7 @@ export default function HomePage() {
           <span className="hidden sm:inline">·</span>
           <span>Parents own their data</span>
           <span className="hidden sm:inline">·</span>
-          <span>Built on CASEL &amp; Atomic Habits research</span>
+          <span>Built by parents, for families</span>
         </div>
       </section>
 
@@ -224,7 +224,7 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-10 text-sm text-gray-400">
-            Built on research from UCLA, Daniel Goleman, CASEL, and Atomic Habits.
+            Built by parents, informed by lived experience, and designed to help families navigate the challenges of raising children in today's digital world—one small win at a time.
           </p>
         </div>
       </section>
