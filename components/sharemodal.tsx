@@ -11,7 +11,7 @@ export default function ShareModal({ onClose }: ShareModalProps) {
   const shareText = encodeURIComponent(
     "🚀 I just joined the BrytThrive waitlist — a smarter way to help kids balance screen time, focus, and thrive every day! Join me 👇"
   );
-  const shareUrl = encodeURIComponent('https://brytthrive.com/');
+  const shareUrl = encodeURIComponent((process.env.NEXT_PUBLIC_SITE_URL || 'https://brytthrive.com') + '/');
 
   const twitterUrl = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`;
