@@ -10,12 +10,12 @@
  *   ACCOUNT_B_PASSWORD    — Account B password
  *
  * Optional:
- *   E2E_BASE_URL          — defaults to https://brightthrive.vercel.app
+ *   E2E_BASE_URL          — defaults to https://brytthrive.com
  */
 
 import { test, expect, Page } from '@playwright/test';
 
-const BASE = process.env.E2E_BASE_URL ?? 'https://brightthrive.vercel.app';
+const BASE = process.env.E2E_BASE_URL ?? 'https://brytthrive.com';
 
 const CREDS = {
   parent: {

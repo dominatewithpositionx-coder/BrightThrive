@@ -5,7 +5,7 @@
 - Node.js 18 or later ([nodejs.org](https://nodejs.org))
 - Git
 - A terminal (PowerShell or Command Prompt on Windows)
-- Three Supabase test accounts on `brightthrive.vercel.app`:
+- Three Supabase test accounts on `brytthrive.com`:
   - **Test parent** — a dedicated account used only for automated testing
   - **Account A** — your real account that has August and Nova as children
   - **Account B** — a fresh account with no children
@@ -34,7 +34,7 @@ notepad .env.e2e
 Fill in `.env.e2e`:
 
 ```env
-E2E_BASE_URL=https://brightthrive.vercel.app
+E2E_BASE_URL=https://brytthrive.com
 
 E2E_PARENT_EMAIL=your-test-parent@example.com
 E2E_PARENT_PASSWORD=your-test-password

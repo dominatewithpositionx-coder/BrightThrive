@@ -84,6 +84,23 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
     setChildId(data.id);
     setStep(2);
+
+    // Fire-and-forget: seed first missions so they're ready when the child logs in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.access_token) return;
+      fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          childId: data.id,
+          parentId: user.id,
+          childAge: childAge ? Number(childAge) : null,
+        }),
+      }).catch(() => {/* non-blocking — wizard flow continues regardless */});
+    });
   }
 
   async function saveTask() {

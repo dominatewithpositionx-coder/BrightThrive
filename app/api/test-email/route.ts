@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://brytthrive.com';
+
 export async function POST(req: Request) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   try {
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
             <h1>Welcome to <strong>BrytThrive</strong>!</h1>
             <p>Hey ${name || 'Friend'},</p>
             <p>Thanks for joining — you're helping your family build healthy habits and calmer days.</p>
-            <a href="https://brytthrive.com/dashboard" class="cta">Go to your dashboard</a>
+            <a href="${SITE_URL}/dashboard" class="cta">Go to your dashboard</a>
             <div class="footer">
               © ${new Date().getFullYear()} BrytThrive — Earn your play. Enjoy your day.
             </div>

@@ -6,7 +6,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { outputFolder: 'tests/report', open: 'never' }]],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'https://brightthrive.vercel.app',
+    baseURL: process.env.E2E_BASE_URL ?? 'https://brytthrive.com',
     screenshot: 'on',
     video: 'off',
     trace: 'off',
