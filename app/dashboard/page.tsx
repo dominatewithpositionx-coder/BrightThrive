@@ -13,7 +13,7 @@ import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 const supabase = getSupabase();
 
 type Child = { id: string; name: string; points: number };
-type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
+type Mission = { id: string; child_id: string; title: string; is_completed: boolean; mission_date?: string };
 type Reward = { id: string; title: string; coin_cost: number };
 type LedgerEntry = { id: string; child_id: string; amount: number; description: string; created_at: string };
 
@@ -37,14 +37,19 @@ function getGreeting() {
   return 'Good evening';
 }
 
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
 export default function DashboardPage() {
-  const [user, setUser]               = useState<any>(null);
+  const [user, setUser]               = useState<{ id: string; email?: string } | null>(null);
   const [children, setChildren]       = useState<Child[]>([]);
   const [missions, setMissions]       = useState<Mission[]>([]);
   const [rewards, setRewards]         = useState<Reward[]>([]);
   const [recentLedger, setRecentLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [generatingAll, setGeneratingAll] = useState(false);
   const router = useRouter();
 
   useEffect(() => { init(); }, []);
@@ -81,7 +86,7 @@ export default function DashboardPage() {
     ] = await Promise.all([
       supabase.from('children').select('id, name').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('missions').select('id, child_id, title, is_completed'),
+      supabase.from('missions').select('id, child_id, title, is_completed, mission_date'),
       supabase.from('rewards').select('id, title, coin_cost'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }).limit(5),
     ]);
@@ -106,9 +111,33 @@ export default function DashboardPage() {
     init();
   }
 
+  async function generateMissionsForAll() {
+    if (generatingAll || children.length === 0) return;
+    setGeneratingAll(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) { setGeneratingAll(false); return; }
+    await Promise.allSettled(
+      children.map((child) =>
+        fetch('/api/generate-missions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ childId: child.id, parentId: user?.id }),
+        })
+      )
+    );
+    await init();
+    setGeneratingAll(false);
+  }
+
   const firstName = user?.email?.split('@')[0] ?? 'there';
-  const totalTasksDone = missions.filter((m) => m.is_completed).length;
-  const totalPending   = missions.filter((m) => !m.is_completed).length;
+  const today = todayStr();
+  const todayMissions = missions.filter((m) => m.mission_date === today);
+  const totalTasksDone = todayMissions.filter((m) => m.is_completed).length;
+  const totalPending   = todayMissions.filter((m) => !m.is_completed).length;
+  const hasTodayMissions = todayMissions.length > 0;
   const childName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
@@ -149,6 +178,47 @@ export default function DashboardPage() {
         {children.length === 0 && (
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
             <EmptyState {...EMPTY_STATES.noChildren} />
+          </div>
+        )}
+
+        {/* ── Today's Missions summary ── */}
+        {children.length > 0 && (
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-semibold text-navy text-sm">Today&apos;s Missions</p>
+                <p className="text-xs text-gray-400 mt-0.5">BrytThrive created today&apos;s missions</p>
+              </div>
+              {!hasTodayMissions && (
+                <button
+                  onClick={generateMissionsForAll}
+                  disabled={generatingAll}
+                  className="min-h-[44px] px-4 py-2 bg-green-600 text-white text-xs font-semibold rounded-xl hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60"
+                >
+                  {generatingAll ? '✨ Generating…' : '✨ Generate for today'}
+                </button>
+              )}
+            </div>
+            {hasTodayMissions ? (
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="bg-gray-50 rounded-xl py-3">
+                  <p className="text-xl font-bold text-navy">{todayMissions.length}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">total</p>
+                </div>
+                <div className={`rounded-xl py-3 ${totalTasksDone > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <p className={`text-xl font-bold ${totalTasksDone > 0 ? 'text-green-600' : 'text-gray-400'}`}>{totalTasksDone}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">done</p>
+                </div>
+                <div className={`rounded-xl py-3 ${totalPending > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                  <p className={`text-xl font-bold ${totalPending > 0 ? 'text-amber-500' : 'text-gray-400'}`}>{totalPending}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">remaining</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-2">
+                BrytThrive is getting today&apos;s missions ready… or tap Generate to start!
+              </p>
+            )}
           </div>
         )}
 

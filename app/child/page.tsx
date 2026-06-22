@@ -13,7 +13,7 @@ import {
   trackMissionCompleted,
 } from '@/lib/analytics';
 
-type Child   = { id: string; name: string; points: number };
+type Child   = { id: string; name: string; age?: number | null; points: number };
 type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
 type Reward  = { id: string; title: string; coin_cost: number };
 
@@ -188,10 +188,10 @@ function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => v
 
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
-function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenerateMissions, generating, missionError }: {
+function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenerateMissions, generating, missionError, missionSuccess }: {
   child: Child; missions: Mission[]; rewards: Reward[];
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
-  onGenerateMissions: () => void; generating: boolean; missionError: string | null;
+  onGenerateMissions: () => void; generating: boolean; missionError: string | null; missionSuccess: string | null;
 }) {
   const colors = getColors(child.name);
   const pending = missions.filter((m) => !m.is_completed);
@@ -321,13 +321,13 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
               ) : (
                 <>
                   <div className="text-3xl mb-3">🎯</div>
-                  <p className="text-gray-500 text-sm mb-4 font-medium">No missions yet today!</p>
+                  <p className="text-gray-500 text-sm mb-4 font-medium">No missions yet — tap below to start!</p>
                   <button
                     onClick={onGenerateMissions}
                     aria-label="Generate missions"
-                    className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-green-700 active:scale-95 transition-all"
+                    className="min-h-[44px] bg-green-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 active:scale-95 transition-all"
                   >
-                    ✨ Generate My Missions
+                    ✨ Get My Missions
                   </button>
                 </>
               )}
@@ -337,6 +337,12 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
           {missionError && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 text-center mt-3">
               {missionError}
+            </div>
+          )}
+
+          {missionSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 text-center mt-3 animate-fade-in">
+              {missionSuccess}
             </div>
           )}
 
@@ -402,6 +408,7 @@ export default function ChildPage() {
   const [loading, setLoading]       = useState(true);
   const [generating, setGenerating] = useState(false);
   const [missionError, setMissionError] = useState<string | null>(null);
+  const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
@@ -410,7 +417,7 @@ export default function ChildPage() {
       { data: childData }, { data: walletData },
       { data: missionData }, { data: rewardData },
     ] = await Promise.all([
-      supabase.from('children').select('id, name').order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('missions').select('id, child_id, title, is_completed'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
@@ -441,16 +448,18 @@ export default function ChildPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ childId: selected.id, childName: selected.name, childAge: null, count: 5, mood: selectedMood }),
+        body: JSON.stringify({ childId: selected.id, childAge: selected.age ?? null, count: 6, mood: selectedMood }),
       });
       if (res.ok) {
         trackMissionGenerated({
           child_id: selected.id,
           mood: selectedMood,
           weather_available: true,
-          count: 5,
+          count: 6,
         });
         await fetchData();
+        setMissionSuccess('New missions ready! 🎉');
+        setTimeout(() => setMissionSuccess(null), 3000);
       } else if (res.status === 429) {
         setMissionError('Just a moment! Wait a few seconds before generating new missions.');
       } else {
@@ -567,6 +576,7 @@ export default function ChildPage() {
           onGenerateMissions={handleGenerateMissions}
           generating={generating}
           missionError={missionError}
+          missionSuccess={missionSuccess}
         />
       )}
     </>
