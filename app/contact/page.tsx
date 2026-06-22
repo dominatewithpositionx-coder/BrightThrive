@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Contact — BrightThrive',
-  description: 'Get in touch with the BrightThrive team.',
+  title: 'Contact — BrytThrive',
+  description: 'Get in touch with the BrytThrive team.',
 };
 
 export default function ContactPage() {
@@ -16,7 +16,7 @@ export default function ContactPage() {
           We read every message and usually reply within a day.
         </p>
         <a
-          href="mailto:hello@brightthrive.app"
+          href="mailto:hello@brytthrive.com"
           className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold px-8 py-3 rounded-xl shadow-sm transition-opacity hover:opacity-90 min-h-[44px]"
           style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
         >

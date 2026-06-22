@@ -1,4 +1,4 @@
-# BrightThrive Quality Audit
+# BrytThrive Quality Audit
 ## "Where Would Apple Simplify?"
 
 > Run before every milestone. Updated: 2026-06-21

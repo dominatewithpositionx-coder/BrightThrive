@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const templatePath = path.join(process.cwd(), 'emails', 'reward-redeemed.html');
     let emailHtml = fs.readFileSync(templatePath, 'utf8');
 
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://brightthrive.com'}/dashboard`;
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://brytthrive.com'}/dashboard`;
 
     emailHtml = emailHtml
       .replace(/{{childName}}/g, childName)
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       .replace(/{{year}}/g, new Date().getFullYear().toString());
 
     await resend.emails.send({
-      from: 'BrightThrive <notifications@resend.dev>',
+      from: 'BrytThrive <notifications@resend.dev>',
       to: parentEmail,
       subject: `🎁 ${childName} redeemed ${rewardTitle}!`,
       html: emailHtml,

@@ -24,7 +24,7 @@ export default function SuccessPage() {
       <h1 className="text-3xl font-bold mb-2">🎉 You're on the list!</h1>
 
       <p className="text-gray-700 mb-6 max-w-lg">
-        Thanks for joining the <strong>BrightThrive</strong> waitlist!
+        Thanks for joining the <strong>BrytThrive</strong> waitlist!
         We'll notify you as soon as early access opens — stay tuned,
         and get ready to help your family build healthy screen habits.
       </p>
@@ -46,7 +46,7 @@ export default function SuccessPage() {
       </div>
 
       <footer className="mt-12 text-xs text-gray-500">
-        © {new Date().getFullYear()} BrightThrive. All rights reserved.
+        © {new Date().getFullYear()} BrytThrive. All rights reserved.
       </footer>
 
       {showModal && (
@@ -62,13 +62,13 @@ export default function SuccessPage() {
 
             <h2 className="text-xl font-bold mb-3">🚀 Share the excitement!</h2>
             <p className="text-gray-600 mb-6">
-              Let your friends know you're on the <strong>BrightThrive</strong> waitlist.
+              Let your friends know you're on the <strong>BrytThrive</strong> waitlist.
               The more people that join, the sooner we launch early access!
             </p>
 
             <div className="flex justify-center gap-4">
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I just joined the BrightThrive waitlist! Join me to help families build healthier tech habits 📱 https://brightthrive.com")}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I just joined the BrytThrive waitlist! Join me to help families build healthier tech habits 📱 https://brytthrive.com")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-sky-500 text-white px-4 py-2 rounded-md hover:bg-sky-600 transition"
@@ -77,7 +77,7 @@ export default function SuccessPage() {
               </a>
 
               <a
-                href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fbrightthrive.com"
+                href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fbrytthrive.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#0077B5] text-white px-4 py-2 rounded-md hover:bg-[#005582] transition"
@@ -86,7 +86,7 @@ export default function SuccessPage() {
               </a>
 
               <a
-                href={`mailto:?subject=${encodeURIComponent("Join me on the BrightThrive waitlist!")}&body=${encodeURIComponent("I just joined the BrightThrive waitlist — a new app helping families balance screen time and real-world wins! Join me at https://brightthrive.com")}`}
+                href={`mailto:?subject=${encodeURIComponent("Join me on the BrytThrive waitlist!")}&body=${encodeURIComponent("I just joined the BrytThrive waitlist — a new app helping families balance screen time and real-world wins! Join me at https://brytthrive.com")}`}
                 className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition"
               >
                 Email

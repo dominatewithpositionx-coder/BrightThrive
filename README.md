@@ -1,6 +1,6 @@
-# 🧠 BrightThrive — Landing + Waitlist + Supabase
+# 🧠 BrytThrive — Landing + Waitlist + Supabase
 
-A clean, modern **Next.js (App Router)** app with Tailwind CSS, Supabase integration, and a secure waitlist API — built to help families build healthy habits with BrightThrive.
+A clean, modern **Next.js (App Router)** app with Tailwind CSS, Supabase integration, and a secure waitlist API — built to help families build healthy habits with BrytThrive.
 
 ---
 

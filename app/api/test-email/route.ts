@@ -26,12 +26,12 @@ export async function POST(req: Request) {
         </head>
         <body>
           <div class="container">
-            <h1>Welcome to <strong>BrightThrive</strong>!</h1>
+            <h1>Welcome to <strong>BrytThrive</strong>!</h1>
             <p>Hey ${name || 'Friend'},</p>
             <p>Thanks for joining — you're helping your family build healthy habits and calmer days.</p>
-            <a href="https://brightthrive.com/dashboard" class="cta">Go to your dashboard</a>
+            <a href="https://brytthrive.com/dashboard" class="cta">Go to your dashboard</a>
             <div class="footer">
-              © ${new Date().getFullYear()} BrightThrive — Earn your play. Enjoy your day.
+              © ${new Date().getFullYear()} BrytThrive — Earn your play. Enjoy your day.
             </div>
           </div>
         </body>
@@ -39,9 +39,9 @@ export async function POST(req: Request) {
     `;
 
     const { error } = await resend.emails.send({
-      from: 'BrightThrive <notifications@resend.dev>',
+      from: 'BrytThrive <notifications@resend.dev>',
       to: recipient,
-      subject: `Welcome to BrightThrive${name ? `, ${name}` : ''}! 🎉`,
+      subject: `Welcome to BrytThrive${name ? `, ${name}` : ''}! 🎉`,
       html: emailHtml,
     });
 

@@ -49,7 +49,7 @@ export const EMPTY_STATES = {
   noMissions: {
     emoji: '🎯',
     headline: 'No missions yet today',
-    body: "Start with a mood check-in and BrightThrive will generate 5 personalized missions.",
+    body: "Start with a mood check-in and BrytThrive will generate 5 personalized missions.",
     cta: { label: 'Generate missions', href: '/child' },
   },
   noRewards: {

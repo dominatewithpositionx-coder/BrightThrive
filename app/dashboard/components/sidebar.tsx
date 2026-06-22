@@ -8,8 +8,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Home, Users, BarChart3, Gift, Settings, ClipboardList, Gamepad2 } from 'lucide-react';
 
 const brand = {
-  name: 'BrightThrive',
-  logo: '/brand/BrightThrive.png',
+  name: 'BrytThrive',
+  logo: '/brand/BrytThrive.png',
 };
 
 type NavItem = {

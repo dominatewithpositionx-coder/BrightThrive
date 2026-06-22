@@ -1,4 +1,4 @@
-# BrightThrive Pilot Test Plan
+# BrytThrive Pilot Test Plan
 **Version:** 1.0  
 **Date:** June 2026  
 **Scope:** 5 friendly pilot families
@@ -22,7 +22,7 @@ Wayne's test account: use your own email — gives direct visibility into the we
 ## Pre-Flight Checklist (Before Inviting Families)
 
 - [ ] `RESEND_API_KEY` set in Vercel environment variables
-- [ ] `NEXT_PUBLIC_SITE_URL=https://brightthrive.com` set in Vercel
+- [ ] `NEXT_PUBLIC_SITE_URL=https://brytthrive.com` set in Vercel
 - [ ] `ANTHROPIC_API_KEY` set in Vercel
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` set
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` set (required for coin RPC and mission writes)
@@ -193,8 +193,8 @@ Expected:
 
 | Email | Trigger | From | Check |
 |-------|---------|------|-------|
-| Welcome | Signup | Wayne at BrightThrive | Arrives within 2 min, links work |
-| Reward alert | Redemption (if enabled in Settings) | BrightThrive | Arrives within 2 min |
+| Welcome | Signup | Wayne at BrytThrive | Arrives within 2 min, links work |
+| Reward alert | Redemption (if enabled in Settings) | BrytThrive | Arrives within 2 min |
 
 If emails don't arrive:
 - Check spam folder
@@ -234,11 +234,11 @@ Expected:
 **iOS (Safari):**
 1. Open site in Safari
 2. Tap Share → "Add to Home Screen"
-3. Confirm name "BrightThrive" → Add
+3. Confirm name "BrytThrive" → Add
 4. Launch from home screen
 
 Expected:
-- App icon shows BrightThrive brain+orbit mark
+- App icon shows BrytThrive brain+orbit mark
 - App opens without browser chrome
 - Offline page shows if connection is lost
 

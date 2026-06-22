@@ -39,13 +39,13 @@ export default function InstallPrompt() {
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 flex items-start gap-3 animate-slide-up">
         <img
           src="/icons/icon-96x96.png"
-          alt="BrightThrive"
+          alt="BrytThrive"
           width={40}
           height={40}
           className="w-10 h-10 rounded-xl flex-shrink-0"
         />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-navy leading-tight">Add BrightThrive to your home screen</p>
+          <p className="font-semibold text-sm text-navy leading-tight">Add BrytThrive to your home screen</p>
           <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">Access it like an app — no browser needed.</p>
         </div>
         <button

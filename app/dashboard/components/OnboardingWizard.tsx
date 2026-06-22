@@ -142,7 +142,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <Sparkles size={32} className="text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">You're all set!</h2>
-          <p className="text-gray-500">BrightThrive is ready for your family. Let's go!</p>
+          <p className="text-gray-500">BrytThrive is ready for your family. Let's go!</p>
         </motion.div>
       </div>
     );
@@ -157,7 +157,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
       >
         {/* Header */}
         <div className="px-8 pt-8 pb-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome to BrightThrive!</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome to BrytThrive!</h2>
           <p className="text-sm text-gray-500">Let's get your family set up in 3 quick steps.</p>
 
           {/* Step indicators */}

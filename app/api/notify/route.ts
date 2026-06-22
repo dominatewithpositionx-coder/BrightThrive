@@ -7,15 +7,15 @@ export async function POST(req: Request) {
     const { name, email } = await req.json();
 
     await resend.emails.send({
-      from: "BrightThrive <notifications@resend.dev>",
+      from: "BrytThrive <notifications@resend.dev>",
       to: process.env.NOTIFY_EMAIL!,
-      subject: "🎉 New BrightThrive Waitlist Signup",
+      subject: "🎉 New BrytThrive Waitlist Signup",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
           <h2 style="color:#111827;">New Waitlist Signup</h2>
           <p><b>Name:</b> ${name || "N/A"}</p>
           <p><b>Email:</b> ${email}</p>
-          <p>🔥 Someone just joined the BrightThrive waitlist!</p>
+          <p>🔥 Someone just joined the BrytThrive waitlist!</p>
         </div>
       `,
     });

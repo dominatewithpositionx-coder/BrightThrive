@@ -1,4 +1,4 @@
-# BrightThrive — E2E Smoke Test Guide
+# BrytThrive — E2E Smoke Test Guide
 
 ## Prerequisites
 

@@ -373,10 +373,10 @@ export default function OnboardingPage() {
           <Sparkles size={30} color="white" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#0F172A' }}>
-          Your BrightThrive Family Plan Is Ready
+          Your BrytThrive Family Plan Is Ready
         </h1>
         <p className="text-sm mb-8 max-w-sm" style={{ color: '#64748B' }}>
-          Based on your answers, here&apos;s what BrightThrive will help your family do:
+          Based on your answers, here&apos;s what BrytThrive will help your family do:
         </p>
 
         <div className="w-full max-w-sm mb-8 space-y-3 text-left">

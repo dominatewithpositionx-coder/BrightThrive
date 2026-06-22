@@ -1,4 +1,4 @@
-# BrightThrive Figma Workflow
+# BrytThrive Figma Workflow
 
 > Figma is the source of visual truth. Code is the implementation of approved designs.
 
@@ -39,7 +39,7 @@ Merge to main → Vercel deploy
 Organize the Figma file as follows:
 
 ```
-📁 BrightThrive Design System
+📁 BrytThrive Design System
   └── 🎨 Styles (colors, text styles, effects)
   └── 🧩 Components
       ├── MoodCard
@@ -55,7 +55,7 @@ Organize the Figma file as follows:
       ├── ErrorBanner
       └── SuccessToast
 
-📁 BrightThrive Screens
+📁 BrytThrive Screens
   └── 📱 Child Flow
       ├── Child Picker
       ├── Mood Check-In
@@ -75,7 +75,7 @@ Organize the Figma file as follows:
       └── Settings
   └── 🌐 Landing Page
       ├── Hero
-      ├── Why BrightThrive
+      ├── Why BrytThrive
       ├── Features
       ├── Science
       ├── Pricing
@@ -85,7 +85,7 @@ Organize the Figma file as follows:
       ├── Login
       └── Onboarding Wizard
 
-📁 BrightThrive — Archived
+📁 BrytThrive — Archived
   └── (old versions go here, never deleted)
 ```
 
@@ -180,7 +180,7 @@ Before merging any screen to main:
 When using Stitch or AI tools to generate Figma screens:
 
 **Always include in the prompt:**
-- "BrightThrive design system"
+- "BrytThrive design system"
 - "Poppins font"
 - "8-point grid spacing"
 - Specific mood color if applicable
