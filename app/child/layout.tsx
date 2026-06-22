@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export const metadata = { title: 'BrightThrive — Kid View' };
+export const metadata = { title: 'BrytThrive — Kid View' };
 
 export default function ChildLayout({ children }: { children: ReactNode }) {
   return (

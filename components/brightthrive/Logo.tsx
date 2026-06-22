@@ -13,17 +13,17 @@ export default function Logo({ variant = 'full', className = '', href = '/' }: L
   const img =
     variant === 'full' ? (
       <Image
-        src="/brand/BrightThrive.png"
-        alt="BrightThrive"
-        width={200}
-        height={54}
+        src="/brand/BrytThrive.png"
+        alt="BrytThrive"
+        width={300}
+        height={200}
         priority
-        className={`h-10 w-auto object-contain ${className}`}
+        className={`h-12 w-auto object-contain ${className}`}
       />
     ) : (
       <Image
-        src="/brand/BrightThrive.png"
-        alt="BrightThrive"
+        src="/brand/BrytThrive.png"
+        alt="BrytThrive"
         width={40}
         height={40}
         priority

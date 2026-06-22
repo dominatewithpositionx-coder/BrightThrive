@@ -12,7 +12,7 @@ export default function ErrorPage({
 }) {
   useEffect(() => {
     // Log for debugging without exposing to user
-    console.error('[BrightThrive error]', error.digest ?? error.message);
+    console.error('[BrytThrive error]', error.digest ?? error.message);
   }, [error]);
 
   return (

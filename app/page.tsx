@@ -88,13 +88,13 @@ export default function HomePage() {
       <section className="py-16 md:py-24 px-4 bg-green-50">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How BrightThrive works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How BrytThrive works</h2>
             <p className="text-lg text-gray-600">Three simple steps. One calmer family.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
             {[
               { step: '1', emoji: '😊', heading: 'Check in on mood', body: 'Each day starts with a simple mood check-in. Your child taps how they feel — happy, calm, tired, frustrated — in one tap.' },
-              { step: '2', emoji: '🎯', heading: 'Get personalized missions', body: 'BrightThrive generates 5 missions matched to their mood and the weather outside. Short, fun, and built for growth.' },
+              { step: '2', emoji: '🎯', heading: 'Get personalized missions', body: 'BrytThrive generates 5 missions matched to their mood and the weather outside. Short, fun, and built for growth.' },
               { step: '3', emoji: '⭐', heading: 'Earn screen time', body: 'Completing missions earns stars and coins. Redeem them for screen time, treats, or any reward parents set.' },
             ].map((item) => (
               <div key={item.step} className="relative bg-white rounded-2xl p-6 shadow-sm">
@@ -116,7 +116,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Missions that meet your child where they are</h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              A tired child and an energetic child need different things. BrightThrive uses their mood and your local weather to generate missions that match how they&apos;re feeling right now.
+              A tired child and an energetic child need different things. BrytThrive uses their mood and your local weather to generate missions that match how they&apos;re feeling right now.
             </p>
             <ul className="space-y-3 text-sm">
               {[
@@ -208,7 +208,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Your family&apos;s data is yours. Always.</h2>
           <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg">
-            BrightThrive is built on a foundation of trust. We will never sell, share, or profit from your family&apos;s data.
+            BrytThrive is built on a foundation of trust. We will never sell, share, or profit from your family&apos;s data.
           </p>
           <div className="grid sm:grid-cols-3 gap-6">
             {[
@@ -236,10 +236,10 @@ export default function HomePage() {
             👋
           </div>
           <blockquote className="text-xl text-gray-700 leading-relaxed mb-8">
-            &ldquo;I built BrightThrive because I needed it for my own family. I didn&apos;t want to take screens away — I wanted to give my kids a reason to earn them. Everything we build starts with one question: does this make family life calmer?&rdquo;
+            &ldquo;I built BrytThrive because I needed it for my own family. I didn&apos;t want to take screens away — I wanted to give my kids a reason to earn them. Everything we build starts with one question: does this make family life calmer?&rdquo;
           </blockquote>
           <p className="font-semibold text-gray-900">Wayne</p>
-          <p className="text-sm text-gray-500">Founder, BrightThrive · Dad of three</p>
+          <p className="text-sm text-gray-500">Founder, BrytThrive · Dad of three</p>
         </div>
       </section>
 
@@ -248,7 +248,7 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to turn screen time into growth time?</h2>
           <p className="text-gray-600 text-lg mb-10 max-w-xl mx-auto">
-            Join families using BrightThrive to build calmer routines, stronger kids, and fewer screen battles.
+            Join families using BrytThrive to build calmer routines, stronger kids, and fewer screen battles.
           </p>
           <Link
             href="/onboarding"

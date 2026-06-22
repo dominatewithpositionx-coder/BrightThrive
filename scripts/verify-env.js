@@ -25,7 +25,7 @@ const OPTIONAL = [
 
 let hasError = false;
 
-console.log('\n── BrightThrive Environment Check ──────────────────\n');
+console.log('\n── BrytThrive Environment Check ──────────────────\n');
 
 for (const { key, validate, hint } of REQUIRED) {
   const val = process.env[key] || '';

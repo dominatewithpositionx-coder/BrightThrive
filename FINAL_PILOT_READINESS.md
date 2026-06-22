@@ -1,4 +1,4 @@
-# BrightThrive — Final Pilot Readiness Report
+# BrytThrive — Final Pilot Readiness Report
 **Date:** June 21, 2026  
 **Production Commit:** `63f8a1e` (+ `dad-of-three` fix pending push)  
 **Supabase Project:** `keshpxgamiujktmfnodi` — Canada (Central) · ca-central-1  
@@ -9,7 +9,7 @@
 ## GO / NO-GO Recommendation
 
 > ### ✅ GO
-> BrightThrive is ready for the 3–5 family pilot.  
+> BrytThrive is ready for the 3–5 family pilot.  
 > All infrastructure, security, privacy, and data residency checks pass.  
 > Complete the browser smoke test below before sending the first invitation.
 
@@ -80,7 +80,7 @@
 
 ## Data Residency Statement
 
-> **All BrightThrive family data is stored in Canada.**  
+> **All BrytThrive family data is stored in Canada.**  
 > The Supabase project `keshpxgamiujktmfnodi` runs on AWS `ca-central-1` (Canada Central, Montreal).  
 > Parent credentials, child profiles, mission history, coin ledger, reward records, and all family settings reside exclusively in this Canadian data centre.  
 > Limited, minimized data is processed outside Canada by trusted infrastructure providers (Anthropic, Resend, Vercel) solely to deliver app features, and is not stored or sold by those providers.  
@@ -95,7 +95,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ `keshpxgamiujktmfnodi.supabase.co` (Canada) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Canada project |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Canada project |
-| `NEXT_PUBLIC_SITE_URL` | ✅ `https://brightthrive.com` |
+| `NEXT_PUBLIC_SITE_URL` | ✅ `https://brytthrive.com` |
 | `ANTHROPIC_API_KEY` | ✅ Set |
 | `RESEND_API_KEY` | ✅ Set |
 | `VITE_*` variables | ✅ Deleted |
@@ -118,11 +118,11 @@
 ## Browser Smoke Test Checklist
 
 **Complete this yourself before sending pilot invitations.**  
-Open `https://brightthrive.com` in a private/incognito window.
+Open `https://brytthrive.com` in a private/incognito window.
 
 ### Onboarding & Auth
 - [ ] Go to `/onboarding` → complete all wizard steps → create account
-- [ ] Welcome email arrives within 2 minutes (check spam — subject: "Welcome to BrightThrive!")
+- [ ] Welcome email arrives within 2 minutes (check spam — subject: "Welcome to BrytThrive!")
 - [ ] Dashboard loads showing "Add your first child" empty state
 - [ ] Log out → log back in → dashboard loads correctly
 
@@ -163,7 +163,7 @@ Open `https://brightthrive.com` in a private/incognito window.
 ### PWA (Mobile)
 - [ ] Android Chrome: visit site → install banner appears → install → opens standalone
 - [ ] iOS Safari: Share → Add to Home Screen → opens without browser chrome
-- [ ] App icon shows BrightThrive logo on home screen
+- [ ] App icon shows BrytThrive logo on home screen
 
 ### Network Verification (optional, for confidence)
 - [ ] Browser DevTools → Network tab → filter by "supabase"
@@ -206,8 +206,8 @@ Before sending the first invitation, confirm:
 
 - [ ] Vercel shows commit `63f8a1e` (or later) as Production · Current
 - [ ] All browser smoke tests above pass
-- [ ] "Dad of three" shows correctly on `https://brightthrive.com` (founder section)
-- [ ] Welcome email arrives and looks correct (Wayne's name, BrightThrive branding)
+- [ ] "Dad of three" shows correctly on `https://brytthrive.com` (founder section)
+- [ ] Welcome email arrives and looks correct (Wayne's name, BrytThrive branding)
 - [ ] Network tab confirms requests go to `keshpxgamiujktmfnodi.supabase.co`
 
 Once all boxes are checked: **invite your first pilot family.**
@@ -222,7 +222,7 @@ Once all boxes are checked: **invite your first pilot family.**
 | Security (RLS, auth, rate limiting) | 10/10 |
 | Privacy minimization (AI) | 10/10 |
 | Environment hygiene | 10/10 |
-| Brand consistency (BrightThrive) | 10/10 |
+| Brand consistency (BrytThrive) | 10/10 |
 | TypeScript / build | 10/10 |
 | Feature completeness for pilot | 9/10 *(weekly summary email not automated)* |
 | **Overall pilot readiness** | **9.9 / 10** |

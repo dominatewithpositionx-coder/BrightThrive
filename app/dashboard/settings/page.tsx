@@ -251,7 +251,7 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium text-gray-900">Your data stays private</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              BrightThrive never sells or shares your family's data. All data is stored securely in Canada.{' '}
+              BrytThrive never sells or shares your family's data. All data is stored securely in Canada.{' '}
               <a href="/privacy" className="text-green-600 underline">Privacy Policy</a>.
             </p>
           </div>

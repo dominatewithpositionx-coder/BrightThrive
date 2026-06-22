@@ -7,7 +7,7 @@
 
 ## What this is
 
-The Family Timeline is BrightThrive's emotional moat.
+The Family Timeline is BrytThrive's emotional moat.
 
 It is not a feature. It is a memory.
 
@@ -104,7 +104,7 @@ Every product feature can be copied.
 
 A 2-year family timeline cannot.
 
-The day a parent sees their child's first mood check-in and their 100th side by side — that is the day BrightThrive becomes irreplaceable.
+The day a parent sees their child's first mood check-in and their 100th side by side — that is the day BrytThrive becomes irreplaceable.
 
 **Build trigger:** When 10 families have 60+ days of data.
 **Estimated time:** 1 sprint UI + 1 sprint event wiring.

@@ -1,4 +1,4 @@
-# BrightThrive — Environment Variable Audit
+# BrytThrive — Environment Variable Audit
 **Date:** June 2026  
 **Auditor:** Claude Code  
 **Status:** Post Canada migration · Pre-pilot launch
@@ -12,7 +12,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | `lib/supabase.ts`, `lib/supabaseAdmin.ts`, `app/api/generate-missions`, `app/api/notify-reward`, `app/api/waitlist`, `app/api/export/csv`, `components/WaitlistForm.tsx` | **Yes** | Production + Preview | Must point to `keshpxgamiujktmfnodi.supabase.co` (Canada) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `lib/supabase.ts`, `app/api/generate-missions` | **Yes** | Production + Preview | Safe for browser; RLS enforced |
 | `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabaseAdmin.ts`, `app/api/generate-missions`, `app/api/notify-reward`, `app/api/waitlist`, `app/api/export/csv`, `components/WaitlistForm.tsx` | **Yes** | Production only | Bypasses RLS — never expose publicly |
-| `NEXT_PUBLIC_SITE_URL` | `app/api/notify-reward`, `app/api/welcome-email`, `app/reset/page.tsx`, `lib/brand.ts` | **Yes** | Production + Preview | Must be `https://brightthrive.com` in production |
+| `NEXT_PUBLIC_SITE_URL` | `app/api/notify-reward`, `app/api/welcome-email`, `app/reset/page.tsx`, `lib/brand.ts` | **Yes** | Production + Preview | Must be `https://brytthrive.com` in production |
 | `ANTHROPIC_API_KEY` | `app/api/generate-missions` | Yes (soft) | Production + Preview | If missing, missions fall back to 5 hardcoded defaults |
 | `RESEND_API_KEY` | `app/api/welcome-email`, `app/api/notify-reward`, `app/api/notify`, `app/api/test-email` | Yes (soft) | Production + Preview | If missing, emails are silently skipped (guarded) |
 | `NOTIFY_EMAIL` | `app/api/notify`, `app/api/test-email` | No | Production + Preview | Waitlist admin notification recipient; optional |
@@ -73,7 +73,7 @@ Replaced with placeholder strings — no real keys in any committed file.
 
 | Location | Type | Action |
 |---|---|---|
-| `README.md` line 3 | Runtime text | ✅ Fixed — updated to BrightThrive |
+| `README.md` line 3 | Runtime text | ✅ Fixed — updated to BrytThrive |
 | `public/brand/brainthrive/` | Static asset folder | ✅ Acceptable — legacy brand asset files; not referenced in app UI |
 | `public/brand/brainthrive/readme.md` | Asset documentation | ✅ Acceptable — internal asset pack docs; not served to users |
 | `PILOT_SUPPORT_PLAYBOOK.md` | Docs reference | ✅ Acceptable — historical context in support docs |
@@ -95,7 +95,7 @@ Replaced with placeholder strings — no real keys in any committed file.
 | `add_coins` RPC | Correct 6-param signature | ✅ |
 | `anon` cannot call `add_coins` | `false` confirmed | ✅ |
 | Realtime on 4 tables | Enabled | ✅ |
-| Auth redirect URL | `https://brightthrive.com/**` | ✅ |
+| Auth redirect URL | `https://brytthrive.com/**` | ✅ |
 
 ---
 
@@ -128,7 +128,7 @@ These must all be set in Vercel → Production environment:
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ Set — Canada project |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Set — Canada project |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Set — Canada project |
-| `NEXT_PUBLIC_SITE_URL` | ✅ Set — `https://brightthrive.com` |
+| `NEXT_PUBLIC_SITE_URL` | ✅ Set — `https://brytthrive.com` |
 | `ANTHROPIC_API_KEY` | ✅ Set |
 | `RESEND_API_KEY` | ✅ Set |
 | `NOTIFY_EMAIL` | ✅ Set (optional but recommended) |

@@ -19,14 +19,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'BrightThrive — Earn your play. Enjoy your day.',
+  title: 'BrytThrive — Earn your play. Enjoy your day.',
   description:
-    'BrightThrive helps families build healthy habits, emotional intelligence, and calmer homes — one mission at a time.',
+    'BrytThrive helps families build healthy habits, emotional intelligence, and calmer homes — one mission at a time.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'BrightThrive',
+    title: 'BrytThrive',
     startupImage: '/icons/icon-1024x1024.png',
   },
   icons: {
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'BrightThrive — Turn Screen Time Into Growth Time',
+    title: 'BrytThrive — Turn Screen Time Into Growth Time',
     description: 'Healthy habits. Emotional intelligence. Calmer homes.',
     type: 'website',
     images: [{ url: '/icons/icon-512x512.png', width: 512, height: 512 }],
@@ -101,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Footer */}
         <footer className="max-w-5xl mx-auto px-4 py-12 text-sm text-gray-600 border-t mt-12">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <p>© {new Date().getFullYear()} BrightThrive. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} BrytThrive. All rights reserved.</p>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
               <Link href="/how-it-works" className="hover:text-gray-900">How it works</Link>

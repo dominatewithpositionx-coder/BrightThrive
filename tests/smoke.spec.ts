@@ -1,5 +1,5 @@
 /**
- * BrightThrive Pilot Smoke Test
+ * BrytThrive Pilot Smoke Test
  *
  * Required environment variables:
  *   E2E_PARENT_EMAIL      — test parent account email
@@ -79,7 +79,7 @@ function requireCreds() {
 
 test('Step 1 — live site loads', async ({ page }) => {
   await page.goto(BASE);
-  await expect(page).toHaveTitle(/BrightThrive/i);
+  await expect(page).toHaveTitle(/BrytThrive/i);
   await screenshot(page, '01-landing');
 });
 

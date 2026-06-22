@@ -1,4 +1,4 @@
-# BrightThrive Design System
+# BrytThrive Design System
 
 > **Standard:** Every screen must feel like Apple Health, Calm, Duolingo, and Airbnb had a child.
 > **Test:** Would Tim Cook demo this? Would Jony Ive remove something? Would a tired parent understand it immediately?
@@ -165,7 +165,7 @@ Section gap: `space-y-6` or `gap-6`.
 
 ## Component Inventory
 
-### BrightThrive Components
+### BrytThrive Components
 
 | Component | Location | Status | Description |
 |---|---|---|---|
@@ -255,7 +255,7 @@ Never show a blank white screen.
 
 ### Source Asset
 - Master file: `public/brand/favicon.png` (1024×1024, RGB, white background)
-- Design: BrightThrive brain+orbit mark, green→teal→blue gradient
+- Design: BrytThrive brain+orbit mark, green→teal→blue gradient
 - No text inside the app icon
 
 ### Color Palette (icon gradient)

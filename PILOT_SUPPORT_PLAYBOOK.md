@@ -1,4 +1,4 @@
-# BrightThrive Pilot Support Playbook
+# BrytThrive Pilot Support Playbook
 **Version:** 1.0  
 **Date:** June 2026  
 **For:** Wayne (support contact during pilot)
@@ -117,7 +117,7 @@ Response target: within 24 hours on weekdays.
 ### Diagnosis
 
 **Step 1:** Ask them to check spam/junk folder. Subject lines:
-- Welcome: "Welcome to BrightThrive! Here's what happens next 💛"
+- Welcome: "Welcome to BrytThrive! Here's what happens next 💛"
 - Reward: "🎁 [ChildName] redeemed [RewardName]!"
 
 **Step 2:** Check Vercel function logs:
@@ -173,7 +173,7 @@ Response target: within 24 hours on weekdays.
 
 ### During Pilot (Week 1–2)
 Check in once after 3 days:
-> "Hey! Just checking in — have you had a chance to try BrightThrive with the kids? Anything working well or anything that felt confusing?"
+> "Hey! Just checking in — have you had a chance to try BrytThrive with the kids? Anything working well or anything that felt confusing?"
 
 ### End of Week 2 Survey (informal)
 Ask these 3 questions:

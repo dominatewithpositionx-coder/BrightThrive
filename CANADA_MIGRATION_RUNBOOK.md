@@ -1,4 +1,4 @@
-# BrightThrive — Canada Data Residency Migration Runbook
+# BrytThrive — Canada Data Residency Migration Runbook
 **Version:** 1.0  
 **Date:** June 2026  
 **Author:** Wayne (with Claude Code)  
@@ -8,7 +8,7 @@
 
 ## Overview
 
-BrightThrive's landing page, settings page, and email footer claim "Data stored in Canada."  
+BrytThrive's landing page, settings page, and email footer claim "Data stored in Canada."  
 This runbook migrates the production Supabase project from `us-west-2` (Oregon) to `ca-central-1` (Canada Central) to make that claim truthful before pilot launch.
 
 ---
@@ -25,7 +25,7 @@ This runbook migrates the production Supabase project from `us-west-2` (Oregon) 
 
 | Field | Value |
 |---|---|
-| Name | BrightThrive Production Canada |
+| Name | BrytThrive Production Canada |
 | Region | **Canada Central / ca-central-1** |
 | Project ref | (assigned by Supabase after creation) |
 
@@ -47,7 +47,7 @@ Because this is a pre-pilot migration with no real family data:
 
 1. Go to [supabase.com](https://supabase.com) → Your organization → **New Project**
 2. Fill in:
-   - **Name:** `BrightThrive Production Canada`
+   - **Name:** `BrytThrive Production Canada`
    - **Database password:** generate a strong password and save it in your password manager
    - **Region:** `Canada (Central)` — verify this carefully before clicking Create
 3. Click **Create new project** and wait ~2 minutes for provisioning
@@ -82,8 +82,8 @@ Dashboard → **Database** → **Replication** (or Table Editor → table → to
 
 Dashboard → **Authentication** → **URL Configuration**:
 
-- **Site URL:** `https://brightthrive.com`
-- **Redirect URLs:** add `https://brightthrive.com/**`
+- **Site URL:** `https://brytthrive.com`
+- **Redirect URLs:** add `https://brytthrive.com/**`
 
 ---
 

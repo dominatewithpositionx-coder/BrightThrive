@@ -1,4 +1,4 @@
-# BrightThrive Architecture Roadmap
+# BrytThrive Architecture Roadmap
 
 > Priority filter: **trust → delight → retention → pilot learning → safety → emotional transformation**
 > Not: shiny tech, feature count, completeness theatre.
@@ -45,7 +45,7 @@
 - Files: `app/api/notify/route.ts` exists, extend it; add Resend welcome trigger
 
 **3. PWA manifest + install prompt**
-- BrightThrive is a web app used on phones
+- BrytThrive is a web app used on phones
 - A PWA install prompt makes it feel native — icon on home screen, no browser chrome
 - Requires: `public/manifest.json`, meta tags in `app/layout.tsx`, `apple-touch-icon`
 - Time: 2 hours
@@ -195,7 +195,7 @@ components/
 **Copy (already written — use exactly):**
 - H1: "Turn Screen Time Into Growth Time"
 - H2: "Healthy habits. Emotional intelligence. Calmer homes."
-- "BrightThrive is not a screen blocker. We motivate growth, not punishment."
+- "BrytThrive is not a screen blocker. We motivate growth, not punishment."
 - "The problem isn't screens — it's what screens replace."
 - Trust bar: "🇨🇦 Data stored in Canada · No ads · No tracking · Parents own their data"
 - Science note: "Built on research from UCLA, Goleman, CASEL, and Atomic Habits"
@@ -204,11 +204,11 @@ components/
 ### Build 2: Onboarding Email — Email 1 via Resend
 **Why second:** Pilot families are signing up right now. Without a welcome email, every signup that doesn't log in within 24h is likely gone. This is the retention floor.
 **What:** Wire Resend to send Email 1 on first signup.
-**Email 1 subject:** "Welcome to BrightThrive! Here's what happens next 💛"
+**Email 1 subject:** "Welcome to BrytThrive! Here's what happens next 💛"
 **Trigger:** Supabase auth webhook on `user.created` → POST to `/api/notify`
 
 ### Build 3: PWA Manifest + Install Prompt
-**Why third:** BrightThrive is used by children on phones. The browser URL bar is friction. An install prompt converts the web app into a home screen icon. This makes it feel like a real product, not a website.
+**Why third:** BrytThrive is used by children on phones. The browser URL bar is friction. An install prompt converts the web app into a home screen icon. This makes it feel like a real product, not a website.
 **What:** `public/manifest.json`, `apple-touch-icon`, `theme-color` meta tag, install prompt component.
 **Time:** 2 hours. High perceived quality lift for zero backend work.
 

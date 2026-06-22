@@ -9,13 +9,13 @@ interface ShareModalProps {
 
 export default function ShareModal({ onClose }: ShareModalProps) {
   const shareText = encodeURIComponent(
-    "🚀 I just joined the BrightThrive waitlist — a smarter way to help kids balance screen time, focus, and thrive every day! Join me 👇"
+    "🚀 I just joined the BrytThrive waitlist — a smarter way to help kids balance screen time, focus, and thrive every day! Join me 👇"
   );
-  const shareUrl = encodeURIComponent('https://brightthrive.com/');
+  const shareUrl = encodeURIComponent('https://brytthrive.com/');
 
   const twitterUrl = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`;
-  const emailUrl = `mailto:?subject=Join BrightThrive&body=${shareText}%0A${shareUrl}`;
+  const emailUrl = `mailto:?subject=Join BrytThrive&body=${shareText}%0A${shareUrl}`;
 
   return (
     <motion.div
@@ -41,14 +41,14 @@ export default function ShareModal({ onClose }: ShareModalProps) {
         <div className="flex flex-col items-center mb-5">
           <Image
             src="/icons/icon-96x96.png"
-            alt="BrightThrive"
+            alt="BrytThrive"
             width={56}
             height={56}
             className="rounded-2xl mb-3"
           />
           <Image
             src="/brand/BrightThrive.png"
-            alt="BrightThrive"
+            alt="BrytThrive"
             width={140}
             height={40}
             className="object-contain"
@@ -60,7 +60,7 @@ export default function ShareModal({ onClose }: ShareModalProps) {
         </h2>
 
         <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-          Let your friends know you're on the <strong>BrightThrive</strong> waitlist!
+          Let your friends know you're on the <strong>BrytThrive</strong> waitlist!
           The more families that join, the sooner we can help kids everywhere thrive smarter.
         </p>
 
