@@ -47,7 +47,7 @@ export default function ShareModal({ onClose }: ShareModalProps) {
             className="rounded-2xl mb-3"
           />
           <Image
-            src="/brand/BrightThrive.png"
+            src="/brand/BrytThrive.png"
             alt="BrytThrive"
             width={140}
             height={40}

@@ -9,7 +9,7 @@ import { Home, Users, BarChart3, Gift, Settings, ClipboardList, Gamepad2 } from 
 
 const brand = {
   name: 'BrytThrive',
-  logo: '/brand/BrightThrive.png',
+  logo: '/brand/BrytThrive.png',
 };
 
 type NavItem = {
