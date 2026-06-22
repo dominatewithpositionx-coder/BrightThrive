@@ -17,7 +17,7 @@ import {
 } from '@/lib/analytics';
 
 type Child   = { id: string; name: string; age?: number | null; points: number };
-type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean };
+type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; generated_by?: string };
 type Reward  = { id: string; title: string; coin_cost: number };
 
 const CAT_EMOJI: Record<string, string> = {
@@ -295,13 +295,13 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
         {/* Missions section */}
         <div>
-          <h2 className="text-lg font-bold text-navy mb-3">
-            {allDone
-              ? '🎉 All done for today!'
-              : missions.length === 0
-                ? 'Your Missions'
-                : `Missions (${pending.length} left)`}
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900">Today&apos;s Adventures</h2>
+          <p className="text-sm text-gray-500 mt-0.5 mb-3">
+            {allDone ? '🎉 All done for today!' : `${missions.length} missions · ${pending.length} remaining`}
+          </p>
+          {(missions.some(m => m.category === 'outdoor') || missions.some(m => m.generated_by === 'claude')) && (
+            <span className="inline-block mb-3 text-xs font-medium bg-sky-50 text-sky-600 rounded-full px-3 py-1">🌤 Weather missions included</span>
+          )}
 
           {/* All done celebration */}
           {allDone && (
@@ -522,7 +522,7 @@ export default function ChildPage() {
     ] = await Promise.all([
       supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('missions').select('id, child_id, title, category, screen_time_reward, is_completed'),
+      supabase.from('missions').select('id, child_id, title, category, screen_time_reward, is_completed, generated_by'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
       supabase.from('family_plans').select('personalization_data').limit(1).maybeSingle(),
       supabase.from('streaks').select('child_id, current_streak'),
