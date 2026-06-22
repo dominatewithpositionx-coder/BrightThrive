@@ -51,7 +51,7 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
       {/* Logo */}
       <div className="px-5 py-6 flex items-center justify-between border-b bg-gradient-to-r from-green-50 to-teal-50">
         <Link href="/dashboard" onClick={onClose}>
-          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={200} height={52} priority className="h-12 w-auto" />
+          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={180} height={120} priority className="h-12 w-auto" />
         </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
@@ -163,7 +163,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           >
             <Menu size={22} />
           </button>
-          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={160} height={40} className="h-10 w-auto" />
+          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={135} height={90} className="h-9 w-auto" />
           <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">
             {firstName[0]?.toUpperCase() || '?'}
           </div>
