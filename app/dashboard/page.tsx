@@ -8,6 +8,7 @@ import { getSupabase } from '@/lib/supabase';
 import { ClipboardList, Gift, TrendingUp, ChevronRight, Star, Flame } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
+import WeatherCard from './components/WeatherCard';
 import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 
 const supabase = getSupabase();
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [missions, setMissions]       = useState<Mission[]>([]);
   const [rewards, setRewards]         = useState<Reward[]>([]);
   const [recentLedger, setRecentLedger] = useState<LedgerEntry[]>([]);
+  const [familyLocation, setFamilyLocation] = useState<string | null>(null);
   const [loading, setLoading]         = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -82,13 +84,14 @@ export default function DashboardPage() {
 
     const [
       { data: childData }, { data: walletData }, { data: missionData },
-      { data: rewardData }, { data: ledgerData },
+      { data: rewardData }, { data: ledgerData }, { data: planData },
     ] = await Promise.all([
       supabase.from('children').select('id, name').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('missions').select('id, child_id, title, is_completed, mission_date'),
       supabase.from('rewards').select('id, title, coin_cost'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('family_plans').select('personalization_data').eq('parent_id', user.id).single(),
     ]);
 
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
@@ -97,6 +100,10 @@ export default function DashboardPage() {
     setMissions(missionData || []);
     setRewards(rewardData || []);
     setRecentLedger(ledgerData || []);
+
+    const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
+    if (loc) setFamilyLocation(loc);
+
     setLoading(false);
 
     if (kids.length === 0) {
@@ -116,6 +123,18 @@ export default function DashboardPage() {
     setGeneratingAll(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) { setGeneratingAll(false); return; }
+
+    let weatherSummary: string | undefined;
+    if (familyLocation) {
+      try {
+        const wxRes = await fetch(`/api/weather?location=${encodeURIComponent(familyLocation)}`);
+        const wxData = await wxRes.json();
+        if (!wxData.error) {
+          weatherSummary = `${wxData.condition}, ${wxData.tempC}°C, ${wxData.isOutdoorFriendly ? 'outdoor friendly' : 'indoor recommended'}`;
+        }
+      } catch { /* weather is optional */ }
+    }
+
     await Promise.allSettled(
       children.map((child) =>
         fetch('/api/generate-missions', {
@@ -124,7 +143,7 @@ export default function DashboardPage() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ childId: child.id, parentId: user?.id }),
+          body: JSON.stringify({ childId: child.id, parentId: user?.id, weatherSummary }),
         })
       )
     );
@@ -140,11 +159,11 @@ export default function DashboardPage() {
   const hasTodayMissions = todayMissions.length > 0;
   const childName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="p-4 sm:p-6 max-w-4xl space-y-6 animate-pulse">
         <div className="h-8 bg-gray-100 rounded-xl w-56" />
+        <div className="h-36 bg-gray-200 rounded-2xl" />
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {[1,2,3].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
         </div>
@@ -173,6 +192,9 @@ export default function DashboardPage() {
                 : `Managing ${children.length} children's missions and rewards.`}
           </p>
         </div>
+
+        {/* Weather card */}
+        {familyLocation && <WeatherCard location={familyLocation} />}
 
         {/* ── No children state ── */}
         {children.length === 0 && (
@@ -225,27 +247,9 @@ export default function DashboardPage() {
         {/* ── Stat row (only when children exist) ── */}
         {children.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
-            <StatCard
-              emoji="✅"
-              label="Done today"
-              value={totalTasksDone}
-              href="/dashboard/tasks"
-              accent="text-green-600"
-            />
-            <StatCard
-              emoji="🎯"
-              label="Pending"
-              value={totalPending}
-              href="/dashboard/tasks"
-              accent="text-amber-500"
-            />
-            <StatCard
-              emoji="⭐"
-              label="Rewards"
-              value={rewards.length}
-              href="/dashboard/rewards"
-              accent="text-purple-500"
-            />
+            <StatCard emoji="✅" label="Done today"  value={totalTasksDone} href="/dashboard/tasks"   accent="text-green-600" />
+            <StatCard emoji="🎯" label="Pending"     value={totalPending}   href="/dashboard/tasks"   accent="text-amber-500" />
+            <StatCard emoji="⭐" label="Rewards"     value={rewards.length} href="/dashboard/rewards" accent="text-purple-500" />
           </div>
         )}
 
@@ -265,7 +269,6 @@ export default function DashboardPage() {
 
                 return (
                   <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
-                    {/* Avatar + name */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-11 h-11 rounded-full ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                         {child.name[0].toUpperCase()}
@@ -285,12 +288,11 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Progress bar */}
                     {childMissions.length > 0 && (
                       <div className="mb-4">
                         <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                          <span>Today's missions</span>
-                          <span>{completionPct}%</span>
+                          <span>Today&apos;s missions</span>
+                          <span>{done}/{childMissions.length}</span>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
@@ -301,7 +303,6 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {/* Stats */}
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className={`rounded-xl py-2 ${done > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
                         <p className={`text-base font-bold ${done > 0 ? 'text-green-600' : 'text-gray-500'}`}>{done}</p>
@@ -365,8 +366,6 @@ export default function DashboardPage() {
     </>
   );
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title, href, linkLabel }: { title: string; href: string; linkLabel: string }) {
   return (

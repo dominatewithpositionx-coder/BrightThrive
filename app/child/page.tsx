@@ -7,6 +7,7 @@ import { getSupabase } from '@/lib/supabase';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { type MoodKey, MOODS, EI_RESPONSES } from '@/lib/mood';
+import { type WeatherData } from '@/lib/weather';
 import {
   trackMoodSelected,
   trackMissionGenerated,
@@ -32,6 +33,22 @@ function getColors(name: string) {
 
 function fireConfetti() {
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ec4899'] });
+}
+
+function ChildWeatherCard({ weather }: { weather: WeatherData | null }) {
+  if (!weather) return null;
+  const outdoorMsg = weather.isOutdoorFriendly
+    ? 'Nice outside today! Perfect for a movement mission.'
+    : 'Stay cosy inside — great day for creative missions.';
+  return (
+    <div className="mx-4 mt-4 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 p-4 flex items-center gap-4">
+      <span className="text-4xl leading-none">{weather.emoji}</span>
+      <div>
+        <p className="text-base font-bold text-orange-900">{weather.tempC}°C — {weather.condition}</p>
+        <p className="text-sm text-orange-700 mt-0.5">{outdoorMsg}</p>
+      </div>
+    </div>
+  );
 }
 
 // ── PinDialog ─────────────────────────────────────────────────────────────────
@@ -188,10 +205,11 @@ function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => v
 
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
-function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenerateMissions, generating, missionError, missionSuccess }: {
+function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenerateMissions, generating, missionError, missionSuccess, weather }: {
   child: Child; missions: Mission[]; rewards: Reward[];
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMissions: () => void; generating: boolean; missionError: string | null; missionSuccess: string | null;
+  weather: WeatherData | null;
 }) {
   const colors = getColors(child.name);
   const pending = missions.filter((m) => !m.is_completed);
@@ -238,6 +256,8 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
           </div>
         </div>
       </div>
+
+      <ChildWeatherCard weather={weather} />
 
       <div className="px-4 space-y-5 mt-5 max-w-lg mx-auto">
 
@@ -409,19 +429,29 @@ export default function ChildPage() {
   const [generating, setGenerating] = useState(false);
   const [missionError, setMissionError] = useState<string | null>(null);
   const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
+  const [weather, setWeather]       = useState<WeatherData | null>(null);
 
   const supabase = getSupabase();
 
   const fetchData = useCallback(async () => {
     const [
       { data: childData }, { data: walletData },
-      { data: missionData }, { data: rewardData },
+      { data: missionData }, { data: rewardData }, { data: planData },
     ] = await Promise.all([
       supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('missions').select('id, child_id, title, is_completed'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
+      supabase.from('family_plans').select('personalization_data').limit(1).maybeSingle(),
     ]);
+
+    const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
+    if (loc && !weather) {
+      fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
+        .then(r => r.json())
+        .then(json => { if (!json.error) setWeather(json as WeatherData); })
+        .catch(() => {});
+    }
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
     const kids = (childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
     setChildren(kids);
@@ -454,8 +484,8 @@ export default function ChildPage() {
         trackMissionGenerated({
           child_id: selected.id,
           mood: selectedMood,
-          weather_available: true,
-          count: 6,
+          weather_available: !!weather,
+          count: 5,
         });
         await fetchData();
         setMissionSuccess('New missions ready! 🎉');
@@ -577,6 +607,7 @@ export default function ChildPage() {
           generating={generating}
           missionError={missionError}
           missionSuccess={missionSuccess}
+          weather={weather}
         />
       )}
     </>
