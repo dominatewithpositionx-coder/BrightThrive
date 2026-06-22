@@ -4,10 +4,12 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { type MoodKey, MOODS, EI_RESPONSES } from '@/lib/mood';
 import { type WeatherData } from '@/lib/weather';
+import { updateStreak } from '@/lib/streaks';
 import {
   trackMoodSelected,
   trackMissionGenerated,
@@ -15,8 +17,20 @@ import {
 } from '@/lib/analytics';
 
 type Child   = { id: string; name: string; age?: number | null; points: number };
-type Mission = { id: string; child_id: string; title: string; is_completed: boolean };
+type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean };
 type Reward  = { id: string; title: string; coin_cost: number };
+
+const CAT_EMOJI: Record<string, string> = {
+  movement: '🏃',
+  responsibility: '🧹',
+  emotional_intelligence: '💛',
+  learning: '📚',
+  creativity: '🎨',
+  family_connection: '👨‍👩‍👧',
+  outdoor: '🌤️',
+  healthy_habits: '🥦',
+  general: '⭐',
+};
 
 const AVATAR_COLORS = [
   { bg: 'bg-green-400',  ring: 'ring-green-300',  text: 'text-green-900',  light: 'bg-green-50'  },
@@ -35,17 +49,25 @@ function fireConfetti() {
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ec4899'] });
 }
 
+function weatherGradient(data: WeatherData): string {
+  const lc = data.condition.toLowerCase();
+  if (lc.includes('rain') || lc.includes('shower') || lc.includes('storm')) return 'from-indigo-100 to-blue-100';
+  if (lc.includes('snow')) return 'from-blue-100 to-cyan-100';
+  if (lc.includes('cloud') || lc.includes('fog')) return 'from-slate-100 to-gray-100';
+  return 'from-amber-100 to-orange-100';
+}
+
 function ChildWeatherCard({ weather }: { weather: WeatherData | null }) {
   if (!weather) return null;
   const outdoorMsg = weather.isOutdoorFriendly
-    ? 'Nice outside today! Perfect for a movement mission.'
+    ? "Nice day outside! Let's earn points outdoors."
     : 'Stay cosy inside — great day for creative missions.';
   return (
-    <div className="mx-4 mt-4 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 p-4 flex items-center gap-4">
+    <div className={`mx-4 mt-4 rounded-2xl bg-gradient-to-br ${weatherGradient(weather)} p-4 flex items-center gap-4`}>
       <span className="text-4xl leading-none">{weather.emoji}</span>
       <div>
-        <p className="text-base font-bold text-orange-900">{weather.tempC}°C — {weather.condition}</p>
-        <p className="text-sm text-orange-700 mt-0.5">{outdoorMsg}</p>
+        <p className="text-base font-bold text-gray-800">{weather.tempC}° — {weather.condition}</p>
+        <p className="text-sm text-gray-600 mt-0.5">{outdoorMsg}</p>
       </div>
     </div>
   );
@@ -96,7 +118,7 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
           ))}
         </div>
         {error && <p className="text-red-500 text-sm mb-3 animate-fade-in">Wrong PIN, try again</p>}
-        <button onClick={onCancel} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">Back</button>
+        <button onClick={onCancel} className="text-sm text-gray-400 hover:text-gray-600 transition-colors min-h-[44px]">Back</button>
       </div>
     </div>
   );
@@ -179,24 +201,17 @@ function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => v
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-6 py-16 bg-gradient-to-br ${r.bg} animate-fade-in`}>
       <div className="w-full max-w-sm text-center">
-        {/* Emoji */}
         <div className="text-8xl mb-8 leading-none">{emoji}</div>
-
-        {/* EI copy */}
         <div className="space-y-3 mb-10">
           <h2 className="text-2xl font-bold text-navy leading-snug">{r.headline}</h2>
           <p className="text-gray-600 text-base leading-relaxed max-w-xs mx-auto">{r.message}</p>
         </div>
-
-        {/* CTA */}
         <button
           onClick={onContinue}
           className="w-full bg-gray-900 text-white py-4 rounded-2xl text-base font-semibold active:scale-[0.98] hover:bg-gray-800 transition-all duration-150 shadow-lg"
         >
           {r.cta}
         </button>
-
-        {/* Subtle label */}
         <p className="text-xs text-gray-400 mt-5">Your missions are ready for you</p>
       </div>
     </div>
@@ -205,8 +220,8 @@ function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => v
 
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
-function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenerateMissions, generating, missionError, missionSuccess, weather }: {
-  child: Child; missions: Mission[]; rewards: Reward[];
+function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, onGenerateMissions, generating, missionError, missionSuccess, weather }: {
+  child: Child; missions: Mission[]; rewards: Reward[]; streak: number;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMissions: () => void; generating: boolean; missionError: string | null; missionSuccess: string | null;
   weather: WeatherData | null;
@@ -215,14 +230,13 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
   const pending = missions.filter((m) => !m.is_completed);
   const done    = missions.filter((m) => m.is_completed);
   const allDone = missions.length > 0 && pending.length === 0;
+  const progress = missions.length > 0 ? Math.round((done.length / missions.length) * 100) : 0;
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const sortedRewards = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
   const nextReward = sortedRewards.find((r) => r.coin_cost > child.points) || null;
   const affordableRewards = sortedRewards.filter((r) => r.coin_cost <= child.points);
-  const progress = nextReward ? Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100)) : 100;
-
-  const encouragements = ['Amazing work!', "You're on fire!", 'Keep it up!', 'Super star!', 'Crushing it!'];
-  const encouragement  = encouragements[done.length % encouragements.length];
+  const rewardProgress = nextReward ? Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100)) : 100;
 
   return (
     <div className="min-h-screen pb-10 animate-fade-in">
@@ -240,16 +254,16 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
             {child.name[0].toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{child.name}</h1>
+            <h1 className="text-2xl font-bold text-white">Hey {child.name}! 🌟</h1>
             <div className="flex items-center gap-2 mt-1.5">
               <div className="flex items-center gap-1 bg-white/20 rounded-full px-3 py-1">
                 <Star size={13} fill="white" className="text-white" />
                 <span className="text-white font-bold text-sm">{child.points} pts</span>
               </div>
-              {done.length > 0 && (
+              {streak > 0 && (
                 <div className="flex items-center gap-1 bg-white/20 rounded-full px-3 py-1">
                   <Flame size={13} className="text-white" />
-                  <span className="text-white text-sm font-medium">{encouragement}</span>
+                  <span className="text-white text-sm font-medium">{streak} day streak</span>
                 </div>
               )}
             </div>
@@ -261,40 +275,21 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
 
       <div className="px-4 space-y-5 mt-5 max-w-lg mx-auto">
 
-        {/* Next reward progress */}
-        {nextReward && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Gift size={16} className="text-purple-500" />
-                <span className="font-semibold text-gray-700 text-sm">Next reward</span>
-              </div>
-              <span className="text-xs text-gray-400">{child.points} / {nextReward.coin_cost} pts</span>
+        {/* Mission progress bar */}
+        {missions.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="font-semibold text-navy">{done.length}/{missions.length} missions done today</span>
+              <span className="text-gray-400">{progress}%</span>
             </div>
-            <p className="font-bold text-navy mb-3">{nextReward.title}</p>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-700" style={{ width: `${progress}%` }} />
+              <motion.div
+                className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.5 }}
+              />
             </div>
-            <p className="text-xs text-gray-400 mt-1.5 text-right">{nextReward.coin_cost - child.points} pts to go!</p>
-          </div>
-        )}
-
-        {/* Ready to redeem banner */}
-        {affordableRewards.length > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Gift size={16} className="text-green-600" />
-              <span className="font-semibold text-green-800 text-sm">Ready to redeem!</span>
-            </div>
-            <div className="space-y-1.5">
-              {affordableRewards.map((r) => (
-                <div key={r.id} className="flex justify-between items-center text-sm">
-                  <span className="text-green-900 font-medium">{r.title}</span>
-                  <span className="text-green-600 font-semibold">{r.coin_cost} pts</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-green-600 mt-2 font-medium">Ask a parent to redeem! 🎁</p>
           </div>
         )}
 
@@ -318,9 +313,11 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
                 onClick={onGenerateMissions}
                 disabled={generating}
                 aria-label="Generate new missions"
-                className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60"
+                className="min-h-[44px] bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60 inline-flex items-center gap-2"
               >
-                {generating ? '✨ Getting new missions…' : '✨ New Missions!'}
+                {generating
+                  ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Creating adventures…</>
+                  : '✨ New Missions!'}
               </button>
             </div>
           )}
@@ -331,7 +328,7 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
               {generating ? (
                 <div className="space-y-4">
                   <div className="text-3xl animate-bounce">✨</div>
-                  <p className="text-gray-500 text-sm font-medium">Creating your missions…</p>
+                  <p className="text-gray-500 text-sm font-medium">Creating adventures…</p>
                   <div className="flex justify-center gap-1.5">
                     {[0,1,2].map(i => (
                       <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -368,43 +365,127 @@ function ChildView({ child, missions, rewards, onBack, onMissionToggle, onGenera
 
           {/* Pending missions */}
           <div className="space-y-3 mt-3">
-            {pending.map((mission) => (
-              <button
-                key={mission.id}
-                onClick={() => onMissionToggle(mission)}
-                aria-label={`Mark "${mission.title}" as complete`}
-                className="w-full bg-white rounded-2xl border-2 border-gray-100 p-4 flex items-center gap-4 text-left hover:border-green-300 hover:shadow-md active:scale-[0.98] transition-all duration-150 group"
-              >
-                <div className="w-10 h-10 rounded-full border-2 border-gray-200 group-hover:border-green-400 flex items-center justify-center flex-shrink-0 transition-colors duration-150">
-                  <div className="w-5 h-5 rounded-full bg-gray-100 group-hover:bg-green-100 transition-colors" />
-                </div>
-                <span className="text-navy font-medium text-base flex-1">{mission.title}</span>
-                <span className="text-green-500 font-bold text-sm whitespace-nowrap">+10 pts</span>
-              </button>
-            ))}
+            <AnimatePresence>
+              {pending.map((mission, i) => {
+                const emoji = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+                const reward = mission.screen_time_reward ?? 10;
+                return (
+                  <motion.div
+                    key={mission.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.25, delay: i * 0.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="bg-white rounded-2xl border-2 border-gray-100 p-4"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl leading-none">{emoji}</span>
+                      <span className="text-lg font-semibold text-navy flex-1">{mission.title}</span>
+                      <span className="bg-amber-50 text-amber-600 font-bold text-sm rounded-full px-2.5 py-1 whitespace-nowrap">+{reward} 🪙</span>
+                    </div>
+                    <button
+                      onClick={() => onMissionToggle(mission)}
+                      aria-label={`Mark "${mission.title}" as complete`}
+                      className="w-full h-14 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-base hover:from-green-600 hover:to-green-700 active:scale-[0.98] transition-all"
+                    >
+                      Complete ✓
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </div>
 
-        {/* Completed missions */}
+        {/* New Missions button */}
+        {pending.length > 0 && (
+          <button
+            onClick={onGenerateMissions}
+            disabled={generating}
+            aria-label="Get new missions"
+            className="w-full min-h-[44px] border-2 border-green-200 text-green-700 font-semibold py-3 rounded-xl hover:bg-green-50 active:scale-[0.98] transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
+          >
+            {generating
+              ? <><span className="w-4 h-4 border-2 border-green-200 border-t-green-600 rounded-full animate-spin" /> Creating adventures…</>
+              : '✨ New Missions'}
+          </button>
+        )}
+
+        {/* Completed missions (collapsible) */}
         {done.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Completed ✓</h2>
-            <div className="space-y-2">
-              {done.map((mission) => (
-                <button
-                  key={mission.id}
-                  onClick={() => onMissionToggle(mission)}
-                  aria-label={`Undo "${mission.title}"`}
-                  className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-4 flex items-center gap-4 text-left hover:opacity-100 opacity-70 active:scale-[0.98] transition-all duration-150"
+            <button
+              onClick={() => setShowCompleted((v) => !v)}
+              aria-label="Toggle completed missions"
+              className="w-full min-h-[44px] flex items-center justify-between text-sm font-semibold text-gray-400 uppercase tracking-wide"
+            >
+              <span>Completed today ({done.length})</span>
+              <ChevronDown size={16} className={`transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {showCompleted && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 mt-2 overflow-hidden"
                 >
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                  <span className="text-gray-500 font-medium line-through text-base flex-1">{mission.title}</span>
-                  <span className="text-xs text-gray-400">Undo</span>
-                </button>
+                  {done.map((mission) => (
+                    <button
+                      key={mission.id}
+                      onClick={() => onMissionToggle(mission)}
+                      aria-label={`Undo "${mission.title}"`}
+                      className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-4 flex items-center gap-4 text-left opacity-70 active:scale-[0.98] transition-all duration-150"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle size={20} className="text-green-500" />
+                      </div>
+                      <span className="text-gray-500 font-medium line-through text-base flex-1">{mission.title}</span>
+                      <span className="text-xs text-gray-400">Undo</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Rewards progress */}
+        {nextReward && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Gift size={16} className="text-purple-500" />
+                <span className="font-semibold text-gray-700 text-sm">Next reward</span>
+              </div>
+              <span className="text-xs text-gray-400">{child.points} / {nextReward.coin_cost} BrytCoins</span>
+            </div>
+            <p className="font-bold text-navy mb-3">{nextReward.title}</p>
+            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-700" style={{ width: `${rewardProgress}%` }} />
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5 text-right">{nextReward.coin_cost - child.points} BrytCoins to go!</p>
+          </div>
+        )}
+
+        {/* Ready to redeem banner */}
+        {affordableRewards.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Gift size={16} className="text-green-600" />
+              <span className="font-semibold text-green-800 text-sm">Ready to redeem!</span>
+            </div>
+            <div className="space-y-1.5">
+              {affordableRewards.map((r) => (
+                <div key={r.id} className="flex justify-between items-center text-sm">
+                  <span className="text-green-900 font-medium">{r.title}</span>
+                  <span className="text-green-600 font-semibold">{r.coin_cost} pts</span>
+                </div>
               ))}
             </div>
+            <p className="text-xs text-green-600 mt-2 font-medium">Ask a parent to redeem! 🎁</p>
           </div>
         )}
 
@@ -421,6 +502,7 @@ export default function ChildPage() {
   const [children, setChildren]     = useState<Child[]>([]);
   const [missions, setMissions]     = useState<Mission[]>([]);
   const [rewards, setRewards]       = useState<Reward[]>([]);
+  const [streaks, setStreaks]       = useState<Record<string, number>>({});
   const [selected, setSelected]     = useState<Child | null>(null);
   const [pendingChild, setPendingChild] = useState<Child | null>(null);
   const [phase, setPhase]           = useState<AppPhase>('picker');
@@ -436,13 +518,14 @@ export default function ChildPage() {
   const fetchData = useCallback(async () => {
     const [
       { data: childData }, { data: walletData },
-      { data: missionData }, { data: rewardData }, { data: planData },
+      { data: missionData }, { data: rewardData }, { data: planData }, { data: streakData },
     ] = await Promise.all([
       supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('missions').select('id, child_id, title, is_completed'),
+      supabase.from('missions').select('id, child_id, title, category, screen_time_reward, is_completed'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
       supabase.from('family_plans').select('personalization_data').limit(1).maybeSingle(),
+      supabase.from('streaks').select('child_id, current_streak'),
     ]);
 
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
@@ -457,6 +540,7 @@ export default function ChildPage() {
     setChildren(kids);
     setMissions(missionData || []);
     setRewards(rewardData || []);
+    setStreaks(Object.fromEntries((streakData || []).map(s => [s.child_id, s.current_streak])));
     setLoading(false);
     if (selected) {
       const fresh = kids.find((c) => c.id === selected.id);
@@ -485,7 +569,7 @@ export default function ChildPage() {
           child_id: selected.id,
           mood: selectedMood,
           weather_available: !!weather,
-          count: 5,
+          count: 6,
         });
         await fetchData();
         setMissionSuccess('New missions ready! 🎉');
@@ -557,9 +641,16 @@ export default function ChildPage() {
     const newPoints = selected.points + pointsChange;
     setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
     setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
+
+    // Streak reflects whether any mission is still completed today after this toggle.
+    const stillHasCompleted = missions.some((m) =>
+      m.child_id === selected.id && (m.id === mission.id ? nowCompleted : m.is_completed));
+    try {
+      const result = await updateStreak(supabase, selected.id, stillHasCompleted);
+      setStreaks((prev) => ({ ...prev, [selected.id]: result.current }));
+    } catch { /* streak update is non-blocking */ }
   }
 
-  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -601,6 +692,7 @@ export default function ChildPage() {
           child={selected}
           missions={childMissions}
           rewards={rewards}
+          streak={streaks[selected.id] ?? 0}
           onBack={handleBack}
           onMissionToggle={handleMissionToggle}
           onGenerateMissions={handleGenerateMissions}

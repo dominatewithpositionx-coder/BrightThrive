@@ -11,7 +11,7 @@ import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 import { trackRewardCreated, trackRewardRedeemed } from '@/lib/analytics';
 
 type Reward = { id: string; title: string; coin_cost: number; created_at: string };
-type Child  = { id: string; name: string; points: number };
+type Child  = { id: string; name: string; age: number | null; points: number };
 type Redemption = { id: string; child_id: string; reward_title: string; coin_cost: number; requested_at: string };
 type ConfirmState = { child: Child; reward: Reward } | null;
 type DeleteRewardState = Reward | null;
@@ -23,6 +23,53 @@ const AVATAR_COLORS = [
 function avatarColor(name: string) {
   let h = 0; for (const c of name) h += c.charCodeAt(0);
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+const REWARD_PRESETS: Record<string, Array<{ title: string; coin_cost: number; emoji: string }>> = {
+  '3-5': [
+    { title: 'Choose a bedtime story', coin_cost: 10, emoji: '📚' },
+    { title: 'Extra playtime (15 min)', coin_cost: 20, emoji: '🎮' },
+    { title: 'Pick dessert tonight', coin_cost: 30, emoji: '🍦' },
+    { title: 'Stay up 15 min later', coin_cost: 40, emoji: '🌙' },
+    { title: 'Special outing with parent', coin_cost: 100, emoji: '⭐' },
+  ],
+  '6-7': [
+    { title: 'Choose tonight’s movie', coin_cost: 20, emoji: '🎬' },
+    { title: 'Extra playtime (20 min)', coin_cost: 30, emoji: '🎮' },
+    { title: 'Pick dessert tonight', coin_cost: 40, emoji: '🍦' },
+    { title: 'Stay up 20 min later', coin_cost: 50, emoji: '🌙' },
+    { title: 'Special outing with parent', coin_cost: 120, emoji: '⭐' },
+  ],
+  '8-10': [
+    { title: '30 min extra screen time', coin_cost: 40, emoji: '📱' },
+    { title: 'Pick the movie tonight', coin_cost: 50, emoji: '🎬' },
+    { title: 'Choose dinner tonight', coin_cost: 60, emoji: '🍕' },
+    { title: 'Friend playdate', coin_cost: 100, emoji: '🧑‍🤝‍🧑' },
+    { title: 'Trip to the park or pool', coin_cost: 150, emoji: '⭐' },
+  ],
+  '11-13': [
+    { title: '30 min Roblox or gaming', coin_cost: 50, emoji: '🎮' },
+    { title: '1 hour phone time', coin_cost: 70, emoji: '📱' },
+    { title: 'Choose the family meal', coin_cost: 80, emoji: '🍔' },
+    { title: 'Friend sleepover', coin_cost: 150, emoji: '🛌' },
+    { title: 'Day-out with a friend', coin_cost: 200, emoji: '⭐' },
+  ],
+  '14+': [
+    { title: '1 hour gaming session', coin_cost: 60, emoji: '🎮' },
+    { title: 'Later curfew (30 min)', coin_cost: 90, emoji: '🌙' },
+    { title: 'Choose the takeout', coin_cost: 100, emoji: '🍔' },
+    { title: 'Allowance bonus', coin_cost: 180, emoji: '💵' },
+    { title: 'Outing with friends', coin_cost: 220, emoji: '⭐' },
+  ],
+};
+
+function ageBand(age: number | null): string {
+  if (age == null) return '8-10';
+  if (age <= 5) return '3-5';
+  if (age <= 7) return '6-7';
+  if (age <= 10) return '8-10';
+  if (age <= 13) return '11-13';
+  return '14+';
 }
 
 export default function RewardsPage() {
@@ -51,7 +98,7 @@ export default function RewardsPage() {
       { data: redemptionData },
     ] = await Promise.all([
       supabase.from('rewards').select('id, title, coin_cost, created_at').order('created_at', { ascending: false }),
-      supabase.from('children').select('id, name'),
+      supabase.from('children').select('id, name, age'),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('reward_redemptions').select('id, child_id, reward_title, coin_cost, requested_at').order('requested_at', { ascending: false }),
     ]);
@@ -160,6 +207,15 @@ export default function RewardsPage() {
   }
 
   const getChildName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
+
+  const youngestAge = children.length > 0
+    ? children.reduce<number | null>((min, c) => {
+        if (c.age == null) return min;
+        if (min == null) return c.age;
+        return Math.min(min, c.age);
+      }, null)
+    : null;
+  const suggestions = REWARD_PRESETS[ageBand(youngestAge)] ?? REWARD_PRESETS['8-10'];
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
 
@@ -287,6 +343,29 @@ export default function RewardsPage() {
           <h1 className="text-2xl font-bold text-navy">Rewards</h1>
           <p className="text-sm text-gray-500 mt-1">Create rewards. Kids earn them by completing missions.</p>
         </div>
+
+        {/* Suggested rewards */}
+        {children.length > 0 && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Suggested Rewards</h2>
+            <p className="text-xs text-gray-400 mb-3">BrytThrive suggestions — tap to add</p>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+              {suggestions.map((s) => (
+                <button
+                  key={s.title}
+                  type="button"
+                  onClick={() => { setTitle(s.title); setCost(s.coin_cost); }}
+                  aria-label={`Use suggestion: ${s.title}`}
+                  className="flex-shrink-0 min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-sm hover:border-green-400 hover:bg-green-50 active:scale-95 transition-all"
+                >
+                  <span className="text-lg">{s.emoji}</span>
+                  <span className="font-medium text-navy whitespace-nowrap">{s.title}</span>
+                  <span className="text-amber-600 font-semibold whitespace-nowrap">{s.coin_cost}🪙</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Add reward form */}
         <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
