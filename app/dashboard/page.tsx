@@ -93,15 +93,37 @@ export default function DashboardPage() {
     }
 
     const [
-      { data: childData }, { data: walletData }, { data: missionData },
-      { data: streakData }, { data: planData },
+      childRes, walletRes, missionRes,
+      streakRes, planRes,
     ] = await Promise.all([
       supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('missions').select('id, child_id, title, category, is_completed, mission_date, updated_at, generated_by'),
       supabase.from('streaks').select('child_id, current_streak'),
-      supabase.from('family_plans').select('personalization_data').eq('parent_id', user.id).single(),
+      supabase.from('family_plans').select('personalization_data').eq('parent_id', user.id).maybeSingle(),
     ]);
+
+    if (childRes.error) console.error('[dashboard] children query error:', childRes.error.message);
+    if (walletRes.error) console.error('[dashboard] wallet query error:', walletRes.error.message);
+    if (streakRes.error) console.error('[dashboard] streaks query error:', streakRes.error.message);
+    if (planRes.error) console.error('[dashboard] family_plans query error:', planRes.error.message);
+
+    const { data: childData } = childRes;
+    const { data: walletData } = walletRes;
+    const { data: streakData } = streakRes;
+    const { data: planData } = planRes;
+
+    // The `generated_by` column may not exist on older production DBs. If the
+    // mission query failed, retry without it so missions still render.
+    let missionData: Mission[] | null = missionRes.data;
+    if (missionRes.error) {
+      console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
+      const retry = await supabase
+        .from('missions')
+        .select('id, child_id, title, category, is_completed, mission_date, updated_at');
+      if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
+      missionData = retry.data;
+    }
 
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
     const streakMap = Object.fromEntries((streakData || []).map(s => [s.child_id, s.current_streak]));
@@ -227,7 +249,16 @@ export default function DashboardPage() {
         )}
 
         {/* 2. Weather card */}
-        {familyLocation && <WeatherCard location={familyLocation} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />}
+        {familyLocation ? (
+          <WeatherCard location={familyLocation} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />
+        ) : children.length > 0 ? (
+          <Link
+            href="/dashboard/settings"
+            className="block rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-500 hover:border-green-300 hover:bg-green-50 transition-colors"
+          >
+            📍 Add your city in Settings to see today&apos;s weather and weather-aware missions.
+          </Link>
+        ) : null}
 
         {/* ── No children state ── */}
         {children.length === 0 && (

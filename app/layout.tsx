@@ -9,6 +9,7 @@ import ServiceWorkerRegistrar from '@/components/brightthrive/ServiceWorkerRegis
 import InstallPrompt from '@/components/brightthrive/InstallPrompt';
 import MobileNav from '@/components/brightthrive/MobileNav';
 import Logo from '@/components/brightthrive/Logo';
+import ClientChrome from '@/components/brightthrive/ClientChrome';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
@@ -54,7 +55,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={poppins.className}>
       <body className="min-h-screen text-navy bg-white">
-        {/* Header */}
+        {/* Header — hidden on /dashboard and /child (they render their own chrome) */}
+        <ClientChrome>
         <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           {/* Mobile: hamburger | Logo | CTA */}
           {/* Desktop: Logo | nav */}
@@ -94,11 +96,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
           </div>
         </header>
+        </ClientChrome>
 
         {/* Main Content */}
         <main>{children}</main>
 
-        {/* Footer */}
+        {/* Footer — hidden on /dashboard and /child */}
+        <ClientChrome>
         <footer className="max-w-5xl mx-auto px-4 py-12 text-sm text-gray-600 border-t mt-12">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <p>© {new Date().getFullYear()} BrytThrive. All rights reserved.</p>
@@ -108,6 +112,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </footer>
+        </ClientChrome>
 
         <Toaster position="top-right" richColors />
         <Analytics />
