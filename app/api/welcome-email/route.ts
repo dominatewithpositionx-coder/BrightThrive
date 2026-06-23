@@ -24,7 +24,7 @@ function buildHtml(parentEmail: string): string {
 
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);padding:36px 40px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#14B8A6 0%,#0F766E 100%);padding:36px 40px;text-align:center;">
               <p style="margin:0;font-size:28px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">BrytThrive 💛</p>
               <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">Positive Behavior Technology for families</p>
             </td>
@@ -81,7 +81,7 @@ function buildHtml(parentEmail: string): string {
                   <td align="center">
                     <a
                       href="${dashboardUrl}"
-                      style="display:inline-block;background:#22c55e;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:50px;box-shadow:0 2px 8px rgba(34,197,94,0.35);"
+                      style="display:inline-block;background:#14B8A6;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:50px;box-shadow:0 2px 8px rgba(20,184,166,0.35);"
                     >
                       Go to my dashboard →
                     </a>
@@ -90,10 +90,10 @@ function buildHtml(parentEmail: string): string {
               </table>
 
               <!-- Reassurance -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:12px;margin:0 0 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDFA;border-radius:12px;margin:0 0 28px;">
                 <tr>
                   <td style="padding:16px 20px;">
-                    <p style="margin:0;font-size:13px;line-height:1.6;color:#166534;">
+                    <p style="margin:0;font-size:13px;line-height:1.6;color:#0F766E;">
                       <strong>No pressure.</strong> BrytThrive works at your pace. Even one mission a day is a win.
                       Your family doesn&rsquo;t have to be perfect — just a little bit better, one day at a time.
                     </p>

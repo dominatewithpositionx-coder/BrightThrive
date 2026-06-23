@@ -21,14 +21,14 @@ export default function EmptyState({ emoji, headline, body, cta }: EmptyStatePro
         cta.href ? (
           <Link
             href={cta.href}
-            className="inline-block bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+            className="inline-block bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
           >
             {cta.label}
           </Link>
         ) : (
           <button
             onClick={cta.onClick}
-            className="inline-block bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+            className="inline-block bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
           >
             {cta.label}
           </button>
