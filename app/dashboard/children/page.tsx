@@ -134,14 +134,30 @@ export default function ChildrenPage() {
   const supabase = getSupabase();
 
   async function fetchData() {
-    const [{ data: childData }, { data: walletData }, { data: ledgerData }] = await Promise.all([
+    const [childRes, walletRes, ledgerRes] = await Promise.all([
       supabase.from('children').select('id, name, age, daily_screen_time_goal, created_at').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }),
     ]);
-    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
-    setChildren((childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
-    setLedger(ledgerData || []);
+
+    if (walletRes.error) console.error('[children] wallet query error:', walletRes.error.message);
+    if (ledgerRes.error) console.error('[children] ledger query error:', ledgerRes.error.message);
+
+    // daily_screen_time_goal may not exist on older production DBs — retry without it.
+    let childRows = childRes.data;
+    if (childRes.error) {
+      console.error('[children] query error (retrying without daily_screen_time_goal):', childRes.error.message);
+      const retry = await supabase
+        .from('children')
+        .select('id, name, age, created_at')
+        .order('created_at', { ascending: true });
+      if (retry.error) console.error('[children] retry error:', retry.error.message);
+      childRows = (retry.data || []).map(c => ({ ...c, daily_screen_time_goal: null }));
+    }
+
+    const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
+    setChildren((childRows || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
+    setLedger(ledgerRes.data || []);
     setLoading(false);
   }
 
@@ -307,7 +323,7 @@ export default function ChildrenPage() {
               emoji="🌱"
               headline="No children added yet"
               body="Add your first child to start assigning missions and rewards."
-              cta={{ label: 'Add your first child', href: '#' }}
+              cta={{ label: 'Add your first child', onClick: () => setShowForm(true) }}
             />
           </div>
         ) : (

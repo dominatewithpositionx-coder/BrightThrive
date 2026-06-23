@@ -49,9 +49,9 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-6 flex items-center justify-between border-b bg-gradient-to-r from-green-50 to-teal-50">
+      <div className="px-5 py-6 flex items-center justify-between border-b bg-white">
         <Link href="/dashboard" onClick={onClose}>
-          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={180} height={120} priority className="h-12 w-auto" />
+          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={180} height={120} priority className="h-12 w-auto object-contain" />
         </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">

@@ -49,8 +49,8 @@ export const EMPTY_STATES = {
   noMissions: {
     emoji: '🎯',
     headline: 'No missions yet today',
-    body: "Start with a mood check-in and BrytThrive will generate 5 personalized missions.",
-    cta: { label: 'Generate missions', href: '/child' },
+    body: "Open Kid View to do a mood check-in and BrytThrive will generate personalized missions.",
+    cta: { label: 'Open Kid View', href: '/child' },
   },
   noRewards: {
     emoji: '⭐',
@@ -61,8 +61,8 @@ export const EMPTY_STATES = {
   noHistory: {
     emoji: '📅',
     headline: 'No activity yet',
-    body: "Completed missions and earned coins will show up here. Start your first mission to see the magic.",
-    cta: { label: 'Start a mission', href: '/child' },
+    body: "Completed missions and earned coins will show up here. Open Kid View to start the first mission.",
+    cta: { label: 'Open Kid View', href: '/child' },
   },
   noWallet: {
     emoji: '🪙',

@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => { init(); }, []);
@@ -152,8 +153,14 @@ export default function DashboardPage() {
     if (generatingAll || children.length === 0) return;
     setGeneratingAll(true);
     setGeneratedCount(null);
+    setGenerateError(null);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) { setGeneratingAll(false); return; }
+    if (!session?.access_token) {
+      console.error('[dashboard] generateMissionsForAll: no session — aborting');
+      setGenerateError('Session expired. Please refresh the page and try again.');
+      setGeneratingAll(false);
+      return;
+    }
 
     let weatherSummary: string | undefined;
     if (familyLocation) {
@@ -178,10 +185,20 @@ export default function DashboardPage() {
           },
           body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
         });
-        if (res.ok) success += 1;
-      } catch { /* continue with remaining children */ }
+        if (res.ok) {
+          success += 1;
+        } else {
+          const body = await res.json().catch(() => ({}));
+          console.error(`[dashboard] generateMissionsForAll: API returned ${res.status} for child ${child.name}:`, body);
+        }
+      } catch (err) {
+        console.error('[dashboard] generateMissionsForAll: network error for child', child.name, err);
+      }
     }
     setGeneratedCount(success);
+    if (success === 0) {
+      setGenerateError('Could not generate missions. Check the browser console for details and try again.');
+    }
     await init();
     setGeneratingAll(false);
   }
@@ -278,7 +295,7 @@ export default function DashboardPage() {
                   disabled={generatingAll}
                   className="min-h-[44px] px-4 py-2 bg-green-600 text-white text-xs font-semibold rounded-xl hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60"
                 >
-                  {generatingAll ? '✨ Generating…' : '✨ Generate for today'}
+                  {generatingAll ? '✨ Generating…' : generatedCount !== null && generatedCount > 0 ? '✓ Missions created' : '✨ Generate for today'}
                 </button>
               )}
             </div>
@@ -362,7 +379,7 @@ export default function DashboardPage() {
                           ))}
                         </ul>
                         <Link href="/child" target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:text-green-700 font-medium">
-                          See all →
+                          Open Kid View →
                         </Link>
                       </>
                     ) : (
@@ -379,6 +396,9 @@ export default function DashboardPage() {
         {children.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
+            {generateError && (
+              <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>
+            )}
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={generateMissionsForAll}
@@ -388,8 +408,8 @@ export default function DashboardPage() {
                 <Sparkles size={16} />
                 {generatingAll
                   ? 'Generating…'
-                  : generatedCount !== null
-                    ? `Missions created for ${generatedCount} ${generatedCount === 1 ? 'child' : 'children'}`
+                  : generatedCount !== null && generatedCount > 0
+                    ? `✓ Missions created for ${generatedCount} ${generatedCount === 1 ? 'child' : 'children'}`
                     : "Generate Today's Missions"}
               </button>
               <Link
@@ -419,7 +439,7 @@ export default function DashboardPage() {
         {/* 6. Recent activity */}
         {children.length > 0 && (
           <section>
-            <SectionHeader title="Recent Activity" href="/dashboard/history" linkLabel="View all" />
+            <SectionHeader title="Recent Activity" href="/dashboard/history" linkLabel="View coin history" />
             {recentCompleted.length === 0 ? (
               <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
                 <EmptyState {...EMPTY_STATES.noHistory} />

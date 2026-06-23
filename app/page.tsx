@@ -49,7 +49,7 @@ export default function HomePage() {
       {/* ── Trust bar ── */}
       <section className="bg-white border-y border-gray-100 py-4 px-4">
         <div className="max-w-3xl mx-auto flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
-          <span>🇨🇦 Data stored in Canada</span>
+          <span>🍁 Data stored in Canada</span>
           <span className="hidden sm:inline">·</span>
           <span>No ads</span>
           <span className="hidden sm:inline">·</span>

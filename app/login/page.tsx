@@ -34,14 +34,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleLogin() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    if (error) setMessage(error.message);
-  }
-
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
@@ -89,20 +81,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-xs text-gray-400 bg-white px-2">or</div>
-          </div>
-
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full border border-gray-200 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition min-h-[44px]"
-          >
-            <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
-            Continue with Google
-          </button>
+          {/* Google OAuth is hidden until the Google provider is enabled in Supabase.
+              To enable: Supabase Dashboard → Authentication → Providers → Google
+              → toggle on → paste your Google OAuth Client ID and Client Secret
+              → add https://[project].supabase.co/auth/v1/callback as an Authorized Redirect URI in Google Cloud Console. */}
 
           {message && <p className="mt-4 text-sm text-red-600 text-center">{message}</p>}
         </div>

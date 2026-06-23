@@ -36,9 +36,26 @@ function useInstallPrompt() {
   return prompt;
 }
 
+const INSTALL_DISMISSED_KEY = 'bt_install_dismissed_at';
+const INSTALL_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function isInstallDismissed(): boolean {
+  try {
+    const ts = localStorage.getItem(INSTALL_DISMISSED_KEY);
+    if (!ts) return false;
+    return Date.now() - Number(ts) < INSTALL_DISMISS_TTL_MS;
+  } catch { return false; }
+}
+
+function recordInstallDismiss() {
+  try { localStorage.setItem(INSTALL_DISMISSED_KEY, String(Date.now())); } catch {}
+}
+
 function KidInstallBanner({ prompt }: { prompt: BeforeInstallPromptEvent | null }) {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(() => !isInstallDismissed());
   if (!visible || !prompt) return null;
+
+  function dismiss() { setVisible(false); recordInstallDismiss(); }
   async function install() {
     if (!prompt) return;
     await prompt.prompt();
@@ -52,21 +69,22 @@ function KidInstallBanner({ prompt }: { prompt: BeforeInstallPromptEvent | null 
         <p className="font-semibold text-sm text-navy leading-tight">Add BrytThrive to your home screen</p>
         <p className="text-xs text-gray-500 mt-0.5">Access it like an app — no browser needed.</p>
       </div>
-      <button onClick={() => setVisible(false)} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
-      <div className="absolute" style={{ display: 'none' }} />
-      <button onClick={install} className="sr-only">Add</button>
+      <button onClick={dismiss} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
     </div>
   );
 }
 
 function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | null }) {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(() => !isInstallDismissed());
   if (!visible || !prompt) return null;
+
+  function dismiss() { setVisible(false); recordInstallDismiss(); }
+
   async function install() {
     if (!prompt) return;
     await prompt.prompt();
     const { outcome } = await prompt.userChoice;
-    if (outcome === 'accepted') setVisible(false);
+    if (outcome === 'accepted') { setVisible(false); recordInstallDismiss(); }
   }
   return (
     <div className="mx-4 mt-4 animate-fade-in">
@@ -76,10 +94,10 @@ function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | n
           <p className="font-semibold text-sm text-navy">Add BrytThrive to your home screen</p>
           <p className="text-xs text-gray-500 mt-0.5">Access BrytThrive like an app — no browser needed.</p>
         </div>
-        <button onClick={() => setVisible(false)} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
+        <button onClick={dismiss} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
       </div>
       <div className="flex gap-2 mt-2">
-        <button onClick={() => setVisible(false)} className="flex-1 py-2.5 rounded-xl text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]">Not now</button>
+        <button onClick={dismiss} className="flex-1 py-2.5 rounded-xl text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]">Not now</button>
         <button onClick={install} className="flex-[2] py-2.5 rounded-xl text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors min-h-[44px]">Add to Home Screen</button>
       </div>
     </div>
@@ -759,7 +777,7 @@ export default function ChildPage() {
     const nowCompleted = !mission.is_completed;
     const { error: missionErr } = await supabase
       .from('missions')
-      .update({ is_completed: nowCompleted, status: nowCompleted ? 'completed' : 'active' })
+      .update({ is_completed: nowCompleted })
       .eq('id', mission.id);
     if (missionErr) { setMissionError('Oops! Could not save that. Try again.'); return; }
 

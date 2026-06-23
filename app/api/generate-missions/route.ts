@@ -278,7 +278,6 @@ Format: [{"title":"...","category":"...","screen_time_reward":5}]`;
       screen_time_reward: m.screen_time_reward ?? 5,
       is_completed: false,
       mission_date: missionDate,
-      status: 'active',
     })))
     .select();
 
