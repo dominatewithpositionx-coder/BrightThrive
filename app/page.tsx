@@ -1,48 +1,59 @@
 import Link from 'next/link';
+import {
+  FamilyHeroIllustration,
+  AppMockupIllustration,
+  StepMoodCheckIllustration,
+  StepMissionsIllustration,
+  StepCoinsIllustration,
+} from '@/components/brightthrive/Illustrations';
 
 export default function HomePage() {
   return (
     <div className="text-navy">
 
       {/* ── 1. Hero ── */}
-      <section className="bg-gradient-to-b from-teal-50 to-white py-16 md:py-24 px-4 animate-fade-in">
-        <div className="max-w-3xl mx-auto text-center">
-          {/* Eyebrow */}
-          <p className="text-xs font-semibold text-teal-700 uppercase tracking-widest mb-4">
-            Positive Behavior Technology For Families
-          </p>
+      <section className="bg-gradient-to-b from-teal-50 to-white py-16 md:py-20 px-4 animate-fade-in overflow-hidden">
+        <div className="max-w-5xl mx-auto">
+          {/* Top row: text + family illustration */}
+          <div className="grid md:grid-cols-2 gap-8 items-center mb-10">
+            <div className="text-center md:text-left">
+              <p className="text-xs font-semibold text-teal-700 uppercase tracking-widest mb-4">
+                Positive Behavior Technology For Families
+              </p>
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight text-navy mb-6">
+                Turn Screen Time<br />Into Growth Time
+              </h1>
+              <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
+                Healthy habits.{' '}
+                <span className="block sm:inline">Emotional intelligence.</span>{' '}
+                <span className="block sm:inline">Calmer homes.</span>
+              </p>
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
+                style={{ background: 'linear-gradient(90deg, #14B8A6 0%, #06B6D4 100%)' }}
+              >
+                Get Started Free
+              </Link>
+              <p className="mt-4 text-sm text-gray-400">No credit card required · Takes 2 minutes</p>
+              <p className="mt-3 text-sm text-gray-500">
+                Already have an account?{' '}
+                <Link href="/login" className="text-teal-600 hover:text-teal-700 font-medium underline">
+                  Parent Login
+                </Link>
+              </p>
+            </div>
 
-          {/* H1 — max 2 lines on mobile */}
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight text-navy mb-6">
-            Turn Screen Time<br />Into Growth Time
-          </h1>
+            {/* Family illustration — hidden on mobile so hero stays clean */}
+            <div className="hidden md:flex justify-center items-center">
+              <FamilyHeroIllustration className="w-full max-w-sm" />
+            </div>
+          </div>
 
-          {/* Subhead */}
-          <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-xl mx-auto leading-relaxed">
-            Healthy habits.{' '}
-            <span className="block sm:inline">Emotional intelligence.</span>{' '}
-            <span className="block sm:inline">Calmer homes.</span>
-          </p>
-
-          {/* Primary CTA */}
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
-            style={{ background: 'linear-gradient(90deg, #14B8A6 0%, #06B6D4 100%)' }}
-          >
-            Get Started Free
-          </Link>
-
-          {/* Caption */}
-          <p className="mt-4 text-sm text-gray-400">No credit card required · Takes 2 minutes</p>
-
-          {/* Already have account */}
-          <p className="mt-3 text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link href="/login" className="text-teal-600 hover:text-teal-700 font-medium underline">
-              Parent Login
-            </Link>
-          </p>
+          {/* App mockup preview — centered below on all sizes */}
+          <div className="flex justify-center md:hidden">
+            <AppMockupIllustration className="w-48 drop-shadow-lg" />
+          </div>
         </div>
       </section>
 
@@ -87,25 +98,48 @@ export default function HomePage() {
       {/* ── 3. How it works ── */}
       <section className="py-16 md:py-24 px-4 bg-teal-50">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How BrytThrive works</h2>
             <p className="text-lg text-gray-600">Three simple steps. One calmer family.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
             {[
-              { step: '1', emoji: '😊', heading: 'Check in on mood', body: 'Each day starts with a simple mood check-in. Your child taps how they feel — happy, calm, tired, frustrated — in one tap.' },
-              { step: '2', emoji: '🎯', heading: 'Get personalized missions', body: 'BrytThrive generates 5 missions matched to their mood and the weather outside. Short, fun, and built for growth.' },
-              { step: '3', emoji: '⭐', heading: 'Earn screen time', body: 'Completing missions earns stars and coins. Redeem them for screen time, treats, or any reward parents set.' },
+              {
+                step: '1',
+                Illustration: StepMoodCheckIllustration,
+                heading: 'Check in on mood',
+                body: 'Each day starts with a simple mood check-in. Your child taps how they feel — happy, calm, tired, frustrated — in one tap.',
+              },
+              {
+                step: '2',
+                Illustration: StepMissionsIllustration,
+                heading: 'Get personalized missions',
+                body: 'BrytThrive generates 5 missions matched to their mood and the weather outside. Short, fun, and built for growth.',
+              },
+              {
+                step: '3',
+                Illustration: StepCoinsIllustration,
+                heading: 'Earn screen time',
+                body: 'Completing missions earns BrytCoins. Redeem them for screen time, treats, or any reward parents set.',
+              },
             ].map((item) => (
               <div key={item.step} className="relative bg-white rounded-2xl p-6 shadow-sm">
                 <div className="absolute -top-4 -left-2 w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                   {item.step}
                 </div>
-                <div className="text-3xl mb-3 mt-2">{item.emoji}</div>
+                {/* Illustration */}
+                <div className="flex justify-center mb-4 mt-2">
+                  <item.Illustration className="w-24 h-24" />
+                </div>
                 <h3 className="font-semibold text-lg mb-2">{item.heading}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.body}</p>
               </div>
             ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link href="/how-it-works" className="text-sm font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">
+              See the full 7-step flow →
+            </Link>
           </div>
         </div>
       </section>
@@ -137,23 +171,56 @@ export default function HomePage() {
             <p className="text-sm text-gray-400 mb-6 italic">Feeling happy · Sunny, 22°C</p>
             <div className="space-y-3">
               {[
-                '🌿 Go outside and find 3 different leaves',
-                '📖 Read for 15 minutes',
-                '💌 Write a kind note to someone you love',
-                '🏃 Do 20 jumping jacks',
-                '🎨 Draw what made you smile today',
+                { done: true,  text: '🌿 Go outside and find 3 different leaves' },
+                { done: true,  text: '📖 Read for 15 minutes' },
+                { done: false, text: '💌 Write a kind note to someone you love' },
+                { done: false, text: '🏃 Do 20 jumping jacks' },
+                { done: false, text: '🎨 Draw what made you smile today' },
               ].map((m) => (
-                <div key={m} className="flex items-center gap-3 bg-white rounded-xl p-3 text-sm shadow-sm">
-                  <div className="w-5 h-5 rounded-full border-2 border-amber-300 flex-shrink-0" />
-                  <span className="text-gray-700">{m}</span>
+                <div key={m.text} className="flex items-center gap-3 bg-white rounded-xl p-3 text-sm shadow-sm">
+                  <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center ${m.done ? 'bg-teal-500' : 'border-2 border-amber-300'}`}>
+                    {m.done && <span className="text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <span className={`text-gray-700 ${m.done ? 'line-through text-gray-400' : ''}`}>{m.text}</span>
                 </div>
               ))}
+            </div>
+            {/* Coin earned indicator */}
+            <div className="mt-4 flex items-center gap-2 text-xs text-amber-600 font-semibold">
+              <span>🪙</span>
+              <span>20 BrytCoins earned so far today</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 5. Parent clarity / Child confidence ── */}
+      {/* ── 5. Features grid ── */}
+      <section className="py-16 md:py-24 px-4 bg-teal-50">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything your family needs. Nothing you don&apos;t.</h2>
+          <p className="text-gray-600 mb-12">Built for real family life — not a classroom, not a clinic.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-left">
+            {[
+              { emoji: '✨', label: 'AI-Powered Missions',    body: 'Personalized daily missions generated by AI, matched to mood and weather.' },
+              { emoji: '😊', label: 'Emotional Check-ins',   body: 'Kids rate their mood in one tap. BrytThrive responds — not ignores it.' },
+              { emoji: '🔥', label: 'Streaks & Momentum',    body: 'Daily streaks build habits. Kids celebrate every consecutive win.' },
+              { emoji: '🪙', label: 'BrytCoin Rewards',      body: 'A visible, tangible reward system kids actually understand and trust.' },
+              { emoji: '📊', label: 'Parent Insights',       body: 'See what your child completed, earned, and achieved — at a glance.' },
+              { emoji: '🔒', label: 'Privacy First',         body: 'No ads. No tracking. No third-party data sharing. Ever.' },
+            ].map((f) => (
+              <div key={f.label} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-xl mb-3">
+                  {f.emoji}
+                </div>
+                <h3 className="font-semibold text-navy mb-1">{f.label}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 6. Parent clarity / Child confidence ── */}
       <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-sky-50 to-white">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
@@ -166,6 +233,7 @@ export default function HomePage() {
             {[
               {
                 who: 'For parents',
+                icon: '🧑‍💼',
                 bg: 'bg-sky-50',
                 border: 'border-sky-100',
                 items: [
@@ -177,6 +245,7 @@ export default function HomePage() {
               },
               {
                 who: 'For children',
+                icon: '🧒',
                 bg: 'bg-teal-50',
                 border: 'border-teal-100',
                 items: [
@@ -188,7 +257,10 @@ export default function HomePage() {
               },
             ].map((col) => (
               <div key={col.who} className={`${col.bg} border ${col.border} rounded-2xl p-6`}>
-                <h3 className="font-semibold text-lg mb-4">{col.who}</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">{col.icon}</span>
+                  <h3 className="font-semibold text-lg">{col.who}</h3>
+                </div>
                 <ul className="space-y-3">
                   {col.items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-gray-700">
@@ -203,7 +275,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 6. Trust + Data Promise ── */}
+      {/* ── 7. Trust + Data Promise ── */}
       <section className="py-16 md:py-24 px-4 bg-navy text-white">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Your family&apos;s data is yours. Always.</h2>
@@ -212,7 +284,7 @@ export default function HomePage() {
           </p>
           <div className="grid sm:grid-cols-3 gap-6">
             {[
-              { emoji: '🇨🇦', heading: 'Stored in Canada', body: 'All family data is stored in Canadian data centres, subject to Canadian privacy law.' },
+              { emoji: '🍁', heading: 'Stored in Canada', body: 'All family data is stored in Canadian data centres, subject to Canadian privacy law.' },
               { emoji: '🚫', heading: 'No ads. Ever.', body: 'We are funded by subscriptions, not advertising. Your children are not the product.' },
               { emoji: '🔒', heading: 'You own your data', body: 'Request a full export or delete your account at any time — no questions asked.' },
             ].map((item) => (
@@ -224,12 +296,12 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-10 text-sm text-gray-400">
-            Built by parents, informed by lived experience, and designed to help families navigate the challenges of raising children in today's digital world—one small win at a time.
+            Built by parents, informed by lived experience, and designed to help families navigate the challenges of raising children in today&apos;s digital world — one small win at a time.
           </p>
         </div>
       </section>
 
-      {/* ── 7. Founder note ── */}
+      {/* ── 8. Founder note ── */}
       <section className="py-16 md:py-24 px-4 bg-white">
         <div className="max-w-2xl mx-auto text-center">
           <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center text-2xl mx-auto mb-6" aria-hidden="true">
@@ -243,7 +315,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 8. Final CTA ── */}
+      {/* ── 9. Final CTA ── */}
       <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-teal-50 to-white">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to turn screen time into growth time?</h2>

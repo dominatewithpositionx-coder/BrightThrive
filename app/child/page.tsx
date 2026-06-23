@@ -16,6 +16,7 @@ import {
   trackMissionGenerated,
   trackMissionCompleted,
 } from '@/lib/analytics';
+import { KidWelcomeIllustration } from '@/components/brightthrive/Illustrations';
 
 // ── PWA install prompt (shown after child profile selection) ──────────────────
 
@@ -63,7 +64,7 @@ function KidInstallBanner({ prompt }: { prompt: BeforeInstallPromptEvent | null 
     if (outcome === 'accepted') setVisible(false);
   }
   return (
-    <div className="mx-4 mt-4 bg-white border border-green-100 rounded-2xl shadow-sm p-4 flex items-start gap-3 animate-fade-in">
+    <div className="mx-4 mt-4 bg-white border border-teal-100 rounded-2xl shadow-sm p-4 flex items-start gap-3 animate-fade-in">
       <span className="text-2xl flex-shrink-0">📱</span>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm text-navy leading-tight">Add BrytThrive to your home screen</p>
@@ -88,7 +89,7 @@ function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | n
   }
   return (
     <div className="mx-4 mt-4 animate-fade-in">
-      <div className="bg-white border border-green-100 rounded-2xl shadow-sm p-4 flex items-start gap-3">
+      <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-4 flex items-start gap-3">
         <span className="text-2xl flex-shrink-0">📱</span>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-navy">Add BrytThrive to your home screen</p>
@@ -98,7 +99,7 @@ function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | n
       </div>
       <div className="flex gap-2 mt-2">
         <button onClick={dismiss} className="flex-1 py-2.5 rounded-xl text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]">Not now</button>
-        <button onClick={install} className="flex-[2] py-2.5 rounded-xl text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors min-h-[44px]">Add to Home Screen</button>
+        <button onClick={install} className="flex-[2] py-2.5 rounded-xl text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors min-h-[44px]">Add to Home Screen</button>
       </div>
     </div>
   );
@@ -121,7 +122,7 @@ const CAT_EMOJI: Record<string, string> = {
 };
 
 const AVATAR_COLORS = [
-  { bg: 'bg-green-400',  ring: 'ring-green-300',  text: 'text-green-900',  light: 'bg-green-50'  },
+  { bg: 'bg-green-400',  ring: 'ring-green-300',  text: 'text-green-900',  light: 'bg-teal-50'  },
   { bg: 'bg-blue-400',   ring: 'ring-blue-300',   text: 'text-blue-900',   light: 'bg-blue-50'   },
   { bg: 'bg-purple-400', ring: 'ring-purple-300', text: 'text-purple-900', light: 'bg-purple-50' },
   { bg: 'bg-orange-400', ring: 'ring-orange-300', text: 'text-orange-900', light: 'bg-orange-50' },
@@ -182,14 +183,14 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-xs text-center animate-fade-in">
-        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Lock size={24} className="text-green-600" />
+        <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Lock size={24} className="text-teal-600" />
         </div>
         <h2 className="text-xl font-bold text-navy mb-1">Hi, {childName}!</h2>
         <p className="text-sm text-gray-500 mb-5">Enter your PIN to continue</p>
         <div className="flex justify-center gap-3 mb-5">
           {[0,1,2,3].map((i) => (
-            <div key={i} className={`w-4 h-4 rounded-full transition-all duration-200 ${error ? 'bg-red-400' : i < digits.length ? 'bg-green-500 scale-110' : 'bg-gray-200'}`} />
+            <div key={i} className={`w-4 h-4 rounded-full transition-all duration-200 ${error ? 'bg-red-400' : i < digits.length ? 'bg-teal-500 scale-110' : 'bg-gray-200'}`} />
           ))}
         </div>
         <div className="grid grid-cols-3 gap-3 mb-4">
@@ -228,7 +229,7 @@ function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loa
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
       <div className="text-center mb-10">
-        <div className="text-5xl mb-3">🌟</div>
+        <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
         <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
       </div>
@@ -404,7 +405,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             </div>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full"
+                className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5 }}
@@ -425,15 +426,15 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
           {/* All done celebration */}
           {allDone && (
-            <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-2xl p-6 text-center mb-4">
+            <div className="bg-gradient-to-br from-teal-50 to-teal-50 border border-teal-200 rounded-2xl p-6 text-center mb-4">
               <div className="text-4xl mb-2">🏆</div>
-              <p className="font-bold text-green-800 mb-1">You finished all your missions!</p>
-              <p className="text-sm text-green-600 mb-4">Ready for your next challenge?</p>
+              <p className="font-bold text-teal-800 mb-1">You finished all your missions!</p>
+              <p className="text-sm text-teal-600 mb-4">Ready for your next challenge?</p>
               <button
                 onClick={onGenerateMissions}
                 disabled={generating}
                 aria-label="Generate new missions"
-                className="min-h-[44px] bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 active:scale-95 transition-all disabled:opacity-60 inline-flex items-center gap-2"
+                className="min-h-[44px] bg-teal-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-60 inline-flex items-center gap-2"
               >
                 {generating
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Creating adventures…</>
@@ -462,7 +463,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
                   <button
                     onClick={onGenerateMissions}
                     aria-label="Generate missions"
-                    className="min-h-[44px] bg-green-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 active:scale-95 transition-all"
+                    className="min-h-[44px] bg-teal-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:bg-teal-700 active:scale-95 transition-all"
                   >
                     ✨ Get My Missions
                   </button>
@@ -478,7 +479,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           )}
 
           {missionSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 text-center mt-3 animate-fade-in">
+            <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-sm text-teal-700 text-center mt-3 animate-fade-in">
               {missionSuccess}
             </div>
           )}
@@ -508,7 +509,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
                     <button
                       onClick={() => onMissionToggle(mission)}
                       aria-label={`Mark "${mission.title}" as complete`}
-                      className="w-full h-14 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-base hover:from-green-600 hover:to-green-700 active:scale-[0.98] transition-all"
+                      className="w-full h-14 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold text-base hover:from-teal-600 hover:to-teal-700 active:scale-[0.98] transition-all"
                     >
                       Complete ✓
                     </button>
@@ -525,10 +526,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             onClick={onGenerateMissions}
             disabled={generating}
             aria-label="Get new missions"
-            className="w-full min-h-[44px] border-2 border-green-200 text-green-700 font-semibold py-3 rounded-xl hover:bg-green-50 active:scale-[0.98] transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] border-2 border-teal-200 text-teal-700 font-semibold py-3 rounded-xl hover:bg-teal-50 active:scale-[0.98] transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
           >
             {generating
-              ? <><span className="w-4 h-4 border-2 border-green-200 border-t-green-600 rounded-full animate-spin" /> Creating adventures…</>
+              ? <><span className="w-4 h-4 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" /> Creating adventures…</>
               : '✨ New Missions'}
           </button>
         )}
@@ -559,8 +560,8 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
                       aria-label={`Undo "${mission.title}"`}
                       className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-4 flex items-center gap-4 text-left opacity-70 active:scale-[0.98] transition-all duration-150"
                     >
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle size={20} className="text-green-500" />
+                      <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle size={20} className="text-teal-500" />
                       </div>
                       <span className="text-gray-500 font-medium line-through text-base flex-1">{mission.title}</span>
                       <span className="text-xs text-gray-400">Undo</span>
@@ -584,7 +585,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             </div>
             <p className="font-bold text-navy mb-3">{nextReward.title}</p>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-700" style={{ width: `${rewardProgress}%` }} />
+              <div className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-700" style={{ width: `${rewardProgress}%` }} />
             </div>
             <p className="text-xs text-gray-400 mt-1.5 text-right">{nextReward.coin_cost - child.points} BrytCoins to go!</p>
           </div>
@@ -592,20 +593,20 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
         {/* Ready to redeem banner */}
         {affordableRewards.length > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+          <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Gift size={16} className="text-green-600" />
-              <span className="font-semibold text-green-800 text-sm">Ready to redeem!</span>
+              <Gift size={16} className="text-teal-600" />
+              <span className="font-semibold text-teal-800 text-sm">Ready to redeem!</span>
             </div>
             <div className="space-y-1.5">
               {affordableRewards.map((r) => (
                 <div key={r.id} className="flex justify-between items-center text-sm">
                   <span className="text-green-900 font-medium">{r.title}</span>
-                  <span className="text-green-600 font-semibold">{r.coin_cost} pts</span>
+                  <span className="text-teal-600 font-semibold">{r.coin_cost} pts</span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-green-600 mt-2 font-medium">Ask a parent to redeem! 🎁</p>
+            <p className="text-xs text-teal-600 mt-2 font-medium">Ask a parent to redeem! 🎁</p>
           </div>
         )}
 
