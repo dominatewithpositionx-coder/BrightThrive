@@ -17,6 +17,93 @@ import {
   trackMissionCompleted,
 } from '@/lib/analytics';
 
+// ── PWA install prompt (shown after child profile selection) ──────────────────
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+function useInstallPrompt() {
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    if ((navigator as unknown as { standalone?: boolean }).standalone) return;
+    const handler = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+  return prompt;
+}
+
+const INSTALL_DISMISSED_KEY = 'bt_install_dismissed_at';
+const INSTALL_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function isInstallDismissed(): boolean {
+  try {
+    const ts = localStorage.getItem(INSTALL_DISMISSED_KEY);
+    if (!ts) return false;
+    return Date.now() - Number(ts) < INSTALL_DISMISS_TTL_MS;
+  } catch { return false; }
+}
+
+function recordInstallDismiss() {
+  try { localStorage.setItem(INSTALL_DISMISSED_KEY, String(Date.now())); } catch {}
+}
+
+function KidInstallBanner({ prompt }: { prompt: BeforeInstallPromptEvent | null }) {
+  const [visible, setVisible] = useState(() => !isInstallDismissed());
+  if (!visible || !prompt) return null;
+
+  function dismiss() { setVisible(false); recordInstallDismiss(); }
+  async function install() {
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') setVisible(false);
+  }
+  return (
+    <div className="mx-4 mt-4 bg-white border border-green-100 rounded-2xl shadow-sm p-4 flex items-start gap-3 animate-fade-in">
+      <span className="text-2xl flex-shrink-0">📱</span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm text-navy leading-tight">Add BrytThrive to your home screen</p>
+        <p className="text-xs text-gray-500 mt-0.5">Access it like an app — no browser needed.</p>
+      </div>
+      <button onClick={dismiss} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
+    </div>
+  );
+}
+
+function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | null }) {
+  const [visible, setVisible] = useState(() => !isInstallDismissed());
+  if (!visible || !prompt) return null;
+
+  function dismiss() { setVisible(false); recordInstallDismiss(); }
+
+  async function install() {
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') { setVisible(false); recordInstallDismiss(); }
+  }
+  return (
+    <div className="mx-4 mt-4 animate-fade-in">
+      <div className="bg-white border border-green-100 rounded-2xl shadow-sm p-4 flex items-start gap-3">
+        <span className="text-2xl flex-shrink-0">📱</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-navy">Add BrytThrive to your home screen</p>
+          <p className="text-xs text-gray-500 mt-0.5">Access BrytThrive like an app — no browser needed.</p>
+        </div>
+        <button onClick={dismiss} aria-label="Dismiss" className="text-gray-300 hover:text-gray-400 text-lg leading-none mt-0.5 flex-shrink-0">×</button>
+      </div>
+      <div className="flex gap-2 mt-2">
+        <button onClick={dismiss} className="flex-1 py-2.5 rounded-xl text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]">Not now</button>
+        <button onClick={install} className="flex-[2] py-2.5 rounded-xl text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors min-h-[44px]">Add to Home Screen</button>
+      </div>
+    </div>
+  );
+}
+
 type Child   = { id: string; name: string; age?: number | null; parent_id?: string | null; points: number };
 type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; generated_by?: string };
 type Reward  = { id: string; title: string; coin_cost: number };
@@ -135,7 +222,9 @@ function ChildHeader() {
   );
 }
 
-function ChildPicker({ children, onSelect }: { children: Child[]; onSelect: (c: Child) => void }) {
+type LoadState = 'ok' | 'auth' | 'query';
+
+function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loadState: LoadState; onSelect: (c: Child) => void }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
       <div className="text-center mb-10">
@@ -143,12 +232,34 @@ function ChildPicker({ children, onSelect }: { children: Child[]; onSelect: (c: 
         <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
         <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
       </div>
-      {children.length === 0 ? (
+
+      {/* Auth required */}
+      {loadState === 'auth' && (
+        <div className="text-center max-w-xs space-y-2">
+          <div className="text-4xl mb-3">🔒</div>
+          <p className="font-semibold text-gray-700">Parent login required</p>
+          <p className="text-sm text-gray-500 leading-relaxed">Ask a parent to open Kid Mode from the parent dashboard, then hand you the device.</p>
+        </div>
+      )}
+
+      {/* Query / network error */}
+      {loadState === 'query' && (
+        <div className="text-center max-w-xs space-y-2">
+          <div className="text-4xl mb-3">⚠️</div>
+          <p className="font-semibold text-gray-700">Could not load profiles</p>
+          <p className="text-sm text-gray-500">Check your connection and try again, or ask a parent for help.</p>
+        </div>
+      )}
+
+      {/* No children in DB */}
+      {loadState === 'ok' && children.length === 0 && (
         <div className="text-center text-gray-500 space-y-1">
           <p className="font-medium">No children set up yet.</p>
           <p className="text-sm">Ask a parent to add your profile.</p>
         </div>
-      ) : (
+      )}
+
+      {loadState === 'ok' && children.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
           {children.map((child) => {
             const colors = getColors(child.name);
@@ -517,17 +628,31 @@ export default function ChildPage() {
   const [phase, setPhase]           = useState<AppPhase>('picker');
   const [selectedMood, setSelectedMood] = useState<MoodKey | null>(null);
   const [loading, setLoading]       = useState(true);
+  const [loadState, setLoadState]   = useState<LoadState>('ok');
   const [generating, setGenerating] = useState(false);
   const [missionError, setMissionError] = useState<string | null>(null);
   const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
   const [weather, setWeather]       = useState<WeatherData | null>(null);
+  const installPrompt               = useInstallPrompt();
 
   const supabase = getSupabase();
 
   const fetchData = useCallback(async () => {
+    // Verify the parent auth session exists before querying — RLS requires it.
+    const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) console.error('[child] session error:', sessionErr.message);
+
+    if (!session) {
+      // No parent session on this device. Show the auth required message rather
+      // than silently showing "No children set up yet."
+      console.error('[child] No auth session — children query would be blocked by RLS.');
+      setLoadState('auth');
+      setLoading(false);
+      return;
+    }
+
     const [
-      { data: childData }, { data: walletData },
-      { data: missionData }, { data: rewardData }, { data: planData }, { data: streakData },
+      childRes, walletRes, missionRes, rewardRes, planRes, streakRes,
     ] = await Promise.all([
       supabase.from('children').select('id, name, age, parent_id').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
@@ -537,19 +662,43 @@ export default function ChildPage() {
       supabase.from('streaks').select('child_id, current_streak'),
     ]);
 
-    const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
+    if (childRes.error) console.error('[child] children query error:', childRes.error.message);
+    if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
+    if (rewardRes.error) console.error('[child] rewards query error:', rewardRes.error.message);
+    if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
+    if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
+
+    if (childRes.error) {
+      setLoadState('query');
+      setLoading(false);
+      return;
+    }
+
+    // generated_by column may not exist on older production DBs — retry without it.
+    let missionData = missionRes.data;
+    if (missionRes.error) {
+      console.error('[child] missions query error (retrying without generated_by):', missionRes.error.message);
+      const retry = await supabase
+        .from('missions')
+        .select('id, child_id, title, category, screen_time_reward, is_completed');
+      if (retry.error) console.error('[child] missions retry error:', retry.error.message);
+      missionData = (retry.data ?? []).map(m => ({ ...m, generated_by: undefined }));
+    }
+
+    const loc = (planRes.data?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
     if (loc && !weather) {
       fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
         .then(r => r.json())
         .then(json => { if (!json.error) setWeather(json as WeatherData); })
         .catch(() => {});
     }
-    const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
-    const kids = (childData || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
+    const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
+    const kids = (childRes.data || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
     setChildren(kids);
     setMissions(missionData || []);
-    setRewards(rewardData || []);
-    setStreaks(Object.fromEntries((streakData || []).map(s => [s.child_id, s.current_streak])));
+    setRewards(rewardRes.data || []);
+    setStreaks(Object.fromEntries((streakRes.data || []).map(s => [s.child_id, s.current_streak])));
+    setLoadState('ok');
     setLoading(false);
     if (selected) {
       const fresh = kids.find((c) => c.id === selected.id);
@@ -628,7 +777,7 @@ export default function ChildPage() {
     const nowCompleted = !mission.is_completed;
     const { error: missionErr } = await supabase
       .from('missions')
-      .update({ is_completed: nowCompleted, status: nowCompleted ? 'completed' : 'active' })
+      .update({ is_completed: nowCompleted })
       .eq('id', mission.id);
     if (missionErr) { setMissionError('Oops! Could not save that. Try again.'); return; }
 
@@ -689,7 +838,12 @@ export default function ChildPage() {
       {phase !== 'missions' && <ChildHeader />}
 
       {phase === 'picker' && (
-        <ChildPicker children={children} onSelect={handleSelect} />
+        <ChildPicker children={children} loadState={loadState} onSelect={handleSelect} />
+      )}
+
+      {/* Install prompt shown after child profile is selected (mood-check onwards) */}
+      {phase !== 'picker' && phase !== 'missions' && (
+        <KidInstallBannerFull prompt={installPrompt} />
       )}
 
       {phase === 'mood-check' && selected && (
@@ -701,19 +855,22 @@ export default function ChildPage() {
       )}
 
       {phase === 'missions' && selected && (
-        <ChildView
-          child={selected}
-          missions={childMissions}
-          rewards={rewards}
-          streak={streaks[selected.id] ?? 0}
-          onBack={handleBack}
-          onMissionToggle={handleMissionToggle}
-          onGenerateMissions={handleGenerateMissions}
-          generating={generating}
-          missionError={missionError}
-          missionSuccess={missionSuccess}
-          weather={weather}
-        />
+        <>
+          <KidInstallBanner prompt={installPrompt} />
+          <ChildView
+            child={selected}
+            missions={childMissions}
+            rewards={rewards}
+            streak={streaks[selected.id] ?? 0}
+            onBack={handleBack}
+            onMissionToggle={handleMissionToggle}
+            onGenerateMissions={handleGenerateMissions}
+            generating={generating}
+            missionError={missionError}
+            missionSuccess={missionSuccess}
+            weather={weather}
+          />
+        </>
       )}
     </>
   );

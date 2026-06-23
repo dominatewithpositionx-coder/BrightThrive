@@ -5,10 +5,10 @@ export default function HomePage() {
     <div className="text-navy">
 
       {/* ── 1. Hero ── */}
-      <section className="bg-gradient-to-b from-green-50 to-white py-16 md:py-24 px-4 animate-fade-in">
+      <section className="bg-gradient-to-b from-teal-50 to-white py-16 md:py-24 px-4 animate-fade-in">
         <div className="max-w-3xl mx-auto text-center">
           {/* Eyebrow */}
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-4">
+          <p className="text-xs font-semibold text-teal-700 uppercase tracking-widest mb-4">
             Positive Behavior Technology For Families
           </p>
 
@@ -28,7 +28,7 @@ export default function HomePage() {
           <Link
             href="/onboarding"
             className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
-            style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+            style={{ background: 'linear-gradient(90deg, #14B8A6 0%, #06B6D4 100%)' }}
           >
             Get Started Free
           </Link>
@@ -39,7 +39,7 @@ export default function HomePage() {
           {/* Already have account */}
           <p className="mt-3 text-sm text-gray-500">
             Already have an account?{' '}
-            <Link href="/login" className="text-green-600 hover:text-green-700 font-medium underline">
+            <Link href="/login" className="text-teal-600 hover:text-teal-700 font-medium underline">
               Parent Login
             </Link>
           </p>
@@ -49,7 +49,7 @@ export default function HomePage() {
       {/* ── Trust bar ── */}
       <section className="bg-white border-y border-gray-100 py-4 px-4">
         <div className="max-w-3xl mx-auto flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
-          <span>🇨🇦 Data stored in Canada</span>
+          <span>🍁 Data stored in Canada</span>
           <span className="hidden sm:inline">·</span>
           <span>No ads</span>
           <span className="hidden sm:inline">·</span>
@@ -85,7 +85,7 @@ export default function HomePage() {
       </section>
 
       {/* ── 3. How it works ── */}
-      <section className="py-16 md:py-24 px-4 bg-green-50">
+      <section className="py-16 md:py-24 px-4 bg-teal-50">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How BrytThrive works</h2>
@@ -98,7 +98,7 @@ export default function HomePage() {
               { step: '3', emoji: '⭐', heading: 'Earn screen time', body: 'Completing missions earns stars and coins. Redeem them for screen time, treats, or any reward parents set.' },
             ].map((item) => (
               <div key={item.step} className="relative bg-white rounded-2xl p-6 shadow-sm">
-                <div className="absolute -top-4 -left-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                <div className="absolute -top-4 -left-2 w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                   {item.step}
                 </div>
                 <div className="text-3xl mb-3 mt-2">{item.emoji}</div>
@@ -177,8 +177,8 @@ export default function HomePage() {
               },
               {
                 who: 'For children',
-                bg: 'bg-green-50',
-                border: 'border-green-100',
+                bg: 'bg-teal-50',
+                border: 'border-teal-100',
                 items: [
                   'Earn screen time — instead of having it taken away',
                   'Feel proud of what they accomplish each day',
@@ -192,7 +192,7 @@ export default function HomePage() {
                 <ul className="space-y-3">
                   {col.items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="text-green-500 font-bold mt-0.5">✓</span>
+                      <span className="text-teal-500 font-bold mt-0.5">✓</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -232,7 +232,7 @@ export default function HomePage() {
       {/* ── 7. Founder note ── */}
       <section className="py-16 md:py-24 px-4 bg-white">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto mb-6" aria-hidden="true">
+          <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center text-2xl mx-auto mb-6" aria-hidden="true">
             👋
           </div>
           <blockquote className="text-xl text-gray-700 leading-relaxed mb-8">
@@ -244,7 +244,7 @@ export default function HomePage() {
       </section>
 
       {/* ── 8. Final CTA ── */}
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-green-50 to-white">
+      <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-teal-50 to-white">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to turn screen time into growth time?</h2>
           <p className="text-gray-600 text-lg mb-10 max-w-xl mx-auto">
@@ -253,7 +253,7 @@ export default function HomePage() {
           <Link
             href="/onboarding"
             className="inline-flex items-center justify-center w-full md:w-auto text-white font-semibold text-lg px-10 py-4 rounded-xl shadow-md transition-opacity hover:opacity-90 min-h-[44px]"
-            style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+            style={{ background: 'linear-gradient(90deg, #14B8A6 0%, #06B6D4 100%)' }}
           >
             Start your free trial
           </Link>

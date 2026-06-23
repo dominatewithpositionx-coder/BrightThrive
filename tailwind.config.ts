@@ -9,9 +9,10 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#22c55e',
-          dark: '#16a34a',
-          light: '#f0fdf4',
+          DEFAULT: '#14B8A6', // teal-500
+          dark: '#0F766E',    // teal-700
+          light: '#F0FDFA',   // teal-50
+          accent: '#06B6D4',  // cyan-500
         },
         mood: {
           happy:      { DEFAULT: '#fbbf24', light: '#fffbeb', border: '#fde68a' },

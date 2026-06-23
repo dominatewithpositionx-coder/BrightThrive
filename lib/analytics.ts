@@ -1,5 +1,6 @@
 // Analytics event layer — structured event helpers.
-// Currently console-logs in dev. Wire to PostHog/Amplitude/etc. by replacing `emit`.
+// Wire PostHog by setting NEXT_PUBLIC_POSTHOG_KEY + NEXT_PUBLIC_POSTHOG_HOST in env.
+// Fails silently if the key is absent — never blocks app functionality.
 
 type EventName =
   | 'signup_completed'
@@ -15,16 +16,39 @@ type EventName =
   | 'install_prompt_dismissed'
   | 'onboarding_step_completed'
   | 'onboarding_completed'
-  | 'weekly_email_sent';
+  | 'weekly_email_sent'
+  | 'streak_achieved'
+  | 'kid_view_opened'
+  | 'weekly_summary_viewed'
+  | 'win_recorded';
 
 type EventProps = Record<string, string | number | boolean | null | undefined>;
+
+const POSTHOG_KEY = typeof window !== 'undefined'
+  ? (process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '')
+  : '';
+const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
 
 function emit(event: EventName, props?: EventProps) {
   if (process.env.NODE_ENV === 'development') {
     console.log(`[analytics] ${event}`, props ?? {});
   }
-  // TODO: replace with PostHog/Amplitude when wiring analytics
-  // posthog.capture(event, props)
+  if (!POSTHOG_KEY) return;
+  try {
+    fetch(`${POSTHOG_HOST}/capture/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: POSTHOG_KEY,
+        event,
+        properties: { ...props, $lib: 'web' },
+        timestamp: new Date().toISOString(),
+      }),
+      keepalive: true,
+    }).catch(() => {}); // fire-and-forget, swallow network errors
+  } catch {
+    // never throw from analytics
+  }
 }
 
 // ── Typed event helpers ─────────────────────────────────────────────────────
@@ -95,4 +119,20 @@ export function trackOnboardingCompleted(props: {
   selected_habits_count: number;
 }) {
   emit('onboarding_completed', props);
+}
+
+export function trackStreakAchieved(props: { child_id: string; streak_days: number }) {
+  emit('streak_achieved', props);
+}
+
+export function trackKidViewOpened(props: { source: 'dashboard' | 'nav' | 'direct' }) {
+  emit('kid_view_opened', props);
+}
+
+export function trackWeeklySummaryViewed(props: { child_count: number }) {
+  emit('weekly_summary_viewed', props);
+}
+
+export function trackWinRecorded(props: { parent_id: string }) {
+  emit('win_recorded', props);
 }
