@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceSupabaseClient } from '@/lib/supabase';
 import { getWeather, weatherMissionHint } from '@/lib/weather';
 import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 
@@ -104,33 +105,66 @@ export async function POST(req: NextRequest) {
 
   const authHeader = req.headers.get('authorization') ?? '';
   const callerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!callerToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+
+  // Two supported callers:
+  //  1. Parent dashboard — has a Supabase auth session (Bearer token).
+  //  2. Kid View (/child) — no auth session; passes parentId in the body and
+  //     we verify the child belongs to that parent via the service role.
+  let resolvedParentId: string;
+  let childRow: { id: string; age: number | null } | null = null;
 
   const anonSupabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${callerToken}` } } }
+    callerToken
+      ? { global: { headers: { Authorization: `Bearer ${callerToken}` } } }
+      : undefined
   );
-  const { data: { user } } = await anonSupabase.auth.getUser();
-  if (!user) {
+
+  if (callerToken) {
+    const { data: { user }, error: authError } = await anonSupabase.auth.getUser();
+    if (authError || !user) {
+      console.error('[generate-missions] auth.getUser failed:', authError?.message);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    resolvedParentId = parentId ?? user.id;
+
+    const { data, error: childError } = await anonSupabase
+      .from('children')
+      .select('id, age')
+      .eq('id', childId)
+      .eq('parent_id', resolvedParentId)
+      .single();
+    if (childError || !data) {
+      console.error('[generate-missions] child lookup (session) failed:', childError?.message);
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    childRow = data as { id: string; age: number | null };
+  } else if (parentId) {
+    // Kid View: verify child↔parent via service role (RLS-bypassing) read.
+    let serviceSupabase;
+    try {
+      serviceSupabase = createServiceSupabaseClient();
+    } catch (err) {
+      console.error('[generate-missions] service-role client unavailable:', err);
+      return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+    }
+    const { data, error: childError } = await serviceSupabase
+      .from('children')
+      .select('id, age, parent_id')
+      .eq('id', childId)
+      .single();
+    if (childError || !data || (data as { parent_id: string }).parent_id !== parentId) {
+      console.error('[generate-missions] child lookup (kid view) failed or mismatch:', childError?.message);
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    resolvedParentId = parentId;
+    childRow = { id: (data as { id: string }).id, age: (data as { age: number | null }).age };
+  } else {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const resolvedParentId: string = parentId ?? user.id;
-
-  const { data: childRow } = await anonSupabase
-    .from('children')
-    .select('id, age')
-    .eq('id', childId)
-    .eq('parent_id', resolvedParentId)
-    .single();
-  if (!childRow) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const rlKey = `parent:${user.id}`;
+  const rlKey = `parent:${resolvedParentId}`;
   if (!checkRateLimit(rlKey)) {
     return NextResponse.json(
       { error: 'Please wait a moment before generating new missions.' },
@@ -144,7 +178,7 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const resolvedAge: number | null = childAge ?? (childRow as { id: string; age: number | null }).age ?? null;
+  const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
 
   let resolvedWeatherSummary: string | null = weatherSummary ?? null;
@@ -154,10 +188,12 @@ export async function POST(req: NextRequest) {
     if (!resolvedWeatherSummary) {
       let resolvedLocation: string | null = location ?? null;
       if (!resolvedLocation) {
-        const { data: plan } = await anonSupabase
+        // Use service role so this works for both authenticated parents and Kid View.
+        const planClient = createServiceSupabaseClient();
+        const { data: plan } = await planClient
           .from('family_plans')
           .select('personalization_data')
-          .eq('parent_id', user.id)
+          .eq('parent_id', resolvedParentId)
           .single();
         resolvedLocation = (plan?.personalization_data as Record<string, unknown>)?.location as string ?? null;
       }
@@ -247,6 +283,7 @@ Format: [{"title":"...","category":"...","screen_time_reward":5}]`;
     .select();
 
   if (error) {
+    console.error('[generate-missions] mission insert failed:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { getSupabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown } from 'lucide-react';
@@ -16,7 +17,7 @@ import {
   trackMissionCompleted,
 } from '@/lib/analytics';
 
-type Child   = { id: string; name: string; age?: number | null; points: number };
+type Child   = { id: string; name: string; age?: number | null; parent_id?: string | null; points: number };
 type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; generated_by?: string };
 type Reward  = { id: string; title: string; coin_cost: number };
 
@@ -125,6 +126,14 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
 }
 
 // ── ChildPicker ───────────────────────────────────────────────────────────────
+
+function ChildHeader() {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+      <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={120} height={80} className="h-8 w-auto" priority />
+    </div>
+  );
+}
 
 function ChildPicker({ children, onSelect }: { children: Child[]; onSelect: (c: Child) => void }) {
   return (
@@ -520,7 +529,7 @@ export default function ChildPage() {
       { data: childData }, { data: walletData },
       { data: missionData }, { data: rewardData }, { data: planData }, { data: streakData },
     ] = await Promise.all([
-      supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age, parent_id').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('missions').select('id, child_id, title, category, screen_time_reward, is_completed, generated_by'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
@@ -562,7 +571,9 @@ export default function ChildPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ childId: selected.id, childAge: selected.age ?? null, count: 6, mood: selectedMood }),
+        // Kid View has no auth session — pass parentId so the API can verify
+        // child↔parent via the service role instead of a Supabase session.
+        body: JSON.stringify({ childId: selected.id, parentId: selected.parent_id ?? null, childAge: selected.age ?? null, count: 6, mood: selectedMood }),
       });
       if (res.ok) {
         trackMissionGenerated({
@@ -674,6 +685,8 @@ export default function ChildPage() {
           onCancel={() => setPendingChild(null)}
         />
       )}
+
+      {phase !== 'missions' && <ChildHeader />}
 
       {phase === 'picker' && (
         <ChildPicker children={children} onSelect={handleSelect} />
