@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { Gift, ChevronRight, Star, Flame, Plus, Sparkles } from 'lucide-react';
+import { Gift, ChevronRight, Star, Flame, Plus, Sparkles, Tablet } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
 import WeatherCard from './components/WeatherCard';
@@ -403,6 +403,14 @@ export default function DashboardPage() {
                 className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
               >
                 <Gift size={16} /> Add Reward
+              </Link>
+              <Link
+                href="/child"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
+              >
+                <Tablet size={16} /> Open Kid View
               </Link>
             </div>
           </section>

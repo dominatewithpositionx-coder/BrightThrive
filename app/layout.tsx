@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
 import ServiceWorkerRegistrar from '@/components/brightthrive/ServiceWorkerRegistrar';
-import InstallPrompt from '@/components/brightthrive/InstallPrompt';
 import MobileNav from '@/components/brightthrive/MobileNav';
 import Logo from '@/components/brightthrive/Logo';
 import ClientChrome from '@/components/brightthrive/ClientChrome';
@@ -76,6 +75,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/login" className="hover:text-gray-900 font-medium transition-colors">
               Parent Login
             </Link>
+            <Link href="/child" className="hover:text-gray-900 font-medium transition-colors">
+              Kid Mode
+            </Link>
             <Link
               href="/onboarding"
               className="text-white px-5 py-2.5 rounded-xl font-semibold min-h-[44px] flex items-center transition-opacity hover:opacity-90"
@@ -117,7 +119,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster position="top-right" richColors />
         <Analytics />
         <ServiceWorkerRegistrar />
-        <InstallPrompt />
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ import Link from 'next/link';
 const NAV_ITEMS = [
   { label: 'How It Works', href: '/how-it-works' },
   { label: 'Parent Login', href: '/login' },
-  { label: 'Child Login', href: '/child' },
+  { label: 'Kid Mode', href: '/child' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Contact', href: '/contact' },
 ];
