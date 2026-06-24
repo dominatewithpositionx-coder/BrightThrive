@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="markGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#22C55E"/>
+      <stop offset="45%"  stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer orbit ring -->
+  <ellipse cx="50" cy="50" rx="44" ry="44" stroke="url(#markGrad)" stroke-width="5" fill="none"/>
+
+  <!-- Diagonal orbit sweep (the "ring around planet" arc) -->
+  <ellipse cx="50" cy="50" rx="46" ry="16" stroke="url(#markGrad)" stroke-width="4" fill="none"
+           transform="rotate(-30 50 50)"/>
+
+  <!-- Center filled circle -->
+  <circle cx="50" cy="50" r="28" fill="url(#markGrad)"/>
+
+  <!-- Brain icon (simplified, white) -->
+  <g fill="white" opacity="0.95">
+    <!-- Left hemisphere -->
+    <path d="M50 32 C40 32 33 38 33 46 C33 51 35 55 39 57 C38 59 38 62 40 64 C42 66 45 66 47 65 L47 35 C45 33 50 32 50 32Z"/>
+    <!-- Right hemisphere -->
+    <path d="M50 32 C60 32 67 38 67 46 C67 51 65 55 61 57 C62 59 62 62 60 64 C58 66 55 66 53 65 L53 35 C55 33 50 32 50 32Z"/>
+    <!-- Center divider -->
+    <rect x="48.5" y="33" width="3" height="32" rx="1.5"/>
+    <!-- Brain folds -->
+    <path d="M39 44 Q36 46 39 48" stroke="white" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <path d="M61 44 Q64 46 61 48" stroke="white" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <path d="M42 52 Q40 54 43 56" stroke="white" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <path d="M58 52 Q60 54 57 56" stroke="white" stroke-width="1.5" fill="none" opacity="0.7"/>
+  </g>
+</svg>

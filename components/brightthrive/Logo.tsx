@@ -2,37 +2,46 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { BRAND } from '@/lib/brand';
 
 interface LogoProps {
-  variant?: 'full' | 'icon';
+  /** 'full' = horizontal logo+wordmark; 'mark' = icon only */
+  variant?: 'full' | 'mark';
+  /** Tailwind classes applied to the <img> element */
   className?: string;
   href?: string;
+  priority?: boolean;
 }
 
-export default function Logo({ variant = 'full', className = '', href = '/' }: LogoProps) {
+export default function Logo({
+  variant = 'full',
+  className = '',
+  href = '/',
+  priority = false,
+}: LogoProps) {
   const img =
     variant === 'full' ? (
       <Image
-        src="/brand/BrytThrive.png"
-        alt="BrytThrive"
-        width={300}
-        height={200}
-        priority
-        className={`h-12 w-auto object-contain ${className}`}
+        src={BRAND.logo}
+        alt={BRAND.name}
+        width={BRAND.logoWidth}
+        height={BRAND.logoHeight}
+        priority={priority}
+        className={`object-contain ${className || 'w-[140px] sm:w-[180px] h-auto'}`}
       />
     ) : (
       <Image
-        src="/brand/BrytThrive.png"
-        alt="BrytThrive"
-        width={40}
-        height={40}
-        priority
-        className={`h-10 w-10 object-contain ${className}`}
+        src={BRAND.mark}
+        alt={BRAND.name}
+        width={BRAND.markWidth}
+        height={BRAND.markHeight}
+        priority={priority}
+        className={`object-contain ${className || 'w-[48px] h-[48px]'}`}
       />
     );
 
   return (
-    <Link href={href} className="flex items-center flex-shrink-0">
+    <Link href={href} className="inline-flex items-center flex-shrink-0">
       {img}
     </Link>
   );

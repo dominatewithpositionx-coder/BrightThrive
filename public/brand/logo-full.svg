@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" fill="none">
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#22C55E"/>
+      <stop offset="45%"  stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0" y1="0" x2="480" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1d4ed8"/>
+      <stop offset="40%"  stop-color="#0891b2"/>
+      <stop offset="70%"  stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── Icon mark (60×60, centred at x=60, y=60) ── -->
+  <!-- Outer orbit ring -->
+  <ellipse cx="60" cy="60" rx="52" ry="52" stroke="url(#iconGrad)" stroke-width="6" fill="none"/>
+  <!-- Orbit sweep ring -->
+  <ellipse cx="60" cy="60" rx="54" ry="19" stroke="url(#iconGrad)" stroke-width="4.5" fill="none"
+           transform="rotate(-32 60 60)"/>
+  <!-- Centre circle -->
+  <circle cx="60" cy="60" r="33" fill="url(#iconGrad)"/>
+  <!-- Brain — white -->
+  <g fill="white" opacity="0.95">
+    <path d="M60 39 C49 39 41 46 41 55 C41 61 43.5 66 48 68 C47 70.5 47 74 49.5 76.5 C52 79 55.5 79 58 77.5 L58 42 C56 40 60 39 60 39Z"/>
+    <path d="M60 39 C71 39 79 46 79 55 C79 61 76.5 66 72 68 C73 70.5 73 74 70.5 76.5 C68 79 64.5 79 62 77.5 L62 42 C64 40 60 39 60 39Z"/>
+    <rect x="58.5" y="40" width="3" height="37" rx="1.5"/>
+    <path d="M47 53 Q44 55 47 57" stroke="white" stroke-width="1.8" fill="none" opacity="0.7"/>
+    <path d="M73 53 Q76 55 73 57" stroke="white" stroke-width="1.8" fill="none" opacity="0.7"/>
+    <path d="M50 63 Q47 65 51 67" stroke="white" stroke-width="1.8" fill="none" opacity="0.7"/>
+    <path d="M70 63 Q73 65 69 67" stroke="white" stroke-width="1.8" fill="none" opacity="0.7"/>
+  </g>
+
+  <!-- ── Wordmark: "BrytThrive" ── -->
+  <text
+    x="136"
+    y="79"
+    font-family="'Poppins', 'Nunito', system-ui, -apple-system, sans-serif"
+    font-weight="700"
+    font-size="52"
+    letter-spacing="-1"
+    fill="url(#textGrad)"
+  >BrytThrive</text>
+
+  <!-- Green leaf on top of the T in "Thrive" -->
+  <!-- "T" starts roughly at x=265 in a 52px Poppins Bold; leaf sits on the crossbar -->
+  <path d="M278 26 C278 20 283 15 289 13 C289 13 287 22 278 26Z" fill="#22C55E"/>
+  <path d="M278 26 C278 20 273 15 267 13 C267 13 269 22 278 26Z" fill="#16a34a"/>
+  <line x1="278" y1="14" x2="278" y2="27" stroke="#22C55E" stroke-width="1.5"/>
+</svg>

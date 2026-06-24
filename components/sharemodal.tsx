@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import Image from 'next/image';
+import { BRAND } from '@/lib/brand';
 
 interface ShareModalProps {
   onClose: () => void;
@@ -40,18 +41,18 @@ export default function ShareModal({ onClose }: ShareModalProps) {
 
         <div className="flex flex-col items-center mb-5">
           <Image
-            src="/icons/icon-96x96.png"
-            alt="BrytThrive"
+            src={BRAND.mark}
+            alt={BRAND.name}
             width={56}
             height={56}
             className="rounded-2xl mb-3"
           />
           <Image
-            src="/brand/BrytThrive.png"
-            alt="BrytThrive"
-            width={140}
-            height={40}
-            className="object-contain"
+            src={BRAND.logo}
+            alt={BRAND.name}
+            width={BRAND.logoWidth}
+            height={BRAND.logoHeight}
+            className="w-[140px] h-auto object-contain"
           />
         </div>
 
