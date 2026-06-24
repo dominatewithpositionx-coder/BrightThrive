@@ -27,7 +27,7 @@ export default function Logo({
         width={BRAND.logoWidth}
         height={BRAND.logoHeight}
         priority={priority}
-        className={`w-auto object-contain ${className || 'h-10 sm:h-12'}`}
+        className={`w-auto object-contain ${className || 'h-[120px] sm:h-[144px]'}`}
       />
     ) : (
       <Image
