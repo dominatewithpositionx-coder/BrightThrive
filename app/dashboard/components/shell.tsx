@@ -58,7 +58,7 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
             width={BRAND.logoWidth}
             height={BRAND.logoHeight}
             priority
-            className="h-12 w-auto object-contain"
+            className="w-[140px] sm:w-[180px] h-auto object-contain"
           />
         </Link>
         {onClose && (
@@ -176,7 +176,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             alt={BRAND.name}
             width={BRAND.logoWidth}
             height={BRAND.logoHeight}
-            className="h-9 w-auto object-contain"
+            className="w-[140px] h-auto object-contain"
           />
           <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
             {firstName[0]?.toUpperCase() || '?'}

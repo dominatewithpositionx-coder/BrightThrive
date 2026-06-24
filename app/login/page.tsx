@@ -46,7 +46,7 @@ export default function LoginPage() {
             width={BRAND.logoWidth}
             height={BRAND.logoHeight}
             priority
-            className="h-14 w-auto object-contain mb-2"
+            className="w-[140px] sm:w-[180px] h-auto object-contain mb-2"
           />
           <p className="text-sm text-gray-500">Earn your play. Enjoy your day.</p>
         </div>

@@ -38,7 +38,7 @@ export default function Sidebar() {
             width={BRAND.logoWidth}
             height={BRAND.logoHeight}
             priority
-            className="h-12 w-auto object-contain"
+            className="w-[140px] sm:w-[180px] h-auto object-contain"
           />
         </Link>
       </div>

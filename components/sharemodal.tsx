@@ -52,7 +52,7 @@ export default function ShareModal({ onClose }: ShareModalProps) {
             alt={BRAND.name}
             width={BRAND.logoWidth}
             height={BRAND.logoHeight}
-            className="h-10 w-auto object-contain"
+            className="w-[140px] h-auto object-contain"
           />
         </div>
 

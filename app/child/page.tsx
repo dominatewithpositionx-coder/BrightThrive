@@ -218,7 +218,7 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
 function ChildHeader() {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-      <Image src={BRAND.mark} alt={BRAND.name} width={BRAND.markWidth} height={BRAND.markHeight} className="h-8 w-auto object-contain" priority />
+      <Image src={BRAND.mark} alt={BRAND.name} width={BRAND.markWidth} height={BRAND.markHeight} className="w-[48px] h-[48px] object-contain" priority />
     </div>
   );
 }
