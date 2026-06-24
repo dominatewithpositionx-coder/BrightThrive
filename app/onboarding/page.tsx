@@ -199,6 +199,7 @@ export default function OnboardingPage() {
   const [authError, setAuthError] = useState('');
   const [confirmSent, setConfirmSent] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
 
   const qIndex = step - 1; // 0-indexed into QUESTIONS
   const q = step <= QUESTIONS.length ? QUESTIONS[qIndex] : null;
@@ -263,7 +264,13 @@ export default function OnboardingPage() {
 
     try {
       const supabase = getSupabase();
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
 
       if (error) {
         console.error('[Onboarding] signUp error:', error.status, error.message);
@@ -304,14 +311,25 @@ export default function OnboardingPage() {
 
   async function handleResend() {
     setResendLoading(true);
+    setResendStatus('idle');
     console.log('[Onboarding] Resending confirmation to:', email);
     try {
       const supabase = getSupabase();
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
-      if (error) console.error('[Onboarding] Resend error:', error.message);
-      else console.log('[Onboarding] Resend success');
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) {
+        console.error('[Onboarding] Resend error:', error.message);
+        setResendStatus('error');
+      } else {
+        console.log('[Onboarding] Resend success');
+        setResendStatus('sent');
+      }
     } catch (err) {
       console.error('[Onboarding] Resend threw:', err);
+      setResendStatus('error');
     }
     setResendLoading(false);
   }
@@ -454,16 +472,26 @@ export default function OnboardingPage() {
           </a>
           <button
             onClick={handleResend}
-            disabled={resendLoading}
+            disabled={resendLoading || resendStatus === 'sent'}
             className="w-full py-3.5 rounded-full border-2 text-sm font-semibold transition-colors hover:bg-gray-50 disabled:opacity-50"
             style={{ borderColor: '#E2E8F0', color: '#64748B' }}
           >
-            {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+            {resendLoading ? 'Sending…' : resendStatus === 'sent' ? '✓ Email sent!' : 'Resend confirmation email'}
           </button>
+          {resendStatus === 'sent' && (
+            <p className="text-xs text-center" style={{ color: '#0F766E' }}>
+              Check your inbox (and spam folder) for the new confirmation link.
+            </p>
+          )}
+          {resendStatus === 'error' && (
+            <p className="text-xs text-center" style={{ color: '#DC2626' }}>
+              Couldn&apos;t resend. Please wait a moment and try again, or contact support.
+            </p>
+          )}
         </div>
 
         <p className="text-xs mt-6" style={{ color: '#94A3B8' }}>
-          Didn&apos;t receive it? Check your spam folder.
+          Didn&apos;t receive it? Check your spam folder or resend above.
         </p>
       </div>
     );
