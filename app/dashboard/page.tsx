@@ -97,13 +97,10 @@ export default function DashboardPage() {
       if (params.get('onboarding') === '1') router.replace('/dashboard');
     }
 
-    const [
-      childRes, walletRes, missionRes,
-      streakRes, planRes,
-    ] = await Promise.all([
-      supabase.from('children').select('id, name, age').order('created_at', { ascending: true }),
+    // Fetch children first — we need their IDs to scope the missions query.
+    const [childRes, walletRes, streakRes, planRes] = await Promise.all([
+      supabase.from('children').select('id, name, age').eq('parent_id', user.id).order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('missions').select('id, child_id, title, category, is_completed, mission_date, updated_at, generated_by'),
       supabase.from('streaks').select('child_id, current_streak'),
       supabase.from('family_plans').select('personalization_data').eq('parent_id', user.id).maybeSingle(),
     ]);
@@ -118,16 +115,30 @@ export default function DashboardPage() {
     const { data: streakData } = streakRes;
     const { data: planData } = planRes;
 
-    // The `generated_by` column may not exist on older production DBs. If the
-    // mission query failed, retry without it so missions still render.
-    let missionData: Mission[] | null = missionRes.data;
-    if (missionRes.error) {
-      console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
-      const retry = await supabase
+    // Scope missions to this parent's children, last 7 days only.
+    // The `generated_by` column may not exist on older production DBs — retry without it.
+    const childIds = (childData ?? []).map(c => c.id);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+    let missionData: Mission[] | null = null;
+
+    if (childIds.length > 0) {
+      const missionRes = await supabase
         .from('missions')
-        .select('id, child_id, title, category, is_completed, mission_date, updated_at');
-      if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
-      missionData = retry.data;
+        .select('id, child_id, title, category, is_completed, mission_date, updated_at, generated_by')
+        .in('child_id', childIds)
+        .gte('mission_date', sevenDaysAgo);
+
+      if (missionRes.error) {
+        console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
+        const retry = await supabase
+          .from('missions')
+          .select('id, child_id, title, category, is_completed, mission_date, updated_at')
+          .in('child_id', childIds);
+        if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
+        missionData = retry.data;
+      } else {
+        missionData = missionRes.data;
+      }
     }
 
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
