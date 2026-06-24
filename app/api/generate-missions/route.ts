@@ -165,12 +165,17 @@ export async function POST(req: NextRequest) {
   }
 
   const rlKey = `parent:${resolvedParentId}`;
-  if (!checkRateLimit(rlKey)) {
+  const now = Date.now();
+  const lastGen = rateLimitMap.get(rlKey);
+  if (lastGen && now - lastGen < RATE_LIMIT_MS) {
+    const secondsLeft = Math.ceil((RATE_LIMIT_MS - (now - lastGen)) / 1000);
     return NextResponse.json(
-      { error: 'Please wait a moment before generating new missions.' },
+      { error: `Please wait ${secondsLeft} seconds before generating new missions.` },
       { status: 429 }
     );
   }
+  // Record the attempt now — will be reset if generation ultimately fails
+  rateLimitMap.set(rlKey, now);
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const supabase = createClient(
@@ -261,29 +266,56 @@ Format: [{"title":"...","category":"...","screen_time_reward":5}]`;
 
   const missionDate = today();
 
-  // Only incomplete missions are replaced; completed missions stay so coins are preserved.
-  await supabase
+  // Delete today's incomplete missions. Try with mission_date first; if that column
+  // doesn't exist in the production DB, fall back to deleting all incomplete missions
+  // for this child (safe because completed missions are excluded).
+  const delWithDate = await supabase
     .from('missions')
     .delete()
     .eq('child_id', childId)
     .eq('is_completed', false)
     .eq('mission_date', missionDate);
 
-  const { data, error } = await supabase
-    .from('missions')
-    .insert(missions.map((m) => ({
+  if (delWithDate.error) {
+    console.warn('[generate-missions] delete with mission_date failed, retrying without:', delWithDate.error.message);
+    const delFallback = await supabase
+      .from('missions')
+      .delete()
+      .eq('child_id', childId)
+      .eq('is_completed', false);
+    if (delFallback.error) {
+      console.error('[generate-missions] fallback delete failed:', delFallback.error.message);
+    }
+  }
+
+  // Try to insert with mission_date. If that column doesn't exist, retry without it.
+  const rowsWithDate = missions.map((m) => ({
+    child_id: childId,
+    title: m.title,
+    category: m.category ?? 'general',
+    screen_time_reward: m.screen_time_reward ?? 5,
+    is_completed: false,
+    mission_date: missionDate,
+  }));
+
+  let { data, error } = await supabase.from('missions').insert(rowsWithDate).select();
+
+  if (error) {
+    console.warn('[generate-missions] insert with mission_date failed, retrying without:', error.message);
+    const rowsNoDate = missions.map((m) => ({
       child_id: childId,
       title: m.title,
       category: m.category ?? 'general',
       screen_time_reward: m.screen_time_reward ?? 5,
       is_completed: false,
-      mission_date: missionDate,
-    })))
-    .select();
-
-  if (error) {
-    console.error('[generate-missions] mission insert failed:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    }));
+    const retry = await supabase.from('missions').insert(rowsNoDate).select();
+    if (retry.error) {
+      console.error('[generate-missions] mission insert failed (both attempts):', retry.error.message);
+      return NextResponse.json({ error: retry.error.message }, { status: 500 });
+    }
+    data = retry.data;
+    error = null;
   }
 
   return NextResponse.json({ tasks: data, generated: missions.length });

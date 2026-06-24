@@ -223,65 +223,91 @@ function ChildHeader() {
   );
 }
 
-type LoadState = 'ok' | 'auth' | 'query';
+type LoadState = 'ok' | 'auth' | 'no-children' | 'query';
 
 function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loadState: LoadState; onSelect: (c: Child) => void }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
-      <div className="text-center mb-10">
-        <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
-        <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
-      </div>
 
-      {/* Auth required */}
+      {/* Auth gate — full-screen redirect prompt, no illustration */}
       {loadState === 'auth' && (
-        <div className="text-center max-w-xs space-y-2">
-          <div className="text-4xl mb-3">🔒</div>
-          <p className="font-semibold text-gray-700">Parent login required</p>
-          <p className="text-sm text-gray-500 leading-relaxed">Ask a parent to open Kid Mode from the parent dashboard, then hand you the device.</p>
+        <div className="text-center max-w-sm space-y-4">
+          <div className="text-5xl mb-2">🔒</div>
+          <h1 className="text-2xl font-bold text-navy">Parent login required</h1>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Kid Mode is launched from the parent dashboard. Please log in as a parent, then open Kid Mode from there.
+          </p>
+          <a
+            href="/login"
+            className="inline-block mt-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
+          >
+            Parent Login
+          </a>
         </div>
       )}
 
       {/* Query / network error */}
       {loadState === 'query' && (
-        <div className="text-center max-w-xs space-y-2">
-          <div className="text-4xl mb-3">⚠️</div>
+        <div className="text-center max-w-xs space-y-3">
+          <div className="text-4xl mb-2">⚠️</div>
           <p className="font-semibold text-gray-700">Could not load profiles</p>
           <p className="text-sm text-gray-500">Check your connection and try again, or ask a parent for help.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm"
+          >
+            Try again
+          </button>
         </div>
       )}
 
-      {/* No children in DB */}
-      {loadState === 'ok' && children.length === 0 && (
-        <div className="text-center text-gray-500 space-y-1">
-          <p className="font-medium">No children set up yet.</p>
-          <p className="text-sm">Ask a parent to add your profile.</p>
+      {/* Parent has no children set up */}
+      {loadState === 'no-children' && (
+        <div className="text-center max-w-sm space-y-4">
+          <div className="text-5xl mb-2">🌱</div>
+          <h1 className="text-2xl font-bold text-navy">Add a child first</h1>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            No child profiles are set up yet. Go to the parent dashboard to add your first child, then come back here.
+          </p>
+          <a
+            href="/dashboard/children"
+            className="inline-block mt-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
+          >
+            Add a Child
+          </a>
         </div>
       )}
 
+      {/* Child picker */}
       {loadState === 'ok' && children.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
-          {children.map((child) => {
-            const colors = getColors(child.name);
-            return (
-              <button
-                key={child.id}
-                onClick={() => onSelect(child)}
-                aria-label={`Select ${child.name}`}
-                className={`${colors.light} border-2 ${colors.ring.replace('ring','border')} rounded-3xl p-6 flex flex-col items-center gap-3 hover:scale-105 active:scale-95 transition-transform duration-150 shadow-sm`}
-              >
-                <div className={`w-20 h-20 rounded-full ${colors.bg} flex items-center justify-center text-4xl font-bold text-white shadow-md`}>
-                  {child.name[0].toUpperCase()}
-                </div>
-                <span className={`text-lg font-bold ${colors.text}`}>{child.name}</span>
-                <div className="flex items-center gap-1 text-amber-500 font-semibold text-sm">
-                  <Star size={14} fill="currentColor" />{child.points} pts
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <div className="text-center mb-10">
+            <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
+            <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
+            {children.map((child) => {
+              const colors = getColors(child.name);
+              return (
+                <button
+                  key={child.id}
+                  onClick={() => onSelect(child)}
+                  aria-label={`Select ${child.name}`}
+                  className={`${colors.light} border-2 ${colors.ring.replace('ring','border')} rounded-3xl p-6 flex flex-col items-center gap-3 hover:scale-105 active:scale-95 transition-transform duration-150 shadow-sm`}
+                >
+                  <div className={`w-20 h-20 rounded-full ${colors.bg} flex items-center justify-center text-4xl font-bold text-white shadow-md`}>
+                    {child.name[0].toUpperCase()}
+                  </div>
+                  <span className={`text-lg font-bold ${colors.text}`}>{child.name}</span>
+                  <div className="flex items-center gap-1 text-amber-500 font-semibold text-sm">
+                    <Star size={14} fill="currentColor" />{child.points} pts
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -452,21 +478,23 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
                   <p className="text-gray-500 text-sm font-medium">Creating adventures…</p>
                   <div className="flex justify-center gap-1.5">
                     {[0,1,2].map(i => (
-                      <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      <div key={i} className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                     ))}
                   </div>
                 </div>
               ) : (
                 <>
                   <div className="text-3xl mb-3">🎯</div>
-                  <p className="text-gray-500 text-sm mb-4 font-medium">No missions yet — tap below to start!</p>
-                  <button
-                    onClick={onGenerateMissions}
-                    aria-label="Generate missions"
-                    className="min-h-[44px] bg-teal-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:bg-teal-700 active:scale-95 transition-all"
+                  <p className="text-gray-700 text-base font-semibold mb-1">No missions yet today</p>
+                  <p className="text-gray-500 text-sm mb-5 leading-relaxed">
+                    Ask a parent to generate today&apos;s missions from the dashboard, then come back here.
+                  </p>
+                  <a
+                    href="/dashboard"
+                    className="inline-block min-h-[44px] bg-teal-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-teal-700 active:scale-95 transition-all"
                   >
-                    ✨ Get My Missions
-                  </button>
+                    Go to Parent Dashboard
+                  </a>
                 </>
               )}
             </div>
@@ -520,19 +548,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </div>
         </div>
 
-        {/* New Missions button */}
-        {pending.length > 0 && (
-          <button
-            onClick={onGenerateMissions}
-            disabled={generating}
-            aria-label="Get new missions"
-            className="w-full min-h-[44px] border-2 border-teal-200 text-teal-700 font-semibold py-3 rounded-xl hover:bg-teal-50 active:scale-[0.98] transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
-          >
-            {generating
-              ? <><span className="w-4 h-4 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" /> Creating adventures…</>
-              : '✨ New Missions'}
-          </button>
-        )}
+        {/* "New Missions" is only shown in the all-done state above, not while missions are pending */}
 
         {/* Completed missions (collapsible) */}
         {done.length > 0 && (
@@ -638,14 +654,16 @@ export default function ChildPage() {
 
   const supabase = getSupabase();
 
+  function todayStr() {
+    return new Date().toISOString().split('T')[0];
+  }
+
   const fetchData = useCallback(async () => {
     // Verify the parent auth session exists before querying — RLS requires it.
     const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
     if (sessionErr) console.error('[child] session error:', sessionErr.message);
 
     if (!session) {
-      // No parent session on this device. Show the auth required message rather
-      // than silently showing "No children set up yet."
       console.error('[child] No auth session — children query would be blocked by RLS.');
       setLoadState('auth');
       setLoading(false);
@@ -653,37 +671,67 @@ export default function ChildPage() {
     }
 
     const [
-      childRes, walletRes, missionRes, rewardRes, planRes, streakRes,
+      childRes, walletRes, rewardRes, planRes, streakRes,
     ] = await Promise.all([
       supabase.from('children').select('id, name, age, parent_id').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('missions').select('id, child_id, title, category, screen_time_reward, is_completed, generated_by'),
       supabase.from('rewards').select('id, title, coin_cost').order('coin_cost', { ascending: true }),
       supabase.from('family_plans').select('personalization_data').limit(1).maybeSingle(),
       supabase.from('streaks').select('child_id, current_streak'),
     ]);
 
-    if (childRes.error) console.error('[child] children query error:', childRes.error.message);
-    if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
-    if (rewardRes.error) console.error('[child] rewards query error:', rewardRes.error.message);
-    if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
-    if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
-
     if (childRes.error) {
+      console.error('[child] children query error:', childRes.error.message);
       setLoadState('query');
       setLoading(false);
       return;
     }
 
-    // generated_by column may not exist on older production DBs — retry without it.
-    let missionData = missionRes.data;
+    if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
+    if (rewardRes.error) console.error('[child] rewards query error:', rewardRes.error.message);
+    if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
+    if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
+
+    const kids = (childRes.data || []);
+    if (kids.length === 0) {
+      setChildren([]);
+      setLoadState('no-children');
+      setLoading(false);
+      return;
+    }
+
+    // Fetch only today's missions to avoid showing stale/old missions.
+    // mission_date or generated_by columns may not exist on older production DBs — retry without.
+    const today = todayStr();
+    let missionData: Mission[] | null = null;
+
+    const missionRes = await supabase
+      .from('missions')
+      .select('id, child_id, title, category, screen_time_reward, is_completed, generated_by')
+      .eq('mission_date', today);
+
     if (missionRes.error) {
-      console.error('[child] missions query error (retrying without generated_by):', missionRes.error.message);
-      const retry = await supabase
+      console.warn('[child] missions query with mission_date failed, retrying without date filter:', missionRes.error.message);
+      // mission_date column may not exist — fall back to fetching all, filtered by updated_at today
+      const fallback = await supabase
         .from('missions')
-        .select('id, child_id, title, category, screen_time_reward, is_completed');
-      if (retry.error) console.error('[child] missions retry error:', retry.error.message);
-      missionData = (retry.data ?? []).map(m => ({ ...m, generated_by: undefined }));
+        .select('id, child_id, title, category, screen_time_reward, is_completed')
+        .gte('updated_at', today + 'T00:00:00.000Z')
+        .lte('updated_at', today + 'T23:59:59.999Z');
+      if (fallback.error) {
+        // Last resort: fetch all incomplete missions
+        console.warn('[child] missions fallback also failed, fetching all incomplete:', fallback.error.message);
+        const lastResort = await supabase
+          .from('missions')
+          .select('id, child_id, title, category, screen_time_reward, is_completed')
+          .eq('is_completed', false);
+        if (lastResort.error) console.error('[child] missions last-resort error:', lastResort.error.message);
+        missionData = (lastResort.data ?? []).map(m => ({ ...m, generated_by: undefined }));
+      } else {
+        missionData = (fallback.data ?? []).map(m => ({ ...m, generated_by: undefined }));
+      }
+    } else {
+      missionData = missionRes.data;
     }
 
     const loc = (planRes.data?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
@@ -694,15 +742,15 @@ export default function ChildPage() {
         .catch(() => {});
     }
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
-    const kids = (childRes.data || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
-    setChildren(kids);
+    const enrichedKids = kids.map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
+    setChildren(enrichedKids);
     setMissions(missionData || []);
     setRewards(rewardRes.data || []);
     setStreaks(Object.fromEntries((streakRes.data || []).map(s => [s.child_id, s.current_streak])));
     setLoadState('ok');
     setLoading(false);
     if (selected) {
-      const fresh = kids.find((c) => c.id === selected.id);
+      const fresh = enrichedKids.find((c) => c.id === selected.id);
       if (fresh) setSelected(fresh);
     }
   }, [selected]);
@@ -721,39 +769,48 @@ export default function ChildPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        // Kid View has no auth session — pass parentId so the API can verify
-        // child↔parent via the service role instead of a Supabase session.
-        body: JSON.stringify({ childId: selected.id, parentId: selected.parent_id ?? null, childAge: selected.age ?? null, count: 6, mood: selectedMood }),
+        body: JSON.stringify({
+          childId: selected.id,
+          parentId: selected.parent_id ?? null,
+          childAge: selected.age ?? null,
+          count: 6,
+          mood: selectedMood,
+        }),
       });
+
+      let body: { error?: string; generated?: number } = {};
+      try { body = await res.json(); } catch { /* no body */ }
+
       if (res.ok) {
         trackMissionGenerated({
           child_id: selected.id,
           mood: selectedMood,
           weather_available: !!weather,
-          count: 6,
+          count: body.generated ?? 6,
         });
         await fetchData();
         setMissionSuccess('New missions ready! 🎉');
         setTimeout(() => setMissionSuccess(null), 3000);
       } else if (res.status === 429) {
-        setMissionError('Just a moment! Wait a few seconds before generating new missions.');
+        const msg = body.error ?? 'Just a moment — wait before generating new missions.';
+        console.warn('[child] generate-missions rate limited:', msg);
+        setMissionError(msg);
+      } else if (res.status === 401 || res.status === 403) {
+        console.error('[child] generate-missions auth error:', res.status, body.error);
+        setMissionError('Session expired. Ask a parent to reopen Kid Mode.');
       } else {
-        setMissionError('Could not load missions. Try again!');
+        console.error('[child] generate-missions failed:', res.status, body.error);
+        setMissionError(`Could not create missions (${res.status}). Ask a parent to try from the dashboard.`);
       }
-    } catch {
-      setMissionError('Could not load missions. Try again!');
+    } catch (err) {
+      console.error('[child] generate-missions threw:', err);
+      setMissionError('Could not reach the server. Check your connection and try again.');
     }
     setGenerating(false);
   }
 
-  // Auto-generate if no missions when entering missions phase
-  useEffect(() => {
-    if (!selected || phase !== 'missions') return;
-    const childMissions = missions.filter((m) => m.child_id === selected.id);
-    if (childMissions.length === 0 && !generating && !loading) {
-      handleGenerateMissions();
-    }
-  }, [selected, missions, loading, phase]);
+  // Do not auto-generate — show the empty state with a "Go to Dashboard" CTA instead.
+  // Auto-generation caused confusing errors and silent failures when columns were missing.
 
   function handleSelect(child: Child) {
     const pin = localStorage.getItem(`bt_pin_${child.name.toLowerCase()}`);
