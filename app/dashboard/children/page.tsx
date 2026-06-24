@@ -12,7 +12,7 @@ type Child = {
   id: string;
   name: string;
   age: number | null;
-  daily_screen_time_goal: number | null;
+  screen_time_limit: number | null;
   points: number;
   created_at: string;
 };
@@ -135,7 +135,7 @@ export default function ChildrenPage() {
 
   async function fetchData() {
     const [childRes, walletRes, ledgerRes] = await Promise.all([
-      supabase.from('children').select('id, name, age, daily_screen_time_goal, created_at').order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age, screen_time_limit, created_at').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }),
     ]);
@@ -146,13 +146,13 @@ export default function ChildrenPage() {
     // daily_screen_time_goal may not exist on older production DBs — retry without it.
     let childRows = childRes.data;
     if (childRes.error) {
-      console.error('[children] query error (retrying without daily_screen_time_goal):', childRes.error.message);
+      console.error('[children] query error (retrying without screen_time_limit):', childRes.error.message);
       const retry = await supabase
         .from('children')
         .select('id, name, age, created_at')
         .order('created_at', { ascending: true });
       if (retry.error) console.error('[children] retry error:', retry.error.message);
-      childRows = (retry.data || []).map(c => ({ ...c, daily_screen_time_goal: null }));
+      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null }));
     }
 
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
@@ -196,7 +196,7 @@ export default function ChildrenPage() {
     const { error } = await supabase.from('children').insert([{
       name,
       age: age ? Number(age) : null,
-      daily_screen_time_goal: limit ? Number(limit) : 60,
+      screen_time_limit: limit ? Number(limit) : 60,
       parent_id: user?.id,
     }]);
     if (error) toast.error('Error adding child: ' + error.message);
@@ -211,7 +211,7 @@ export default function ChildrenPage() {
 
   async function adjustScreenTime(id: string, current: number, delta: number) {
     const next = Math.max(0, current + delta);
-    const { error } = await supabase.from('children').update({ daily_screen_time_goal: next }).eq('id', id);
+    const { error } = await supabase.from('children').update({ screen_time_limit: next }).eq('id', id);
     if (error) toast.error('Error updating screen time.');
     else {
       toast.success(delta > 0 ? `+${delta} min added!` : `${Math.abs(delta)} min removed.`);
@@ -263,7 +263,7 @@ export default function ChildrenPage() {
           <button
             onClick={() => setShowForm((v) => !v)}
             aria-label={showForm ? 'Cancel adding child' : 'Add a child'}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
           >
             {showForm ? <ChevronUp size={16} /> : <Plus size={16} />}
             {showForm ? 'Cancel' : 'Add Child'}
@@ -278,7 +278,7 @@ export default function ChildrenPage() {
           >
             <h2 className="text-base font-semibold text-gray-800 mb-1">New Child Profile</h2>
             <input
-              className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
               placeholder="Name (e.g. Emma)"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -288,7 +288,7 @@ export default function ChildrenPage() {
             />
             <div className="flex gap-3">
               <input
-                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                 type="number"
                 placeholder="Age (optional)"
                 min="1"
@@ -298,7 +298,7 @@ export default function ChildrenPage() {
                 aria-label="Child's age (optional)"
               />
               <input
-                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                 type="number"
                 placeholder="Screen limit (min)"
                 value={limit}
@@ -309,7 +309,7 @@ export default function ChildrenPage() {
             <button
               type="submit"
               disabled={!name || saving}
-              className="w-full bg-green-600 text-white py-2.5 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors"
+              className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors"
             >
               {saving ? 'Saving…' : 'Add Child'}
             </button>
@@ -331,7 +331,7 @@ export default function ChildrenPage() {
             {children.map((child) => {
               const streak = computeStreak(ledger, child.id);
               const avatarColor = getAvatarColor(child.name);
-              const screenGoal = child.daily_screen_time_goal ?? 60;
+              const screenGoal = child.screen_time_limit ?? 60;
               const screenPct = Math.min(100, Math.round((screenGoal / 120) * 100));
 
               return (
@@ -447,7 +447,7 @@ export default function ChildrenPage() {
                             placeholder="4-digit PIN"
                             value={pinInput}
                             onChange={(e) => setPinInput(e.target.value.slice(0, 4))}
-                            className="border rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                            className="border rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
                             onKeyDown={(e) => e.key === 'Enter' && savePin(child.name)}
                             aria-label={`Enter 4-digit PIN for ${child.name}`}
                             autoFocus
@@ -455,7 +455,7 @@ export default function ChildrenPage() {
                           <button
                             onClick={() => savePin(child.name)}
                             aria-label="Save PIN"
-                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 transition-colors"
+                            className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-teal-700 transition-colors"
                           >
                             Save
                           </button>

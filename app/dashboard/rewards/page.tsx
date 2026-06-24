@@ -325,7 +325,7 @@ export default function RewardsPage() {
                 <button
                   onClick={confirmRedeem}
                   disabled={redeeming}
-                  className="flex-[2] py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors disabled:opacity-60"
+                  className="flex-[2] py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm transition-colors disabled:opacity-60"
                 >
                   {redeeming ? 'Redeeming…' : 'Yes, redeem it! 🎉'}
                 </button>
@@ -397,7 +397,7 @@ export default function RewardsPage() {
                 type="submit"
                 disabled={saving}
                 aria-label="Add reward"
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-colors disabled:opacity-60"
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-colors disabled:opacity-60"
               >
                 {saving ? (
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />

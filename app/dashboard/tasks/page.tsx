@@ -226,7 +226,7 @@ export default function TasksPage() {
               type="button"
               onClick={() => setTitle(t)}
               className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
-                title === t ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                title === t ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'
               }`}
             >
               {t}
@@ -252,7 +252,7 @@ export default function TasksPage() {
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
             <p className="font-medium text-gray-700 mb-1">No children added yet</p>
             <p className="text-sm text-gray-500 mb-4">Add a child first, then you can assign tasks to them.</p>
-            <a href="/dashboard/children" className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">Add a Child</a>
+            <a href="/dashboard/children" className="inline-block bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700">Add a Child</a>
           </div>
         ) : missions.length === 0 ? (
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">

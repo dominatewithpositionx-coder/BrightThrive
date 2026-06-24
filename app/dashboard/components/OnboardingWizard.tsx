@@ -182,7 +182,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
             {steps.map(({ n, label, icon: Icon }, i) => (
               <div key={n} className="flex items-center gap-2 flex-1">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                  step > n ? 'bg-green-500' : step === n ? 'bg-green-600' : 'bg-gray-200'
+                  step > n ? 'bg-teal-500' : step === n ? 'bg-teal-600' : 'bg-gray-200'
                 }`}>
                   {step > n
                     ? <CheckCircle size={16} className="text-white" />
@@ -190,7 +190,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   }
                 </div>
                 <span className={`text-xs font-medium hidden sm:block ${step === n ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
-                {i < steps.length - 1 && <div className={`h-px flex-1 ${step > n ? 'bg-green-400' : 'bg-gray-200'}`} />}
+                {i < steps.length - 1 && <div className={`h-px flex-1 ${step > n ? 'bg-teal-400' : 'bg-gray-200'}`} />}
               </div>
             ))}
           </div>
@@ -205,7 +205,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 <p className="text-sm text-gray-500 mb-4">You can add more children later from the Children page.</p>
                 <div className="space-y-3">
                   <input
-                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Child's name (e.g. Emma)"
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
@@ -213,7 +213,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     autoFocus
                   />
                   <input
-                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Age (optional)"
                     type="number"
                     min="1"
@@ -226,7 +226,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 <button
                   onClick={saveChild}
                   disabled={!childName.trim() || saving}
-                  className="mt-5 w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                  className="mt-5 w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
                   {saving ? 'Saving…' : <>Continue <ChevronRight size={18} /></>}
                 </button>
@@ -243,7 +243,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       key={t}
                       onClick={() => setTaskTitle(t)}
                       className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                        taskTitle === t ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
+                        taskTitle === t ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-700 border-gray-300 hover:border-teal-400'
                       }`}
                     >
                       {t}
@@ -251,7 +251,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   ))}
                 </div>
                 <input
-                  className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="Or write your own task…"
                   value={taskTitle}
                   onChange={(e) => setTaskTitle(e.target.value)}
@@ -266,7 +266,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   <button
                     onClick={saveTask}
                     disabled={saving}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     {saving ? 'Saving…' : <>Continue <ChevronRight size={18} /></>}
                   </button>
@@ -284,7 +284,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       key={r.title}
                       onClick={() => { setRewardTitle(r.title); setRewardCost(r.coin_cost); }}
                       className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                        rewardTitle === r.title ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
+                        rewardTitle === r.title ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-700 border-gray-300 hover:border-teal-400'
                       }`}
                     >
                       {r.title} <span className="opacity-70">· {r.coin_cost}pts</span>
@@ -293,13 +293,13 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 </div>
                 <div className="space-y-3">
                   <input
-                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Or write your own reward…"
                     value={rewardTitle}
                     onChange={(e) => setRewardTitle(e.target.value)}
                   />
                   <input
-                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Points cost (e.g. 100)"
                     type="number"
                     value={rewardCost}
@@ -316,7 +316,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   <button
                     onClick={saveReward}
                     disabled={saving}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     {saving ? 'Saving…' : 'Finish Setup ✓'}
                   </button>
