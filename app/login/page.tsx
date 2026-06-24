@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
+import { BRAND } from '@/lib/brand';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -40,10 +41,10 @@ export default function LoginPage() {
         {/* Brand mark */}
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="/brand/BrytThrive.png"
-            alt="BrytThrive"
-            width={200}
-            height={133}
+            src={BRAND.logo}
+            alt={BRAND.name}
+            width={BRAND.logoWidth}
+            height={BRAND.logoHeight}
             priority
             className="h-14 w-auto object-contain mb-2"
           />

@@ -13,7 +13,7 @@ import ClientChrome from '@/components/brightthrive/ClientChrome';
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
 export const viewport: Viewport = {
-  themeColor: '#22c55e',
+  themeColor: '#14B8A6',
   width: 'device-width',
   initialScale: 1,
 };
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/brand/favicon.svg',     type: 'image/svg+xml' },
       { url: '/icons/icon-32x32.png',  sizes: '32x32',  type: 'image/png' },
       { url: '/icons/icon-96x96.png',  sizes: '96x96',  type: 'image/png' },
       { url: '/icons/icon-192x192.png',sizes: '192x192',type: 'image/png' },

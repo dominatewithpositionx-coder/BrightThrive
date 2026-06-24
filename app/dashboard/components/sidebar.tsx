@@ -6,11 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { Home, Users, BarChart3, Gift, Settings, ClipboardList, Gamepad2 } from 'lucide-react';
-
-const brand = {
-  name: 'BrytThrive',
-  logo: '/brand/BrytThrive.png',
-};
+import { BRAND } from '@/lib/brand';
 
 type NavItem = {
   name: string;
@@ -37,11 +33,12 @@ export default function Sidebar() {
       <div className="p-4 text-center">
         <Link href="/" className="inline-flex items-center justify-center">
           <Image
-            src={brand.logo}
-            alt={brand.name}
-            width={140}
-            height={28}
+            src={BRAND.logo}
+            alt={BRAND.name}
+            width={BRAND.logoWidth}
+            height={BRAND.logoHeight}
             priority
+            className="h-12 w-auto object-contain"
           />
         </Link>
       </div>

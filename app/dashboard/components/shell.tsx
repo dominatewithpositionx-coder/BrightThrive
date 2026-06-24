@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
+import { BRAND } from '@/lib/brand';
 import {
   Home, Users, BarChart3, Gift, Settings, ClipboardList,
   Gamepad2, History, Menu, X, LogOut, ChevronRight,
@@ -32,12 +33,12 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             href={href}
             onClick={onClick}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-              active ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              active ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <Icon size={18} className={active ? 'text-green-600' : ''} />
+            <Icon size={18} className={active ? 'text-teal-600' : ''} />
             {name}
-            {active && <ChevronRight size={14} className="ml-auto text-green-400" />}
+            {active && <ChevronRight size={14} className="ml-auto text-teal-400" />}
           </Link>
         );
       })}
@@ -49,9 +50,16 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-6 flex items-center justify-between border-b bg-white">
+      <div className="px-5 py-5 flex items-center justify-between border-b bg-white">
         <Link href="/dashboard" onClick={onClose}>
-          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={180} height={120} priority className="h-12 w-auto object-contain" />
+          <Image
+            src={BRAND.logo}
+            alt={BRAND.name}
+            width={BRAND.logoWidth}
+            height={BRAND.logoHeight}
+            priority
+            className="h-12 w-auto object-contain"
+          />
         </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
@@ -63,7 +71,7 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
       {/* User greeting */}
       <div className="px-5 py-3 border-b">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
             {firstName[0]?.toUpperCase() || '?'}
           </div>
           <div>
@@ -85,11 +93,11 @@ function SidebarContent({ onClose, onLogout, firstName }: { onClose?: () => void
           target="_blank"
           rel="noopener noreferrer"
           onClick={onClose}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
         >
           <Gamepad2 size={18} />
           Kid View
-          <span className="ml-auto text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">↗</span>
+          <span className="ml-auto text-[10px] bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded-full">↗</span>
         </Link>
         <button
           onClick={onLogout}
@@ -163,8 +171,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           >
             <Menu size={22} />
           </button>
-          <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={135} height={90} className="h-9 w-auto" />
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">
+          <Image
+            src={BRAND.logo}
+            alt={BRAND.name}
+            width={BRAND.logoWidth}
+            height={BRAND.logoHeight}
+            className="h-9 w-auto object-contain"
+          />
+          <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
             {firstName[0]?.toUpperCase() || '?'}
           </div>
         </header>

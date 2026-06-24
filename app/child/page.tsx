@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { getSupabase } from '@/lib/supabase';
+import { BRAND } from '@/lib/brand';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -217,7 +218,7 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
 function ChildHeader() {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-      <Image src="/brand/BrytThrive.png" alt="BrytThrive" width={120} height={80} className="h-8 w-auto" priority />
+      <Image src={BRAND.mark} alt={BRAND.name} width={BRAND.markWidth} height={BRAND.markHeight} className="h-8 w-auto object-contain" priority />
     </div>
   );
 }
