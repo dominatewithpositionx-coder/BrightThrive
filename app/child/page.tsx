@@ -109,7 +109,7 @@ function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | n
   );
 }
 
-type Child   = { id: string; name: string; age?: number | null; parent_id?: string | null; points: number };
+type Child   = { id: string; name: string; age?: number | null; parent_id?: string | null; points: number; location_label?: string | null; location_name?: string | null; location_city?: string | null };
 type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; generated_by?: string };
 type Reward  = { id: string; title: string; coin_cost: number };
 
@@ -573,6 +573,9 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           <span className="text-4xl leading-none flex-shrink-0">{wx.emoji}</span>
           <div className="flex-1">
             <p className="font-bold text-gray-800 text-base">{wx.label} · {wx.temp}</p>
+            {child.location_name && (
+              <p className="text-xs text-gray-500 mt-0.5">📍 {child.location_name}{child.location_city ? `, ${child.location_city}` : ''}</p>
+            )}
             <p className="text-sm text-gray-600 mt-0.5">
               {wx.outdoor ? "Great day to get outside! 🌿" : "Perfect day for indoor adventures! 🏠"}
             </p>
@@ -771,7 +774,7 @@ export default function ChildPage() {
     ] = await Promise.all([
       // Explicit parent_id filter — defense-in-depth on top of RLS.
       // Ensures no other parent's children are ever returned, even if RLS is misconfigured.
-      supabase.from('children').select('id, name, age, parent_id').eq('parent_id', parentId).order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age, parent_id, location_label, location_name, location_city').eq('parent_id', parentId).order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('rewards').select('id, title, coin_cost').eq('parent_id', parentId).order('coin_cost', { ascending: true }),
       supabase.from('family_plans').select('personalization_data').eq('parent_id', parentId).maybeSingle(),
@@ -831,13 +834,9 @@ export default function ChildPage() {
       missionData = missionRes.data;
     }
 
-    const loc = (planRes.data?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
-    if (loc && !weather) {
-      fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
-        .then(r => r.json())
-        .then(json => { if (!json.error) setWeather(json as WeatherData); })
-        .catch(() => {});
-    }
+    const planLoc = (planRes.data?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
+    // Store plan location for fallback use in weather fetching
+    if (planLoc) (window as unknown as Record<string, string>)['__bt_plan_loc'] = planLoc;
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
     const enrichedKids = kids.map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
     setChildren(enrichedKids);
@@ -856,10 +855,19 @@ export default function ChildPage() {
 
   // Mission generation is parent-only. Kids display and complete missions; they never create them.
 
+  function fetchChildWeather(child: Child) {
+    const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
+    if (!city) return;
+    fetch(`/api/weather?location=${encodeURIComponent(city)}`)
+      .then(r => r.json())
+      .then(json => { if (!json.error) setWeather(json as WeatherData); })
+      .catch(() => {});
+  }
+
   function handleSelect(child: Child) {
     const pin = localStorage.getItem(`bt_pin_${child.name.toLowerCase()}`);
     if (pin) { setPendingChild(child); }
-    else { setSelected(child); setPhase('mood-check'); }
+    else { setSelected(child); fetchChildWeather(child); setPhase('mood-check'); }
   }
 
   function handleMoodSelect(mood: MoodKey) {
@@ -932,7 +940,7 @@ export default function ChildPage() {
       {pendingChild && (
         <PinDialog
           childName={pendingChild.name}
-          onUnlock={() => { setSelected(pendingChild); setPendingChild(null); setPhase('mood-check'); }}
+          onUnlock={() => { setSelected(pendingChild); fetchChildWeather(pendingChild); setPendingChild(null); setPhase('mood-check'); }}
           onCancel={() => setPendingChild(null)}
         />
       )}

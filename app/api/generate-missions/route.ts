@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceSupabaseClient } from '@/lib/supabase';
-import { getWeather, weatherMissionHint } from '@/lib/weather';
+import { getWeather, weatherMissionHint, fetchWeatherCached } from '@/lib/weather';
 import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 import THEMES from '@/lib/themes';
 
@@ -120,7 +120,7 @@ const FALLBACK: Record<string, MissionDraft[]> = {
 const CATEGORIES = ['movement', 'responsibility', 'emotional_intelligence', 'learning', 'creativity', 'family_connection', 'kindness', 'mindfulness'];
 
 export async function POST(req: NextRequest) {
-  const { childId, childAge, parentId, location, mood, weatherSummary, count } = await req.json();
+  const { childId, childAge, parentId, location, locationLabel, locationCity, mood, weatherSummary, count } = await req.json();
 
   if (!childId) {
     return NextResponse.json({ error: 'childId is required' }, { status: 400 });
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
   //  2. Kid View (/child) — no auth session; passes parentId in the body and
   //     we verify the child belongs to that parent via the service role.
   let resolvedParentId: string;
-  let childRow: { id: string; age: number | null } | null = null;
+  let childRow: { id: string; age: number | null; location_label?: string | null; location_city?: string | null } | null = null;
 
   const anonSupabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error: childError } = await anonSupabase
       .from('children')
-      .select('id, age')
+      .select('id, age, location_label, location_city')
       .eq('id', childId)
       .eq('parent_id', resolvedParentId)
       .single();
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
       console.error('[generate-missions] child lookup (session) failed:', childError?.message);
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    childRow = data as { id: string; age: number | null };
+    childRow = data as { id: string; age: number | null; location_label?: string | null; location_city?: string | null };
   } else if (parentId) {
     // Kid View: verify child↔parent via service role (RLS-bypassing) read.
     let serviceSupabase;
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     }
     const { data, error: childError } = await serviceSupabase
       .from('children')
-      .select('id, age, parent_id')
+      .select('id, age, parent_id, location_label, location_city')
       .eq('id', childId)
       .single();
     if (childError || !data || (data as { parent_id: string }).parent_id !== parentId) {
@@ -184,7 +184,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     resolvedParentId = parentId;
-    childRow = { id: (data as { id: string }).id, age: (data as { age: number | null }).age };
+    childRow = {
+      id: (data as { id: string }).id,
+      age: (data as { age: number | null }).age,
+      location_label: (data as { location_label?: string | null }).location_label,
+      location_city: (data as { location_city?: string | null }).location_city,
+    };
   } else {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -211,14 +216,21 @@ export async function POST(req: NextRequest) {
   const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
 
+  // Resolve child's location: request body > child DB row > parent plan
+  const resolvedLocationCity: string | null =
+    locationCity ?? childRow?.location_city ?? null;
+  const resolvedLocationLabel: string =
+    locationLabel ?? childRow?.location_label ?? 'home';
+
   let resolvedWeatherSummary: string | null = weatherSummary ?? null;
   let isOutdoorFriendly = false;
   let weatherHint = '';
+  let weatherDetails = '';
   try {
     if (!resolvedWeatherSummary) {
-      let resolvedLocation: string | null = location ?? null;
+      let resolvedLocation: string | null = location ?? resolvedLocationCity ?? null;
       if (!resolvedLocation) {
-        // Use service role so this works for both authenticated parents and Kid View.
+        // Fall back to parent plan location
         const planClient = createServiceSupabaseClient();
         const { data: plan } = await planClient
           .from('family_plans')
@@ -228,18 +240,28 @@ export async function POST(req: NextRequest) {
         resolvedLocation = (plan?.personalization_data as Record<string, unknown>)?.location as string ?? null;
       }
       if (resolvedLocation) {
-        const weather = await getWeather(resolvedLocation);
-        if (weather) {
-          resolvedWeatherSummary = weather.summary;
-          weatherHint = weatherMissionHint(weather);
-          isOutdoorFriendly = !weather.isRainy && !weather.isSnowy && !weather.isCold;
+        const wxData = await fetchWeatherCached(resolvedLocation);
+        if (wxData) {
+          const lc = wxData.condition.toLowerCase();
+          const isRainy = lc.includes('rain') || lc.includes('shower');
+          const isSnowy = lc.includes('snow');
+          const isHot   = wxData.tempC >= 28;
+          const isCold  = wxData.tempC <= 5;
+          isOutdoorFriendly = wxData.isOutdoorFriendly;
+          resolvedWeatherSummary = `${wxData.condition}, ${wxData.tempC}°C (feels like ${wxData.feelsLikeC}°C), high ${wxData.highC}°C, low ${wxData.lowC}°C`;
+          if (wxData.windSpeed)         resolvedWeatherSummary += `, wind ${wxData.windSpeed} km/h`;
+          if (wxData.precipProbability) resolvedWeatherSummary += `, ${wxData.precipProbability}% chance of rain`;
+          if (wxData.uvIndex)           resolvedWeatherSummary += `, UV index ${wxData.uvIndex}`;
+          weatherHint = weatherMissionHint({ condition: wxData.condition, tempC: wxData.tempC, isRainy, isSnowy, isHot, isCold, summary: '' });
+          weatherDetails = resolvedWeatherSummary;
         }
       }
     } else {
       isOutdoorFriendly = /outdoor friendly/i.test(resolvedWeatherSummary);
+      weatherDetails = resolvedWeatherSummary;
     }
   } catch {
-    // Weather is optional - proceed without it
+    // Weather is optional — proceed without it
   }
 
   const neededCategories = isOutdoorFriendly
@@ -251,18 +273,31 @@ export async function POST(req: NextRequest) {
     ? '\nInclude one healthy_habits mission (hydration, sleep, nutrition, or hygiene).'
     : '';
 
-  // Daily theme drives mission selection variety
   const dayTheme = THEMES[new Date().getDay()];
   const themeLine = `\nToday is ${dayTheme.name} — lean toward ${dayTheme.focusCategories.join(', ')} missions but ensure good variety.`;
 
+  const nowDate = new Date();
+  const hour = nowDate.getHours();
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const dayType = [0, 6].includes(nowDate.getDay()) ? 'weekend' : 'weekday';
+  const month = nowDate.getMonth();
+  const season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'autumn' : 'winter';
+
+  const locationLine = resolvedLocationCity
+    ? `\nLocation: child is at ${resolvedLocationLabel} in ${resolvedLocationCity}.`
+    : `\nLocation: child is at ${resolvedLocationLabel}.`;
+
+  const contextLine = `\nContext: ${timeOfDay}, ${dayType}, ${season}.`;
+
   const systemPrompt = `You are BrytThrive's mission engine. Generate exactly ${requestedCount} child missions for age band "${band}".
-Weather: ${resolvedWeatherSummary ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
-Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${themeLine}
+Weather: ${weatherDetails ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
+Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${locationLine}${contextLine}${themeLine}
 Required distribution:
 - Daily (3-4): movement, responsibility, learning, healthy_habits
 - Bonus (3-4): creativity, kindness, mindfulness${isOutdoorFriendly ? ', outdoor, adventure' : ''}
 - Special (2-3): family_connection, emotional_intelligence
 Available categories: ${neededCategories}.${healthyHabitsLine}
+Tailor missions to the child's location (${resolvedLocationLabel}) and current context. ${isOutdoorFriendly ? 'Weather permits outdoor activities.' : 'Prioritise indoor activities.'}
 Rules: child-friendly language, max 10 words per title, no repetition, varied and fun.
 Coins: easy=5, medium=10, challenging=15.
 Format: JSON array only — [{"title":"...","category":"...","screen_time_reward":5}]`;
