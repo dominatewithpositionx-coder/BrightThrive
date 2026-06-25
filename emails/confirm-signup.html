@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm your BrytThrive account</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0fdf4;font-family:'Segoe UI',Arial,sans-serif;color:#1a2e1a;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- Header gradient bar -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#22C55E 0%,#14B8A6 50%,#3B82F6 100%);height:6px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding:36px 40px 20px;">
+              <img
+                src="https://brytthrive.com/brand/favicon-32x32.png"
+                alt="BrytThrive"
+                width="64"
+                height="64"
+                style="display:block;border-radius:14px;margin:0 auto 12px;"
+              />
+              <p style="margin:0;font-size:24px;font-weight:700;color:#14B8A6;letter-spacing:-0.3px;">
+                BrytThrive
+              </p>
+              <p style="margin:6px 0 0;font-size:13px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">
+                Turn screen time into growth time
+              </p>
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td style="padding:8px 40px 28px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#f0fdf4,#f0fdfa);border-radius:12px;padding:28px 28px;text-align:center;">
+                    <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;color:#0f172a;line-height:1.3;">
+                      Welcome to BrytThrive! 🎉
+                    </h1>
+                    <p style="margin:0;font-size:15px;color:#475569;line-height:1.7;">
+                      You're one step away from setting up your family dashboard.<br />
+                      Confirm your email to get started.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Confirm button -->
+          <tr>
+            <td align="center" style="padding:0 40px 36px;">
+              <a
+                href="{{ .ConfirmationURL }}"
+                style="display:inline-block;background:linear-gradient(90deg,#22C55E 0%,#14B8A6 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 40px;border-radius:12px;letter-spacing:0.3px;"
+              >
+                Confirm my email address →
+              </a>
+              <p style="margin:14px 0 0;font-size:12px;color:#94a3b8;">
+                This link expires in 24 hours. If you didn't create an account, you can ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- What's waiting -->
+          <tr>
+            <td style="padding:32px 40px 28px;">
+              <p style="margin:0 0 20px;font-size:15px;font-weight:700;color:#0f172a;">
+                Here's what's waiting for your family:
+              </p>
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding:8px 0;font-size:14px;color:#374151;line-height:1.5;">
+                    <span style="display:inline-block;width:28px;font-size:18px;">👨‍👩‍👧</span>
+                    <strong>Create child profiles</strong> — set up each child with their own space
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:14px;color:#374151;line-height:1.5;">
+                    <span style="display:inline-block;width:28px;font-size:18px;">🤖</span>
+                    <strong>Generate daily AI missions</strong> — age-appropriate tasks auto-assigned each day
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:14px;color:#374151;line-height:1.5;">
+                    <span style="display:inline-block;width:28px;font-size:18px;">💚</span>
+                    <strong>Track mood check-ins</strong> — build emotional awareness and healthy habits
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:14px;color:#374151;line-height:1.5;">
+                    <span style="display:inline-block;width:28px;font-size:18px;">🏆</span>
+                    <strong>Reward healthy screen-time habits</strong> — kids earn coins, parents stay in control
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Fallback link -->
+          <tr>
+            <td style="padding:24px 40px;font-size:12px;color:#94a3b8;line-height:1.7;">
+              Button not working? Copy and paste this link into your browser:<br />
+              <span style="color:#0d9488;word-break:break-all;">{{ .ConfirmationURL }}</span>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#f8fafc;padding:24px 40px;border-top:1px solid #e2e8f0;">
+              <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;line-height:1.6;">
+                © 2025 BrytThrive. All rights reserved.
+              </p>
+              <p style="margin:0;font-size:12px;color:#cbd5e1;font-style:italic;">
+                Earn your play. Enjoy your day.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

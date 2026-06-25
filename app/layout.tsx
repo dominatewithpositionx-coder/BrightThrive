@@ -31,10 +31,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/brand/favicon.svg',     type: 'image/svg+xml' },
-      { url: '/icons/icon-32x32.png',  sizes: '32x32',  type: 'image/png' },
-      { url: '/icons/icon-96x96.png',  sizes: '96x96',  type: 'image/png' },
-      { url: '/icons/icon-192x192.png',sizes: '192x192',type: 'image/png' },
+      { url: '/brand/favicon-16x16.png', sizes: '16x16',  type: 'image/png' },
+      { url: '/brand/favicon-32x32.png', sizes: '32x32',  type: 'image/png' },
+      { url: '/icons/icon-96x96.png',    sizes: '96x96',  type: 'image/png' },
+      { url: '/icons/icon-192x192.png',  sizes: '192x192',type: 'image/png' },
     ],
     apple: [
       { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen text-navy bg-white">
         {/* Header — hidden on /dashboard and /child (they render their own chrome) */}
         <ClientChrome>
-        <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <header className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Mobile: hamburger | Logo | CTA */}
           {/* Desktop: Logo | nav */}
 
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* Logo — centered on mobile, left on desktop */}
           <div className="flex-1 flex justify-center md:justify-start">
-            <Logo variant="full" />
+            <Logo variant="full" className="h-[64px] w-auto" />
           </div>
 
           {/* Desktop nav */}

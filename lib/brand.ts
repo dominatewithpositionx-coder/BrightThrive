@@ -4,13 +4,15 @@ export const BRAND = {
   description: 'Tools to help families build better screen habits with rewards, tasks, and positive routines.',
   url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 
-  // Full horizontal logo (icon + wordmark). Use in headers, nav, auth pages, emails.
-  logo: '/brand/BrytThrive.png',
-  // Icon-only mark. Use for favicon, PWA icons, compact/mobile headers, loading states.
-  mark: '/brand/BrytThrive.png',
-  // PNG fallback for OG/email (no SVG support in some email clients / crawlers).
-  logoPng: '/brand/BrytThrive.png',
-  ogImage: '/brand/BrytThrive.png',
+  // Full horizontal logo — PNG used in <Image> components (Next.js Image blocks SVG optimization).
+  logo: '/brand/BrytThrive-logo.png.png',
+  // Icon-only mark — same PNG source for <Image> usage.
+  mark: '/brand/BrytThrive-logo.png.png',
+  // Raw SVG path — use in plain <img> or CSS background where SVG is supported.
+  logoSvg: '/brand/BrytThrive-logo.svg.svg',
+  // PNG for OG/email
+  logoPng: '/brand/BrytThrive-logo.png.png',
+  ogImage: '/brand/BrytThrive-logo.png.png',
 
   // Logo natural dimensions (full horizontal)
   logoWidth: 360,
