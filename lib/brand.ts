@@ -4,15 +4,13 @@ export const BRAND = {
   description: 'Tools to help families build better screen habits with rewards, tasks, and positive routines.',
   url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 
-  // Full horizontal logo — PNG used in <Image> components (Next.js Image blocks SVG optimization).
-  logo: '/brand/BrytThrive-logo.png.png',
-  // Icon-only mark — same PNG source for <Image> usage.
-  mark: '/brand/BrytThrive-logo.png.png',
-  // Raw SVG path — use in plain <img> or CSS background where SVG is supported.
-  logoSvg: '/brand/BrytThrive-logo.svg.svg',
-  // PNG for OG/email
-  logoPng: '/brand/BrytThrive-logo.png.png',
-  ogImage: '/brand/BrytThrive-logo.png.png',
+  // Full horizontal logo (SVG — use in <img> or CSS; for Next.js <Image> use logoPng).
+  logo: '/brand/BrytThrive-logo.svg',
+  // Icon-only mark — same file for compact/mobile use.
+  mark: '/brand/BrytThrive-logo.svg',
+  // PNG for Next.js <Image> optimization and OG/email (no SVG in email clients).
+  logoPng: '/brand/BrytThrive-logo.png',
+  ogImage: '/brand/BrytThrive-logo.png',
 
   // Logo natural dimensions (full horizontal)
   logoWidth: 360,

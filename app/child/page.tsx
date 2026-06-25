@@ -191,7 +191,7 @@ function ChildWeatherCard({ weather }: { weather: WeatherData | null }) {
 
 // ── PinDialog ─────────────────────────────────────────────────────────────────
 
-function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnlock: () => void; onCancel: () => void }) {
+function PinDialog({ childId, childName, onUnlock, onCancel }: { childId: string; childName: string; onUnlock: () => void; onCancel: () => void }) {
   const [digits, setDigits] = useState('');
   const [error, setError]   = useState(false);
 
@@ -201,7 +201,9 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
     setDigits(next);
     setError(false);
     if (next.length === 4) {
-      const stored = localStorage.getItem(`bt_pin_${childName.toLowerCase()}`);
+      // Check ID-based key first, then legacy name-based key.
+      const stored = localStorage.getItem(`bt_pin_child_${childId}`)
+        ?? localStorage.getItem(`bt_pin_${childName.toLowerCase()}`);
       if (!stored || stored === next) { onUnlock(); }
       else { setTimeout(() => { setDigits(''); setError(true); }, 300); }
     }
@@ -927,8 +929,23 @@ export default function ChildPage() {
       .catch(() => {});
   }
 
+  function getChildPin(child: Child): string | null {
+    // Prefer new ID-based key; migrate legacy name-based key if found.
+    const newKey = `bt_pin_child_${child.id}`;
+    const existing = localStorage.getItem(newKey);
+    if (existing) return existing;
+    const legacyKey = `bt_pin_${child.name.toLowerCase()}`;
+    const legacy = localStorage.getItem(legacyKey);
+    if (legacy) {
+      localStorage.setItem(newKey, legacy);
+      localStorage.removeItem(legacyKey);
+      return legacy;
+    }
+    return null;
+  }
+
   function handleSelect(child: Child) {
-    const pin = localStorage.getItem(`bt_pin_${child.name.toLowerCase()}`);
+    const pin = getChildPin(child);
     if (pin) { setPendingChild(child); }
     else { setSelected(child); fetchChildWeather(child); setPhase('mood-check'); }
   }
@@ -1007,6 +1024,7 @@ export default function ChildPage() {
     <>
       {pendingChild && (
         <PinDialog
+          childId={pendingChild.id}
           childName={pendingChild.name}
           onUnlock={() => { setSelected(pendingChild); fetchChildWeather(pendingChild); setPendingChild(null); setPhase('mood-check'); }}
           onCancel={() => setPendingChild(null)}

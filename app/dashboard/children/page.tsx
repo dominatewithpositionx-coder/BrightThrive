@@ -165,36 +165,50 @@ export default function ChildrenPage() {
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
     const mapped = (childRows || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
     setChildren(mapped);
+    setPins(loadAndMigratePins(mapped));
     setLedger(ledgerRes.data || []);
     setLoading(false);
     // Auto-open add form when there are no children yet
     if (mapped.length === 0) setShowForm(true);
   }
 
-  useEffect(() => {
-    fetchData();
+  useEffect(() => { fetchData(); }, []);
+
+  // Load PINs keyed by child ID; migrate any legacy name-based keys on first load.
+  function loadAndMigratePins(childList: Child[]) {
     const stored: Record<string, string> = {};
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('bt_pin_')) stored[key.replace('bt_pin_', '')] = localStorage.getItem(key)!;
+      const k = localStorage.key(i);
+      if (k?.startsWith('bt_pin_child_')) {
+        stored[k.replace('bt_pin_child_', '')] = localStorage.getItem(k)!;
+      }
     }
-    setPins(stored);
-  }, []);
+    for (const child of childList) {
+      const oldKey = `bt_pin_${child.name.toLowerCase()}`;
+      const oldPin = localStorage.getItem(oldKey);
+      if (oldPin && !stored[child.id]) {
+        stored[child.id] = oldPin;
+        localStorage.setItem(`bt_pin_child_${child.id}`, oldPin);
+        localStorage.removeItem(oldKey);
+      }
+    }
+    return stored;
+  }
 
-  function savePin(childName: string) {
+  function savePin(childId: string, childName: string) {
     if (pinInput.length !== 4) { toast.error('PIN must be 4 digits'); return; }
-    const key = childName.toLowerCase();
-    localStorage.setItem(`bt_pin_${key}`, pinInput);
-    setPins((p) => ({ ...p, [key]: pinInput }));
+    localStorage.setItem(`bt_pin_child_${childId}`, pinInput);
+    setPins((p) => ({ ...p, [childId]: pinInput }));
     setPinInput('');
     setEditingPin(null);
     toast.success(`PIN set for ${childName}`);
   }
 
-  function clearPin(childName: string) {
-    const key = childName.toLowerCase();
-    localStorage.removeItem(`bt_pin_${key}`);
-    setPins((p) => { const n = { ...p }; delete n[key]; return n; });
+  function clearPin(childId: string, childName: string) {
+    localStorage.removeItem(`bt_pin_child_${childId}`);
+    // Also remove legacy name-based key if present
+    localStorage.removeItem(`bt_pin_${childName.toLowerCase()}`);
+    setPins((p) => { const n = { ...p }; delete n[childId]; return n; });
     toast.success(`PIN removed for ${childName}`);
   }
 
@@ -496,11 +510,11 @@ export default function ChildrenPage() {
                           <KeyRound size={15} className="text-gray-400" />
                           <span>Kid View PIN</span>
                         </div>
-                        {pins[child.name.toLowerCase()] ? (
+                        {pins[child.id] ? (
                           <div className="flex items-center gap-2">
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Set ✓</span>
                             <button
-                              onClick={() => clearPin(child.name)}
+                              onClick={() => clearPin(child.id, child.name)}
                               aria-label={`Remove PIN for ${child.name}`}
                               className="text-xs text-red-400 hover:text-red-600 transition-colors"
                             >
@@ -526,12 +540,12 @@ export default function ChildrenPage() {
                             value={pinInput}
                             onChange={(e) => setPinInput(e.target.value.slice(0, 4))}
                             className="border rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
-                            onKeyDown={(e) => e.key === 'Enter' && savePin(child.name)}
+                            onKeyDown={(e) => e.key === 'Enter' && savePin(child.id, child.name)}
                             aria-label={`Enter 4-digit PIN for ${child.name}`}
                             autoFocus
                           />
                           <button
-                            onClick={() => savePin(child.name)}
+                            onClick={() => savePin(child.id, child.name)}
                             aria-label="Save PIN"
                             className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-teal-700 transition-colors"
                           >
