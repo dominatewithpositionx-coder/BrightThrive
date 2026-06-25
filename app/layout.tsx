@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen text-navy bg-white">
         {/* Header — hidden on /dashboard and /child (they render their own chrome) */}
         <ClientChrome>
-        <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <header className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Mobile: hamburger | Logo | CTA */}
           {/* Desktop: Logo | nav */}
 
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* Logo — centered on mobile, left on desktop */}
           <div className="flex-1 flex justify-center md:justify-start">
-            <Logo variant="full" />
+            <Logo variant="full" className="h-[64px] w-auto" />
           </div>
 
           {/* Desktop nav */}
