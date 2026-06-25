@@ -257,6 +257,20 @@ export default function DashboardPage() {
   const firstName = user?.email?.split('@')[0] ?? 'there';
   const today = todayStr();
   const todayMissions = missions.filter((m) => m.mission_date === today);
+
+  function getStoryline() {
+    if (children.length === 0) return "Let's get your family set up.";
+    const name = children.length === 1 ? children[0].name : 'your family';
+    const h = new Date().getHours();
+    if (totalToday === 0) return `Ready to set up adventures for ${name} today?`;
+    if (totalTasksDone === totalToday && totalToday > 0)
+      return `${name} crushed every mission today — what an explorer! 🎉`;
+    if (totalTasksDone > 0 && totalPending > 0)
+      return `${name} is on a roll — ${totalTasksDone} down, ${totalPending} to go!`;
+    if (h < 10) return `Let's make today a great one for ${name}!`;
+    if (h < 14) return `${name}'s missions are ready and waiting!`;
+    return `Still time for ${name} to earn some BrytCoins today!`;
+  }
   const totalToday     = todayMissions.length;
   const totalTasksDone = todayMissions.filter((m) => m.is_completed).length;
   const totalPending   = todayMissions.filter((m) => !m.is_completed).length;
@@ -284,14 +298,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 max-w-4xl space-y-6 animate-pulse">
-        <div className="h-8 bg-gray-100 rounded-xl w-56" />
-        <div className="h-20 bg-gray-100 rounded-2xl" />
-        <div className="h-36 bg-gray-200 rounded-2xl" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
+      <div className="p-4 sm:p-6 max-w-4xl space-y-6">
+        <div className="space-y-2">
+          <div className="h-8 skeleton rounded-xl w-48" />
+          <div className="h-4 skeleton rounded-lg w-72" />
         </div>
-        <div className="h-40 bg-gray-100 rounded-2xl" />
+        <div className="h-16 skeleton rounded-2xl" />
+        <div className="h-36 skeleton rounded-2xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 skeleton rounded-2xl" />)}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="h-48 skeleton rounded-2xl" />
+          <div className="h-48 skeleton rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -308,13 +328,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-navy">
               {getGreeting()}, {firstName}!
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {children.length === 0
-                ? "Let's get your family set up."
-                : children.length === 1
-                  ? `Managing ${children[0].name}'s missions and rewards.`
-                  : `Managing ${children.length} children's missions and rewards.`}
-            </p>
+            <p className="text-sm text-gray-500 mt-1">{getStoryline()}</p>
           </div>
           {/* Day theme banner */}
           <div className={`bg-gradient-to-r ${dayTheme.gradient} rounded-2xl px-5 py-3.5 flex items-center gap-3`}>
@@ -401,23 +415,23 @@ export default function DashboardPage() {
                 const explorerLevel = getExplorerLevel(child.points);
 
                 return (
-                  <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
+                  <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow card-lift">
+                    {/* Accent strip */}
+                    <div className={`h-1.5 w-full ${avatar.bg}`} />
+                    <div className="p-5">
                     {/* Child header */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-12 h-12 rounded-full ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-12 h-12 rounded-2xl ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm`}>
                         {child.name[0].toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-navy truncate">{child.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span className="text-xs font-medium text-gray-500">
-                            {explorerLevel.emoji} {explorerLevel.name}
-                          </span>
-                        </div>
+                        <span className="text-xs font-medium text-gray-500">
+                          {explorerLevel.emoji} {explorerLevel.name}
+                        </span>
                       </div>
                       {child.streak > 0 && (
                         <div className="flex items-center gap-1 bg-orange-50 rounded-full px-2.5 py-1 flex-shrink-0">
-                          <Flame size={12} className="text-orange-400" />
                           <span className="text-xs font-bold text-orange-500">{child.streak}🔥</span>
                         </div>
                       )}
@@ -479,6 +493,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-400">Generate missions to get started!</p>
                       </div>
                     )}
+                  </div>
                   </div>
                 );
               })}

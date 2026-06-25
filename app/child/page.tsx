@@ -18,9 +18,11 @@ import {
 } from '@/lib/analytics';
 import { KidWelcomeIllustration } from '@/components/brightthrive/Illustrations';
 import ProgressRing from '@/components/brightthrive/ProgressRing';
+import WeatherScene from '@/components/brightthrive/WeatherScene';
 import { getDayTheme } from '@/lib/themes';
 import { getExplorerLevel } from '@/lib/levels';
 import { getMockWeather } from '@/lib/mock-weather';
+import { getClothingSuggestions } from '@/lib/weather';
 
 // ── PWA install prompt (shown after child profile selection) ──────────────────
 
@@ -392,56 +394,100 @@ function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => v
 
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
+// Estimated times per category
+const CAT_TIMES: Record<string, string> = {
+  movement: '15 min', responsibility: '10 min', emotional_intelligence: '5 min',
+  learning: '15 min', creativity: '20 min', family_connection: '10 min',
+  outdoor: '20 min', healthy_habits: '5 min', kindness: '5 min',
+  mindfulness: '5 min', adventure: '20 min', general: '10 min',
+};
+
+// Encouraging subtitles per category
+const CAT_SUBTITLES: Record<string, string> = {
+  movement:               'Get your body moving!',
+  responsibility:         'Be the hero at home.',
+  emotional_intelligence: 'Know yourself better.',
+  learning:               'Level up your brain!',
+  creativity:             'Make something amazing.',
+  family_connection:      'Moments that matter.',
+  outdoor:                'Adventure awaits outside!',
+  healthy_habits:         'Take care of yourself.',
+  kindness:               'Spread the good vibes.',
+  mindfulness:            'Breathe and be present.',
+  adventure:              'Explore the world!',
+  general:                'You got this!',
+};
+
 function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle: (m: Mission) => void; index: number }) {
-  const emoji   = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
-  const reward  = mission.screen_time_reward ?? 10;
-  const colors  = CAT_COLORS[mission.category ?? 'general'] ?? { bg: 'bg-gray-50', text: 'text-gray-600' };
+  const emoji    = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+  const reward   = mission.screen_time_reward ?? 10;
+  const colors   = CAT_COLORS[mission.category ?? 'general'] ?? { bg: 'bg-gray-50', text: 'text-gray-600' };
   const catLabel = (mission.category ?? 'general').replace(/_/g, ' ');
+  const time     = CAT_TIMES[mission.category ?? 'general'] ?? '10 min';
+  const subtitle = CAT_SUBTITLES[mission.category ?? 'general'] ?? 'You got this!';
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      transition={{ duration: 0.22, delay: index * 0.05 }}
-      className="bg-white rounded-2xl border-2 border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+      transition={{ duration: 0.25, delay: index * 0.05 }}
+      className="mission-card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-card"
     >
-      <div className="flex items-start gap-3 mb-3">
-        <div className={`w-11 h-11 rounded-xl ${colors.bg} flex items-center justify-center text-xl flex-shrink-0`}>
-          {emoji}
+      {/* Top accent strip */}
+      <div className={`h-1 w-full ${colors.bg.replace('bg-', 'bg-').replace('-50', '-300')}`} />
+
+      <div className="p-4">
+        <div className="flex items-start gap-3 mb-3.5">
+          {/* Large icon */}
+          <div className={`w-14 h-14 rounded-2xl ${colors.bg} flex items-center justify-center text-3xl flex-shrink-0 shadow-sm`}>
+            {emoji}
+          </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="font-bold text-navy text-base leading-snug mb-1">{mission.title}</p>
+            <p className={`text-xs font-medium ${colors.text} mb-1.5`}>{subtitle}</p>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center text-xs font-semibold ${colors.text} ${colors.bg} rounded-full px-2.5 py-0.5 capitalize`}>
+                {catLabel}
+              </span>
+              <span className="text-xs text-gray-400 font-medium">⏱ {time}</span>
+            </div>
+          </div>
+          {/* Coin reward badge */}
+          <div className="flex-shrink-0 bg-gradient-to-b from-amber-400 to-amber-500 rounded-2xl px-3 py-2 text-center shadow-coin ml-1">
+            <p className="text-white font-black text-sm leading-none">+{reward}</p>
+            <p className="text-amber-100 text-xs leading-none mt-0.5">🪙</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-navy text-base leading-snug">{mission.title}</p>
-          <span className={`inline-block mt-1 text-xs font-medium ${colors.text} ${colors.bg} rounded-full px-2 py-0.5 capitalize`}>
-            {catLabel}
-          </span>
-        </div>
-        <div className="flex-shrink-0 bg-amber-50 rounded-xl px-2.5 py-2 text-center ml-1">
-          <p className="text-amber-600 font-bold text-sm leading-none">+{reward}</p>
-          <p className="text-amber-500 text-xs leading-none mt-0.5">🪙</p>
-        </div>
+
+        <button
+          onClick={() => onToggle(mission)}
+          aria-label={`Complete "${mission.title}"`}
+          className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all shadow-sm press-scale flex items-center justify-center gap-2"
+        >
+          <span>✓</span> Complete Adventure
+        </button>
       </div>
-      <button
-        onClick={() => onToggle(mission)}
-        aria-label={`Mark "${mission.title}" as complete`}
-        className="w-full h-12 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold text-sm hover:from-teal-600 hover:to-teal-700 active:scale-[0.98] transition-all shadow-sm"
-      >
-        Complete Mission ✓
-      </button>
     </motion.div>
   );
 }
 
-function MissionGroup({ title, emoji, missions, onToggle }: {
+function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   title: string; emoji: string; missions: Mission[]; onToggle: (m: Mission) => void;
+  accent?: string;
 }) {
   if (missions.length === 0) return null;
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{emoji}</span>
-        <h3 className="font-bold text-gray-800 text-base">{title}</h3>
-        <span className="ml-auto text-xs text-gray-400 font-medium">{missions.length} left</span>
+    <div className="animate-fade-in">
+      <div className="flex items-center gap-2.5 mb-3.5">
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base ${accent ?? 'bg-gray-100'}`}>
+          {emoji}
+        </div>
+        <h3 className="font-bold text-navy text-base tracking-tight">{title}</h3>
+        <span className="ml-auto bg-gray-100 text-gray-500 text-xs font-bold rounded-full px-2.5 py-0.5">
+          {missions.length}
+        </span>
       </div>
       <div className="space-y-3">
         <AnimatePresence>
@@ -464,9 +510,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
   const level   = getExplorerLevel(child.points);
   const mockWx  = getMockWeather();
 
-  const wx = weather
-    ? { emoji: weather.emoji, label: weather.condition, temp: `${weather.tempC}°C`, outdoor: weather.isOutdoorFriendly, gradient: weatherGradient(weather) }
-    : { emoji: mockWx.emoji, label: mockWx.label, temp: `${mockWx.tempF}°F`, outdoor: mockWx.outdoor, gradient: mockWx.gradient };
+  const clothing = weather ? getClothingSuggestions(weather) : [];
 
   const done    = missions.filter((m) => m.is_completed);
   const pending = missions.filter((m) => !m.is_completed);
@@ -487,112 +531,126 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return `Good morning, ${child.name}! ☀️`;
-    if (h < 17) return `Good afternoon, ${child.name}! 🌤️`;
-    return `Good evening, ${child.name}! 🌙`;
+    if (h < 12) return `Good morning, ${child.name}!`;
+    if (h < 17) return `Good afternoon, ${child.name}!`;
+    return `Good evening, ${child.name}!`;
+  };
+  const greetingEmoji = () => {
+    const h = new Date().getHours();
+    if (h < 12) return '☀️';
+    if (h < 17) return '🌤️';
+    return '🌙';
   };
 
   return (
     <div className="min-h-screen pb-16 animate-fade-in bg-gray-50">
 
       {/* ── Themed gradient header ── */}
-      <div className={`bg-gradient-to-br ${theme.gradient} pt-safe pb-8 px-5`}>
+      <div className={`bg-gradient-to-br ${theme.gradient} pt-safe px-5`} style={{ paddingBottom: '3.5rem' }}>
         <button
           onClick={onBack}
           aria-label="Switch explorer"
-          className="flex items-center gap-1 min-h-[44px] text-white/80 hover:text-white text-sm mb-2 mt-1 transition-colors"
+          className="flex items-center gap-1.5 min-h-[44px] text-white/80 hover:text-white text-sm mb-1 mt-2 transition-colors font-medium"
         >
-          <ChevronLeft size={18} /> Switch Explorer
+          <ChevronLeft size={16} /> Switch Explorer
         </button>
 
         {/* Theme badge */}
-        <div className="flex justify-center mb-3">
-          <div className="inline-flex items-center gap-2 bg-white/25 rounded-full px-4 py-1.5">
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20">
             <span className="text-base">{theme.emoji}</span>
-            <span className="text-white font-semibold text-sm">{theme.name}</span>
+            <span className="text-white font-bold text-sm tracking-wide">{theme.name}</span>
           </div>
         </div>
 
         {/* Greeting */}
-        <h1 className="text-2xl font-bold text-white text-center leading-snug">{greeting()}</h1>
-        <p className="text-white/80 text-sm text-center mt-1">{theme.tagline}</p>
+        <div className="text-center mb-1">
+          <span className="text-4xl">{greetingEmoji()}</span>
+        </div>
+        <h1 className="text-2xl font-black text-white text-center leading-snug tracking-tight">{greeting()}</h1>
+        <p className="text-white/80 text-sm text-center mt-1.5 font-medium">{theme.tagline}</p>
 
         {/* Stats strip */}
         <div className="grid grid-cols-3 gap-2.5 mt-5">
-          <div className="bg-white/20 rounded-2xl p-3 flex flex-col items-center gap-1">
-            <ProgressRing progress={progress} size={60} strokeWidth={6} color="white" bgColor="rgba(255,255,255,0.3)">
-              <span className="text-white font-bold text-xs">{done.length}/{missions.length}</span>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center gap-1.5 border border-white/20">
+            <ProgressRing progress={progress} size={56} strokeWidth={5} color="white" bgColor="rgba(255,255,255,0.25)">
+              <span className="text-white font-bold text-[10px]">{done.length}/{missions.length}</span>
             </ProgressRing>
-            <span className="text-white/80 text-xs font-medium">Progress</span>
+            <span className="text-white/80 text-xs font-semibold">Progress</span>
           </div>
-          <div className="bg-white/20 rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5">
-            <span className="text-2xl leading-none">🪙</span>
-            <span className="text-white font-bold text-xl leading-none">{child.points}</span>
-            <span className="text-white/70 text-xs">BrytCoins</span>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5 border border-white/20">
+            <span className="text-2xl leading-none animate-float">🪙</span>
+            <span className="text-white font-black text-xl leading-none">{child.points}</span>
+            <span className="text-white/70 text-[11px] font-semibold">BrytCoins</span>
           </div>
-          <div className="bg-white/20 rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5">
-            <span className="text-2xl leading-none">🔥</span>
-            <span className="text-white font-bold text-xl leading-none">{streak}</span>
-            <span className="text-white/70 text-xs">{streak === 1 ? 'day' : 'days'}</span>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5 border border-white/20">
+            <span className="text-2xl leading-none animate-flame">{streak > 0 ? '🔥' : '💤'}</span>
+            <span className="text-white font-black text-xl leading-none">{streak}</span>
+            <span className="text-white/70 text-[11px] font-semibold">{streak === 1 ? 'day' : 'days'}</span>
           </div>
         </div>
       </div>
 
       {/* ── Explorer Level card ── */}
-      <div className="mx-4 -mt-4 max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{level.emoji}</span>
+      <div className="px-4 -mt-10 max-w-lg mx-auto">
+        <div className="bg-white rounded-2xl shadow-lift border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: level.color + '20' }}>
+                {level.emoji}
+              </div>
               <div>
-                <p className="font-bold text-navy text-sm leading-tight">Explorer {level.name}</p>
-                <p className="text-xs text-gray-500">Level {level.level}</p>
+                <p className="font-black text-navy text-sm leading-tight">{level.name} Explorer</p>
+                <p className="text-xs text-gray-400 font-medium">Level {level.level} of 7</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-400">
-                {level.progress < 100 ? `${level.progress}% to next` : '🎉 Max!'}
-              </p>
+              {level.progress < 100 ? (
+                <p className="text-sm font-bold" style={{ color: level.color }}>{level.progress}%</p>
+              ) : (
+                <span className="text-sm font-bold text-amber-500">Max! 🎉</span>
+              )}
+              <p className="text-xs text-gray-400">to next level</p>
             </div>
           </div>
-          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full rounded-full"
               style={{ backgroundColor: level.color }}
               initial={{ width: 0 }}
               animate={{ width: `${level.progress}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1] }}
             />
           </div>
+          {level.progress < 100 && (
+            <p className="text-xs text-gray-400 mt-1.5 text-right font-medium">
+              {level.nextLevelCoins - child.points} more BrytCoins to unlock {level.level < 7 ? `Level ${level.level + 1}` : 'Legend'}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ── Weather widget ── */}
-      <div className="mx-4 mt-3 max-w-lg mx-auto">
-        <div className={`rounded-2xl bg-gradient-to-br ${wx.gradient} p-4 flex items-center gap-4`}>
-          <span className="text-4xl leading-none flex-shrink-0">{wx.emoji}</span>
-          <div className="flex-1">
-            <p className="font-bold text-gray-800 text-base">{wx.label} · {wx.temp}</p>
-            {child.location_name && (
-              <p className="text-xs text-gray-500 mt-0.5">📍 {child.location_name}{child.location_city ? `, ${child.location_city}` : ''}</p>
-            )}
-            <p className="text-sm text-gray-600 mt-0.5">
-              {wx.outdoor ? "Great day to get outside! 🌿" : "Perfect day for indoor adventures! 🏠"}
-            </p>
-          </div>
-        </div>
+      {/* ── Premium Weather Scene ── */}
+      <div className="px-4 mt-4 max-w-lg mx-auto">
+        <WeatherScene
+          weather={weather}
+          mock={!weather ? mockWx : null}
+          clothingSuggestions={clothing.length > 0 ? clothing : undefined}
+          locationName={child.location_name}
+          locationCity={child.location_city}
+        />
       </div>
 
       {/* ── Missions ── */}
       <div className="px-4 mt-5 space-y-6 max-w-lg mx-auto">
 
         {missionError && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5 text-sm text-red-700 text-center font-medium">
             {missionError}
           </div>
         )}
         {missionSuccess && (
-          <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-sm text-teal-700 text-center animate-fade-in">
+          <div className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3.5 text-sm text-teal-700 text-center font-medium animate-fade-in">
             {missionSuccess}
           </div>
         )}
@@ -600,51 +658,56 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
         {/* All-done celebration */}
         {allDone && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.93 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gradient-to-br from-teal-50 via-green-50 to-emerald-50 border-2 border-teal-200 rounded-2xl p-7 text-center"
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            className="bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 rounded-3xl p-8 text-center shadow-lift"
           >
-            <div className="text-5xl mb-3">🏆</div>
-            <p className="font-bold text-teal-800 text-lg mb-1">Adventure Complete!</p>
-            <p className="text-sm text-teal-600 leading-relaxed mb-4">
-              You crushed every mission today! Come back tomorrow<br />
-              for a brand-new adventure.
+            <div className="text-6xl mb-4 animate-float">🏆</div>
+            <p className="font-black text-white text-2xl mb-2 tracking-tight">Adventure Complete!</p>
+            <p className="text-white/90 text-sm leading-relaxed mb-5 font-medium">
+              You crushed every single mission today!<br />
+              Come back tomorrow for a brand-new adventure.
             </p>
-            <div className="inline-flex items-center gap-2 bg-teal-100 rounded-xl px-4 py-2 text-teal-700 font-semibold text-sm">
-              <Trophy size={14} /> {done.length} missions · {done.length * 10} coins earned
+            <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-4 backdrop-blur-sm">
+              <Trophy size={16} /> {done.length} missions · +{done.length * 10} BrytCoins
             </div>
             {showGenerateHint ? (
-              <div className="mt-4">
-                <a href="/dashboard" className="inline-block min-h-[44px] bg-teal-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-teal-700 transition-colors">
+              <div className="mt-2">
+                <a href="/dashboard" className="inline-block min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm">
                   Go to Parent Dashboard
                 </a>
               </div>
             ) : (
-              <button onClick={() => setShowGenerateHint(true)} className="mt-4 block mx-auto text-xs text-teal-400 hover:text-teal-600 underline underline-offset-2 transition-colors">
+              <button onClick={() => setShowGenerateHint(true)} className="block mx-auto text-xs text-white/60 hover:text-white/90 transition-colors mt-1">
                 Are you a parent?
               </button>
             )}
           </motion.div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state — no missions */}
         {missions.length === 0 && (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-10 text-center">
-            <div className="text-5xl mb-4">🗺️</div>
-            <p className="text-gray-800 text-lg font-bold mb-2">No adventures yet today!</p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-10 text-center shadow-sm"
+          >
+            <div className="text-6xl mb-4 animate-float">🗺️</div>
+            <p className="text-navy text-xl font-black mb-2 tracking-tight">No adventures yet!</p>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed max-w-xs mx-auto">
-              Ask a parent to generate today&apos;s missions from the dashboard, then come back here.
+              Ask a parent to generate today&apos;s missions from the dashboard, then come back here ready to explore!
             </p>
-            <a href="/dashboard" className="inline-block min-h-[44px] bg-teal-600 text-white px-7 py-3 rounded-xl font-semibold text-sm hover:bg-teal-700 active:scale-95 transition-all">
-              Go to Parent Dashboard
+            <a href="/dashboard" className="inline-flex items-center gap-2 min-h-[48px] bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-95 transition-all shadow-sm">
+              Open Parent Dashboard
             </a>
-          </div>
+          </motion.div>
         )}
 
         {/* Mission groups */}
-        <MissionGroup title="Daily Missions"    emoji="🏅" missions={pendingCore}    onToggle={onMissionToggle} />
-        <MissionGroup title="Bonus Challenges"  emoji="🎯" missions={pendingBonus}   onToggle={onMissionToggle} />
-        <MissionGroup title="Special Quests"    emoji="✨" missions={pendingSpecial} onToggle={onMissionToggle} />
+        <MissionGroup title="Daily Missions"    emoji="🏅" missions={pendingCore}    onToggle={onMissionToggle} accent="bg-amber-50" />
+        <MissionGroup title="Bonus Challenges"  emoji="🎯" missions={pendingBonus}   onToggle={onMissionToggle} accent="bg-purple-50" />
+        <MissionGroup title="Special Quests"    emoji="✨" missions={pendingSpecial} onToggle={onMissionToggle} accent="bg-pink-50" />
 
         {/* Completed missions (collapsible) */}
         {done.length > 0 && (
@@ -923,11 +986,14 @@ export default function ChildPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4 animate-pulse">
-          <div className="text-5xl">🌟</div>
-          <div className="h-4 bg-gray-200 rounded-full w-32 mx-auto" />
-          <div className="h-3 bg-gray-100 rounded-full w-20 mx-auto" />
+      <div className="min-h-screen bg-gray-50 pb-16">
+        {/* Header skeleton */}
+        <div className="h-64 skeleton rounded-b-3xl" />
+        <div className="px-4 -mt-4 space-y-3 max-w-lg mx-auto">
+          <div className="h-20 skeleton rounded-2xl" />
+          <div className="h-24 skeleton rounded-2xl" />
+          <div className="h-40 skeleton rounded-2xl" />
+          <div className="h-32 skeleton rounded-2xl" />
         </div>
       </div>
     );
