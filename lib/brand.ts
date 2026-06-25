@@ -5,12 +5,12 @@ export const BRAND = {
   url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 
   // Full horizontal logo (icon + wordmark). Use in headers, nav, auth pages, emails.
-  logo: '/brand/BrytThrive.png',
+  logo: '/brand/BrytThrive-logo.svg.svg',
   // Icon-only mark. Use for favicon, PWA icons, compact/mobile headers, loading states.
-  mark: '/brand/BrytThrive.png',
+  mark: '/brand/BrytThrive-logo.svg.svg',
   // PNG fallback for OG/email (no SVG support in some email clients / crawlers).
-  logoPng: '/brand/BrytThrive.png',
-  ogImage: '/brand/BrytThrive.png',
+  logoPng: '/brand/BrytThrive-logo.png.png',
+  ogImage: '/brand/BrytThrive-logo.png.png',
 
   // Logo natural dimensions (full horizontal)
   logoWidth: 360,
