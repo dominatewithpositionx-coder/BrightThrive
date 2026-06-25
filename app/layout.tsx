@@ -19,6 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://brytthrive.com'),
   title: 'BrytThrive — Earn your play. Enjoy your day.',
   description:
     'BrytThrive helps families build healthy habits, emotional intelligence, and calmer homes — one mission at a time.',

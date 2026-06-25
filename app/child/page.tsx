@@ -967,6 +967,8 @@ export default function ChildPage() {
     if (nowCompleted) {
       fireConfetti();
       trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
+      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙`);
+      setTimeout(() => setMissionSuccess(null), 3000);
     }
 
     setMissionError(null);
