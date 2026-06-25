@@ -2,56 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 🎨 PlayPass global theme */
+/* ─── BrytThrive Design System ───────────────────────────────────────────────*/
 :root {
   --bg: #f9fafb;
   --text: #111827;
   --accent: #000;
   --accent-hover: #1f1f1f;
+  --radius-card: 20px;
+  --radius-modal: 28px;
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card: 0 4px 16px -2px rgb(0 0 0 / 0.10), 0 1px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-lift: 0 8px 24px -4px rgb(0 0 0 / 0.14), 0 2px 8px -2px rgb(0 0 0 / 0.08);
+  --teal: #14B8A6;
+  --teal-dark: #0F766E;
 }
 
-/* 🌍 Base layout background */
+/* ─── Base ───────────────────────────────────────────────────────────────────*/
 html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   scroll-behavior: smooth;
-  font-size: 16px; /* minimum 16px for mobile readability */
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 📱 PWA Safe Area — notch / home indicator */
+/* ─── PWA Safe Area ──────────────────────────────────────────────────────────*/
 body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
-
-/* Safe area utility classes */
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pl-safe { padding-left: env(safe-area-inset-left); }
 .pr-safe { padding-right: env(safe-area-inset-right); }
 
-/* 🔳 Dashboard layout helpers */
-.dashboard {
-  display: flex;
-  min-height: 100vh;
-}
-
-.dashboard-sidebar {
-  width: 16rem;
-  background: white;
-  border-right: 1px solid #e5e7eb;
-}
-
-.dashboard-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
+/* ─── Dashboard layout ───────────────────────────────────────────────────────*/
+.dashboard { display: flex; min-height: 100vh; }
+.dashboard-sidebar { width: 16rem; background: white; border-right: 1px solid #e5e7eb; }
+.dashboard-main { flex: 1; display: flex; flex-direction: column; }
 .dashboard-header {
   background: white;
   border-bottom: 1px solid #e5e7eb;
@@ -61,21 +54,20 @@ body {
   justify-content: space-between;
 }
 
-/* 🖱️ Buttons */
+/* ─── Buttons ────────────────────────────────────────────────────────────────*/
 .btn {
   display: inline-block;
   background-color: var(--accent);
   color: white;
   padding: 0.6rem 1.2rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
-.btn:hover {
-  background-color: var(--accent-hover);
-}
+.btn:hover { background-color: var(--accent-hover); }
+.btn:active { transform: scale(0.97); }
 
-/* 📋 Sidebar Links */
+/* ─── Sidebar Links ──────────────────────────────────────────────────────────*/
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -83,18 +75,39 @@ body {
   padding: 0.75rem 1.5rem;
   color: #374151;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  border-radius: 12px;
+  margin: 0 0.5rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
-.sidebar-link:hover {
-  background-color: #f3f4f6;
-  color: var(--accent);
+.sidebar-link:hover { background-color: #f0fdfa; color: var(--teal-dark); }
+.sidebar-link.active { background-color: #f0fdfa; color: var(--teal-dark); font-weight: 600; }
+
+/* ─── Card hover lift ────────────────────────────────────────────────────────*/
+.card-lift {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.sidebar-link.active {
-  background-color: #e5e7eb;
-  font-weight: 600;
+.card-lift:hover {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
 }
 
-/* 🌈 Gradient Animation for Success Page */
+/* ─── Mission card press ─────────────────────────────────────────────────────*/
+.mission-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+.mission-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+
+/* ─── Micro-interaction: button press ───────────────────────────────────────*/
+.press-scale { transition: transform 0.1s ease; }
+.press-scale:active { transform: scale(0.96); }
+
+/* ─── Skeleton loader ────────────────────────────────────────────────────────*/
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+/* ─── Gradient animation for success ────────────────────────────────────────*/
 @keyframes gradient-x {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -104,36 +117,153 @@ body {
   animation: gradient-x 8s ease infinite;
 }
 
-/* ✨ Optional glow pulse for brand highlights */
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.9; filter: brightness(1); }
-  50% { opacity: 1; filter: brightness(1.15); }
+/* ─── Fade / slide entrance ──────────────────────────────────────────────────*/
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in          { animation: fadeIn 0.35s ease-out forwards; }
+.animate-fade-in-scale    { animation: fadeInScale 0.4s ease-out forwards; }
+.animate-slide-up         { animation: slideUp 0.4s ease-out forwards; }
+.animate-fade-in-delay-1  { animation: fadeIn 0.35s 0.1s ease-out both; }
+.animate-fade-in-delay-2  { animation: fadeIn 0.35s 0.2s ease-out both; }
+.animate-fade-in-delay-3  { animation: fadeIn 0.35s 0.3s ease-out both; }
+
+/* ─── Skeleton shimmer ───────────────────────────────────────────────────────*/
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* ✨ Staggered entrance animation */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ─── Pulse glow ─────────────────────────────────────────────────────────────*/
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.9; filter: brightness(1); }
+  50%       { opacity: 1;   filter: brightness(1.15); }
 }
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* ─── Coin bounce (mission complete) ────────────────────────────────────────*/
+@keyframes coinPop {
+  0%   { opacity: 0; transform: scale(0.4) translateY(0); }
+  50%  { opacity: 1; transform: scale(1.3) translateY(-16px); }
+  80%  { transform: scale(0.95) translateY(-12px); }
+  100% { opacity: 0; transform: scale(1) translateY(-28px); }
 }
-.animate-fade-in-delay-1 {
-  animation-delay: 0.1s;
-  opacity: 0;
-  animation-fill-mode: forwards;
-  animation-name: fadeIn;
-  animation-duration: 0.4s;
-  animation-timing-function: ease-out;
+.animate-coin-pop { animation: coinPop 0.7s ease-out forwards; }
+
+/* ─── Weather animations ─────────────────────────────────────────────────────*/
+
+/* Sun rays rotate */
+@keyframes sunRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
-.animate-fade-in-delay-2 {
-  animation-delay: 0.2s;
-  opacity: 0;
-  animation-fill-mode: forwards;
-  animation-name: fadeIn;
-  animation-duration: 0.4s;
-  animation-timing-function: ease-out;
+.animate-sun-rays { animation: sunRotate 20s linear infinite; transform-origin: center; }
+
+/* Sun glow pulse */
+@keyframes sunGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(251,191,36,0.5)); }
+  50%       { filter: drop-shadow(0 0 18px rgba(251,191,36,0.85)); }
 }
+.animate-sun-glow { animation: sunGlow 3s ease-in-out infinite; }
+
+/* Cloud drift left-to-right */
+@keyframes cloudDrift {
+  0%   { transform: translateX(-8px); }
+  50%  { transform: translateX(8px); }
+  100% { transform: translateX(-8px); }
+}
+.animate-cloud  { animation: cloudDrift 6s ease-in-out infinite; }
+.animate-cloud2 { animation: cloudDrift 8s ease-in-out infinite reverse; }
+.animate-cloud3 { animation: cloudDrift 10s ease-in-out infinite 1s; }
+
+/* Rain streaks fall */
+@keyframes rainFall {
+  0%   { transform: translateY(-20px); opacity: 0; }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(80px); opacity: 0; }
+}
+.animate-rain1 { animation: rainFall 0.8s linear infinite; }
+.animate-rain2 { animation: rainFall 0.8s 0.15s linear infinite; }
+.animate-rain3 { animation: rainFall 0.8s 0.3s linear infinite; }
+.animate-rain4 { animation: rainFall 0.8s 0.45s linear infinite; }
+.animate-rain5 { animation: rainFall 0.8s 0.6s linear infinite; }
+.animate-rain6 { animation: rainFall 0.8s 0.75s linear infinite; }
+
+/* Snow flakes float */
+@keyframes snowFall {
+  0%   { transform: translateY(-10px) translateX(0px) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.9; }
+  100% { transform: translateY(80px) translateX(12px) rotate(180deg); opacity: 0; }
+}
+.animate-snow1 { animation: snowFall 2s 0s ease-in-out infinite; }
+.animate-snow2 { animation: snowFall 2.5s 0.4s ease-in-out infinite; }
+.animate-snow3 { animation: snowFall 1.8s 0.8s ease-in-out infinite; }
+.animate-snow4 { animation: snowFall 2.2s 1.2s ease-in-out infinite; }
+.animate-snow5 { animation: snowFall 2.8s 0.6s ease-in-out infinite; }
+
+/* Lightning flash */
+@keyframes lightningFlash {
+  0%, 89%, 91%, 93%, 100% { opacity: 0; }
+  90%, 92%                 { opacity: 1; }
+}
+.animate-lightning { animation: lightningFlash 4s ease-in-out infinite; }
+
+/* Stars twinkle */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+.animate-star1 { animation: twinkle 2s ease-in-out infinite; }
+.animate-star2 { animation: twinkle 3s 0.7s ease-in-out infinite; }
+.animate-star3 { animation: twinkle 2.5s 1.4s ease-in-out infinite; }
+.animate-star4 { animation: twinkle 1.8s 0.3s ease-in-out infinite; }
+
+/* Float up-down (for icons) */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+.animate-float  { animation: float 3s ease-in-out infinite; }
+.animate-float2 { animation: float 4s 1s ease-in-out infinite; }
+
+/* XP bar fill */
+@keyframes xpFill {
+  from { width: 0; }
+}
+
+/* Mission complete ring pulse */
+@keyframes completePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4); }
+  70%  { box-shadow: 0 0 0 12px rgba(20, 184, 166, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+}
+.animate-complete-pulse { animation: completePulse 0.6s ease-out forwards; }
+
+/* Streak flame flicker */
+@keyframes flameFlicker {
+  0%, 100% { transform: scaleY(1) rotate(-2deg); }
+  25%       { transform: scaleY(1.08) rotate(2deg); }
+  50%       { transform: scaleY(0.95) rotate(-1deg); }
+  75%       { transform: scaleY(1.05) rotate(3deg); }
+}
+.animate-flame { animation: flameFlicker 0.8s ease-in-out infinite; display: inline-block; transform-origin: bottom center; }
+
+/* Explorer level up burst */
+@keyframes levelBurst {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(1.15); filter: brightness(1.3); }
+  60%  { transform: scale(0.97); filter: brightness(1.1); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.animate-level-up { animation: levelBurst 0.5s ease-out forwards; }

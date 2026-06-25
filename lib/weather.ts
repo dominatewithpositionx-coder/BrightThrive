@@ -19,6 +19,12 @@ export interface WeatherData {
   isOutdoorFriendly: boolean;
   suggestion: string;
   weatherCode: number;
+  windSpeed?: number;
+  humidity?: number;
+  precipProbability?: number;
+  uvIndex?: number;
+  sunrise?: string;
+  sunset?: string;
 }
 
 function mapWeatherCode(code: number): { condition: string; emoji: string; isOutdoorFriendly: boolean } {
@@ -45,7 +51,10 @@ export async function fetchWeather(location: string): Promise<WeatherData | null
 
     const { latitude: lat, longitude: lon, name } = place;
     const wxRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=1`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m,relative_humidity_2m` +
+      `&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,wind_speed_10m_max,sunrise,sunset` +
+      `&timezone=auto&forecast_days=1`,
       { signal: AbortSignal.timeout(5000) }
     );
     if (!wxRes.ok) return null;
@@ -62,10 +71,61 @@ export async function fetchWeather(location: string): Promise<WeatherData | null
       ? 'Great day for outdoor missions!'
       : 'Indoor missions are the way to go today.';
 
-    return { location: name, tempC, feelsLikeC, highC, lowC, condition, emoji, isOutdoorFriendly, suggestion, weatherCode: code };
+    return {
+      location: name, tempC, feelsLikeC, highC, lowC,
+      condition, emoji, isOutdoorFriendly, suggestion, weatherCode: code,
+      windSpeed:         Math.round(wx.current?.wind_speed_10m ?? 0),
+      humidity:          Math.round(wx.current?.relative_humidity_2m ?? 50),
+      precipProbability: Math.round(wx.daily?.precipitation_probability_max?.[0] ?? 0),
+      uvIndex:           Math.round(wx.daily?.uv_index_max?.[0] ?? 0),
+      sunrise:           wx.daily?.sunrise?.[0] ?? undefined,
+      sunset:            wx.daily?.sunset?.[0] ?? undefined,
+    };
   } catch {
     return null;
   }
+}
+
+// In-memory cache: keyed by lowercase city name, expires after 30 minutes
+const weatherCache = new Map<string, { data: WeatherData; expiresAt: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
+export async function fetchWeatherCached(location: string): Promise<WeatherData | null> {
+  const key = location.toLowerCase().trim();
+  const cached = weatherCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.data;
+
+  const data = await fetchWeather(location);
+  if (data) {
+    weatherCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  }
+  return data;
+}
+
+export function getClothingSuggestions(weather: WeatherData): string[] {
+  const suggestions: string[] = [];
+  const { tempC, feelsLikeC, precipProbability = 0, windSpeed = 0, uvIndex = 0, condition } = weather;
+  const lc = condition.toLowerCase();
+  const isRainy  = lc.includes('rain') || lc.includes('shower') || precipProbability > 60;
+  const isSnowy  = lc.includes('snow');
+  const isStormy = lc.includes('storm') || lc.includes('thunder');
+  const isWindy  = windSpeed > 25;
+  const feelsHot = feelsLikeC >= 28;
+  const feelsCold = feelsLikeC <= 5;
+  const feelsCool = feelsLikeC > 5 && feelsLikeC < 15;
+
+  if (isStormy)       suggestions.push('Stay indoors — storm warning! ⛈️');
+  else if (isSnowy)   { suggestions.push('Warm coat & snow boots ❄️'); suggestions.push('Hat, scarf & gloves 🧤'); }
+  else if (isRainy)   { suggestions.push('Rain jacket or umbrella ☂️'); suggestions.push('Waterproof shoes 👟'); }
+  else if (feelsHot)  { suggestions.push('Light, breathable clothes ☀️'); if (uvIndex >= 6) suggestions.push('Sunscreen SPF 30+ 🧴'); suggestions.push('Hat for sun protection 🧢'); }
+  else if (feelsCold) { suggestions.push('Heavy coat & warm layers 🧥'); suggestions.push('Warm hat & gloves 🧤'); }
+  else if (feelsCool) { suggestions.push('Light jacket or hoodie 🧥'); }
+  else                suggestions.push('Comfortable casual clothes 👕');
+
+  if (isWindy && !isStormy && !isSnowy) suggestions.push('Windproof jacket 💨');
+  if (uvIndex >= 8 && !feelsHot)        suggestions.push('Sunscreen SPF 30+ 🧴');
+
+  return suggestions;
 }
 
 export async function getWeather(city: string): Promise<WeatherContext | null> {

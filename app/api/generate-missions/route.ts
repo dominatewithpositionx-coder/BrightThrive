@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceSupabaseClient } from '@/lib/supabase';
-import { getWeather, weatherMissionHint } from '@/lib/weather';
+import { getWeather, weatherMissionHint, fetchWeatherCached } from '@/lib/weather';
 import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
+import THEMES from '@/lib/themes';
 
 export const runtime = 'nodejs';
 
@@ -43,12 +44,16 @@ type MissionDraft = {
 
 const FALLBACK: Record<string, MissionDraft[]> = {
   '3-5': [
-    { title: 'Do 5 star jumps and 5 hops', category: 'movement', screen_time_reward: 5 },
+    { title: 'Do 5 star jumps and 5 bunny hops', category: 'movement', screen_time_reward: 5 },
     { title: 'Pick up your toys and put them away', category: 'responsibility', screen_time_reward: 5 },
     { title: 'Name 3 things that make you happy', category: 'emotional_intelligence', screen_time_reward: 5 },
     { title: 'Count to 20 out loud with a grown-up', category: 'learning', screen_time_reward: 5 },
     { title: 'Draw a picture of your family', category: 'creativity', screen_time_reward: 5 },
     { title: 'Give someone you love a big hug', category: 'family_connection', screen_time_reward: 5 },
+    { title: 'Say something kind to someone today', category: 'kindness', screen_time_reward: 5 },
+    { title: 'Take 5 slow deep breaths', category: 'mindfulness', screen_time_reward: 5 },
+    { title: 'Drink a full glass of water', category: 'healthy_habits', screen_time_reward: 5 },
+    { title: 'Go outside and find something yellow', category: 'outdoor', screen_time_reward: 5 },
   ],
   '6-7': [
     { title: 'Do 10 jumping jacks and 5 push-ups', category: 'movement', screen_time_reward: 5 },
@@ -57,30 +62,46 @@ const FALLBACK: Record<string, MissionDraft[]> = {
     { title: 'Read a book for 10 minutes', category: 'learning', screen_time_reward: 10 },
     { title: 'Build something fun with blocks or paper', category: 'creativity', screen_time_reward: 5 },
     { title: 'Help a family member with a small chore', category: 'family_connection', screen_time_reward: 5 },
+    { title: 'Write a compliment for someone', category: 'kindness', screen_time_reward: 5 },
+    { title: 'Sit quietly for 2 minutes and breathe', category: 'mindfulness', screen_time_reward: 5 },
+    { title: 'Eat a piece of fruit or vegetable', category: 'healthy_habits', screen_time_reward: 5 },
+    { title: 'Find 5 different things in nature outside', category: 'outdoor', screen_time_reward: 10 },
   ],
   '8-10': [
-    { title: 'Go outside and move your body for 15 minutes', category: 'movement', screen_time_reward: 10 },
+    { title: 'Move your body outside for 15 minutes', category: 'movement', screen_time_reward: 10 },
     { title: 'Help prepare or clean up after a meal', category: 'responsibility', screen_time_reward: 5 },
     { title: 'Write 3 things you are grateful for today', category: 'emotional_intelligence', screen_time_reward: 5 },
-    { title: 'Read for 15 minutes and tell someone about it', category: 'learning', screen_time_reward: 10 },
+    { title: 'Read for 15 minutes and summarise it', category: 'learning', screen_time_reward: 10 },
     { title: 'Invent a short story or comic strip', category: 'creativity', screen_time_reward: 10 },
     { title: 'Have a real conversation with a family member', category: 'family_connection', screen_time_reward: 5 },
+    { title: 'Do something kind for someone without being asked', category: 'kindness', screen_time_reward: 10 },
+    { title: 'Spend 5 minutes with no screens — just breathe', category: 'mindfulness', screen_time_reward: 10 },
+    { title: 'Drink 2 glasses of water and do a stretch', category: 'healthy_habits', screen_time_reward: 5 },
+    { title: 'Go on a nature scavenger hunt outside', category: 'outdoor', screen_time_reward: 10 },
   ],
   '11-13': [
     { title: 'Exercise for 20 minutes — your choice', category: 'movement', screen_time_reward: 10 },
     { title: 'Complete a household task without being asked', category: 'responsibility', screen_time_reward: 10 },
     { title: 'Journal: how are you feeling today and why?', category: 'emotional_intelligence', screen_time_reward: 10 },
     { title: 'Study or read for 20 minutes', category: 'learning', screen_time_reward: 10 },
-    { title: 'Make art, music, or write something original', category: 'creativity', screen_time_reward: 10 },
+    { title: 'Make something creative — art, music, or writing', category: 'creativity', screen_time_reward: 10 },
     { title: 'Do something thoughtful for a family member', category: 'family_connection', screen_time_reward: 10 },
+    { title: 'Write an encouraging note to a friend or sibling', category: 'kindness', screen_time_reward: 10 },
+    { title: 'Do a 5-minute mindfulness breathing exercise', category: 'mindfulness', screen_time_reward: 10 },
+    { title: 'Eat a healthy snack and go to bed on time', category: 'healthy_habits', screen_time_reward: 5 },
+    { title: 'Spend 20 minutes exploring outdoors', category: 'outdoor', screen_time_reward: 15 },
   ],
   '14+': [
     { title: 'Get outside and move for 20 minutes', category: 'movement', screen_time_reward: 10 },
-    { title: 'Take on a home responsibility without being asked', category: 'responsibility', screen_time_reward: 10 },
-    { title: 'Reflect: write about a challenge you faced', category: 'emotional_intelligence', screen_time_reward: 10 },
+    { title: 'Take on a responsibility at home without being asked', category: 'responsibility', screen_time_reward: 10 },
+    { title: 'Reflect in writing on a challenge you faced', category: 'emotional_intelligence', screen_time_reward: 10 },
     { title: 'Read or study something that interests you', category: 'learning', screen_time_reward: 10 },
     { title: 'Create something — art, music, writing, or code', category: 'creativity', screen_time_reward: 10 },
     { title: 'Spend quality time with family — no screens', category: 'family_connection', screen_time_reward: 10 },
+    { title: 'Do something kind for someone unexpectedly', category: 'kindness', screen_time_reward: 10 },
+    { title: 'Meditate or practice mindful breathing for 5 minutes', category: 'mindfulness', screen_time_reward: 10 },
+    { title: 'Prioritise sleep — set a wind-down routine tonight', category: 'healthy_habits', screen_time_reward: 10 },
+    { title: 'Go for a walk or explore somewhere new outside', category: 'outdoor', screen_time_reward: 15 },
   ],
   'default': [
     { title: 'Move your body for 15 minutes', category: 'movement', screen_time_reward: 10 },
@@ -88,20 +109,24 @@ const FALLBACK: Record<string, MissionDraft[]> = {
     { title: 'Write or say 3 things you are grateful for', category: 'emotional_intelligence', screen_time_reward: 5 },
     { title: 'Read or learn something new for 15 minutes', category: 'learning', screen_time_reward: 10 },
     { title: 'Make something creative today', category: 'creativity', screen_time_reward: 10 },
-    { title: 'Connect with a family member', category: 'family_connection', screen_time_reward: 5 },
+    { title: 'Connect with a family member meaningfully', category: 'family_connection', screen_time_reward: 5 },
+    { title: 'Do something kind for someone', category: 'kindness', screen_time_reward: 5 },
+    { title: 'Take 5 slow mindful breaths', category: 'mindfulness', screen_time_reward: 5 },
+    { title: 'Drink water and eat something healthy', category: 'healthy_habits', screen_time_reward: 5 },
+    { title: 'Spend time outside — even 10 minutes counts', category: 'outdoor', screen_time_reward: 10 },
   ],
 };
 
-const CATEGORIES = ['movement', 'responsibility', 'emotional_intelligence', 'learning', 'creativity', 'family_connection'];
+const CATEGORIES = ['movement', 'responsibility', 'emotional_intelligence', 'learning', 'creativity', 'family_connection', 'kindness', 'mindfulness'];
 
 export async function POST(req: NextRequest) {
-  const { childId, childAge, parentId, location, mood, weatherSummary, count } = await req.json();
+  const { childId, childAge, parentId, location, locationLabel, locationCity, mood, weatherSummary, count } = await req.json();
 
   if (!childId) {
     return NextResponse.json({ error: 'childId is required' }, { status: 400 });
   }
 
-  const requestedCount = Math.min(8, Math.max(5, Number(count) || 6));
+  const requestedCount = Math.min(15, Math.max(8, Number(count) || 10));
 
   const authHeader = req.headers.get('authorization') ?? '';
   const callerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -111,7 +136,7 @@ export async function POST(req: NextRequest) {
   //  2. Kid View (/child) — no auth session; passes parentId in the body and
   //     we verify the child belongs to that parent via the service role.
   let resolvedParentId: string;
-  let childRow: { id: string; age: number | null } | null = null;
+  let childRow: { id: string; age: number | null; location_label?: string | null; location_city?: string | null } | null = null;
 
   const anonSupabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,7 +156,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error: childError } = await anonSupabase
       .from('children')
-      .select('id, age')
+      .select('id, age, location_label, location_city')
       .eq('id', childId)
       .eq('parent_id', resolvedParentId)
       .single();
@@ -139,7 +164,7 @@ export async function POST(req: NextRequest) {
       console.error('[generate-missions] child lookup (session) failed:', childError?.message);
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    childRow = data as { id: string; age: number | null };
+    childRow = data as { id: string; age: number | null; location_label?: string | null; location_city?: string | null };
   } else if (parentId) {
     // Kid View: verify child↔parent via service role (RLS-bypassing) read.
     let serviceSupabase;
@@ -151,7 +176,7 @@ export async function POST(req: NextRequest) {
     }
     const { data, error: childError } = await serviceSupabase
       .from('children')
-      .select('id, age, parent_id')
+      .select('id, age, parent_id, location_label, location_city')
       .eq('id', childId)
       .single();
     if (childError || !data || (data as { parent_id: string }).parent_id !== parentId) {
@@ -159,7 +184,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     resolvedParentId = parentId;
-    childRow = { id: (data as { id: string }).id, age: (data as { age: number | null }).age };
+    childRow = {
+      id: (data as { id: string }).id,
+      age: (data as { age: number | null }).age,
+      location_label: (data as { location_label?: string | null }).location_label,
+      location_city: (data as { location_city?: string | null }).location_city,
+    };
   } else {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -186,14 +216,21 @@ export async function POST(req: NextRequest) {
   const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
 
+  // Resolve child's location: request body > child DB row > parent plan
+  const resolvedLocationCity: string | null =
+    locationCity ?? childRow?.location_city ?? null;
+  const resolvedLocationLabel: string =
+    locationLabel ?? childRow?.location_label ?? 'home';
+
   let resolvedWeatherSummary: string | null = weatherSummary ?? null;
   let isOutdoorFriendly = false;
   let weatherHint = '';
+  let weatherDetails = '';
   try {
     if (!resolvedWeatherSummary) {
-      let resolvedLocation: string | null = location ?? null;
+      let resolvedLocation: string | null = location ?? resolvedLocationCity ?? null;
       if (!resolvedLocation) {
-        // Use service role so this works for both authenticated parents and Kid View.
+        // Fall back to parent plan location
         const planClient = createServiceSupabaseClient();
         const { data: plan } = await planClient
           .from('family_plans')
@@ -203,36 +240,67 @@ export async function POST(req: NextRequest) {
         resolvedLocation = (plan?.personalization_data as Record<string, unknown>)?.location as string ?? null;
       }
       if (resolvedLocation) {
-        const weather = await getWeather(resolvedLocation);
-        if (weather) {
-          resolvedWeatherSummary = weather.summary;
-          weatherHint = weatherMissionHint(weather);
-          isOutdoorFriendly = !weather.isRainy && !weather.isSnowy && !weather.isCold;
+        const wxData = await fetchWeatherCached(resolvedLocation);
+        if (wxData) {
+          const lc = wxData.condition.toLowerCase();
+          const isRainy = lc.includes('rain') || lc.includes('shower');
+          const isSnowy = lc.includes('snow');
+          const isHot   = wxData.tempC >= 28;
+          const isCold  = wxData.tempC <= 5;
+          isOutdoorFriendly = wxData.isOutdoorFriendly;
+          resolvedWeatherSummary = `${wxData.condition}, ${wxData.tempC}°C (feels like ${wxData.feelsLikeC}°C), high ${wxData.highC}°C, low ${wxData.lowC}°C`;
+          if (wxData.windSpeed)         resolvedWeatherSummary += `, wind ${wxData.windSpeed} km/h`;
+          if (wxData.precipProbability) resolvedWeatherSummary += `, ${wxData.precipProbability}% chance of rain`;
+          if (wxData.uvIndex)           resolvedWeatherSummary += `, UV index ${wxData.uvIndex}`;
+          weatherHint = weatherMissionHint({ condition: wxData.condition, tempC: wxData.tempC, isRainy, isSnowy, isHot, isCold, summary: '' });
+          weatherDetails = resolvedWeatherSummary;
         }
       }
     } else {
       isOutdoorFriendly = /outdoor friendly/i.test(resolvedWeatherSummary);
+      weatherDetails = resolvedWeatherSummary;
     }
   } catch {
-    // Weather is optional - proceed without it
+    // Weather is optional — proceed without it
   }
 
   const neededCategories = isOutdoorFriendly
-    ? `${CATEGORIES.join(', ')}, outdoor`
+    ? `${CATEGORIES.join(', ')}, outdoor, adventure`
     : CATEGORIES.join(', ');
 
-  // 6+ age bands ('6-7', '8-10', '11-13', '14+') get a healthy habits mission.
   const ageBandNum = parseInt(band, 10);
   const healthyHabitsLine = ageBandNum >= 6
-    ? '\nInclude one healthy habits mission (hydration, sleep, nutrition, or hygiene).'
+    ? '\nInclude one healthy_habits mission (hydration, sleep, nutrition, or hygiene).'
     : '';
 
-  const systemPrompt = `You are BrytThrive's mission engine. Generate ${requestedCount} child missions for age band "${band}".
-Weather: ${resolvedWeatherSummary ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
-Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}
-Categories needed: ${neededCategories}.${healthyHabitsLine}
-Rules: child-friendly language, 10 words max per title, JSON array only.
-Format: [{"title":"...","category":"...","screen_time_reward":5}]`;
+  const dayTheme = THEMES[new Date().getDay()];
+  const themeLine = `\nToday is ${dayTheme.name} — lean toward ${dayTheme.focusCategories.join(', ')} missions but ensure good variety.`;
+
+  const nowDate = new Date();
+  const hour = nowDate.getHours();
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const dayType = [0, 6].includes(nowDate.getDay()) ? 'weekend' : 'weekday';
+  const month = nowDate.getMonth();
+  const season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'autumn' : 'winter';
+
+  const locationLine = resolvedLocationCity
+    ? `\nLocation: child is at ${resolvedLocationLabel} in ${resolvedLocationCity}.`
+    : `\nLocation: child is at ${resolvedLocationLabel}.`;
+
+  const contextLine = `\nContext: ${timeOfDay}, ${dayType}, ${season}.`;
+
+  const systemPrompt = `You are BrytThrive's mission engine. Generate exactly ${requestedCount} child missions for age band "${band}".
+Weather: ${weatherDetails ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
+Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${locationLine}${contextLine}${themeLine}
+Required distribution:
+- Daily (3-4): movement, responsibility, learning, healthy_habits
+- Bonus (3-4): creativity, kindness, mindfulness${isOutdoorFriendly ? ', outdoor, adventure' : ''}
+- Special (2-3): family_connection, emotional_intelligence
+Available categories: ${neededCategories}.${healthyHabitsLine}
+Tailor missions to the child's location (${resolvedLocationLabel}) and current context. ${isOutdoorFriendly ? 'Weather permits outdoor activities.' : 'Prioritise indoor activities.'}
+Rules: child-friendly language, max 10 words per title, no repetition, varied and fun.
+Coins: easy=5, medium=10, challenging=15.
+Format: JSON array only — [{"title":"...","category":"...","screen_time_reward":5}]`;
 
   let missions: MissionDraft[] = [];
   try {

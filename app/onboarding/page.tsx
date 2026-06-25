@@ -199,7 +199,8 @@ export default function OnboardingPage() {
   const [authError, setAuthError] = useState('');
   const [confirmSent, setConfirmSent] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error' | 'already-confirmed' | 'rate-limited'>('idle');
+  const [resendErrorMsg, setResendErrorMsg] = useState('');
 
   const qIndex = step - 1; // 0-indexed into QUESTIONS
   const q = step <= QUESTIONS.length ? QUESTIONS[qIndex] : null;
@@ -312,7 +313,10 @@ export default function OnboardingPage() {
   async function handleResend() {
     setResendLoading(true);
     setResendStatus('idle');
-    console.log('[Onboarding] Resending confirmation to:', email);
+    setResendErrorMsg('');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Onboarding] Resending confirmation to:', email);
+    }
     try {
       const supabase = getSupabase();
       const { error } = await supabase.auth.resend({
@@ -321,15 +325,30 @@ export default function OnboardingPage() {
         options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
       if (error) {
-        console.error('[Onboarding] Resend error:', error.message);
-        setResendStatus('error');
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Onboarding] Resend error:', error.status, error.message);
+        }
+        const msg = error.message.toLowerCase();
+        if (msg.includes('already confirmed') || msg.includes('already registered') || msg.includes('email confirmed')) {
+          setResendStatus('already-confirmed');
+        } else if (msg.includes('rate') || msg.includes('too many') || msg.includes('limit')) {
+          setResendStatus('rate-limited');
+        } else {
+          setResendStatus('error');
+          setResendErrorMsg(error.message);
+        }
       } else {
-        console.log('[Onboarding] Resend success');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Onboarding] Resend success (no error returned)');
+        }
         setResendStatus('sent');
       }
     } catch (err) {
-      console.error('[Onboarding] Resend threw:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Onboarding] Resend threw:', err);
+      }
       setResendStatus('error');
+      setResendErrorMsg(err instanceof Error ? err.message : 'Unknown error');
     }
     setResendLoading(false);
   }
@@ -458,40 +477,83 @@ export default function OnboardingPage() {
         <p className="text-sm mb-2 max-w-sm" style={{ color: '#64748B' }}>
           We sent a confirmation link to <strong>{email}</strong>.
         </p>
-        <p className="text-sm mb-8 max-w-sm" style={{ color: '#64748B' }}>
-          Click the link in that email to activate your account. Your onboarding information has been saved and will be ready when you log in.
+        <p className="text-sm mb-1 max-w-sm" style={{ color: '#64748B' }}>
+          Click the link to activate your account — works on any device, mobile or desktop.
         </p>
+
+        {/* Tips block */}
+        <div
+          className="w-full max-w-sm rounded-2xl px-5 py-4 mb-6 text-left space-y-2"
+          style={{ background: '#F0FDFA', border: '1px solid #CCFBF1' }}
+        >
+          {[
+            '📬 Check your inbox and spam / junk folder',
+            '⏱ Links can take 1–2 minutes to arrive',
+            '📱 Works on any device — phone, tablet, or computer',
+            '🔐 If this email was already confirmed, go to login below',
+          ].map(tip => (
+            <p key={tip} className="text-xs font-medium" style={{ color: '#0F766E' }}>{tip}</p>
+          ))}
+        </div>
 
         <div className="w-full max-w-xs space-y-3">
           <a
             href="/login"
-            className="block w-full text-white py-3.5 rounded-full font-semibold text-sm text-center transition-opacity hover:opacity-90 shadow-sm"
+            className="block w-full text-white py-4 rounded-full font-semibold text-sm text-center transition-opacity hover:opacity-90 shadow-sm"
             style={{ background: brandGradient }}
           >
             Go to Login
           </a>
+
+          {/* Resend button — re-enabled after success so user can try again */}
           <button
             onClick={handleResend}
-            disabled={resendLoading || resendStatus === 'sent'}
-            className="w-full py-3.5 rounded-full border-2 text-sm font-semibold transition-colors hover:bg-gray-50 disabled:opacity-50"
+            disabled={resendLoading}
+            className="w-full py-4 rounded-full border-2 text-sm font-semibold transition-colors hover:bg-gray-50 disabled:opacity-50"
             style={{ borderColor: '#E2E8F0', color: '#64748B' }}
           >
-            {resendLoading ? 'Sending…' : resendStatus === 'sent' ? '✓ Email sent!' : 'Resend confirmation email'}
+            {resendLoading
+              ? 'Sending…'
+              : resendStatus === 'sent'
+                ? '✓ Sent — resend again?'
+                : 'Resend confirmation email'}
           </button>
+
+          {/* Status messages */}
           {resendStatus === 'sent' && (
             <p className="text-xs text-center" style={{ color: '#0F766E' }}>
-              Check your inbox (and spam folder) for the new confirmation link.
+              ✅ New link sent! Check your inbox and spam folder.
+            </p>
+          )}
+          {resendStatus === 'already-confirmed' && (
+            <p className="text-xs text-center" style={{ color: '#1D4ED8' }}>
+              This email is already confirmed.{' '}
+              <a href="/login" className="underline font-semibold">Log in instead →</a>
+            </p>
+          )}
+          {resendStatus === 'rate-limited' && (
+            <p className="text-xs text-center" style={{ color: '#B45309' }}>
+              Too many attempts — please wait a few minutes before trying again.
             </p>
           )}
           {resendStatus === 'error' && (
             <p className="text-xs text-center" style={{ color: '#DC2626' }}>
-              Couldn&apos;t resend. Please wait a moment and try again, or contact support.
+              {resendErrorMsg
+                ? `Couldn't resend: ${resendErrorMsg}`
+                : "Couldn't resend. Please wait a moment and try again."}
             </p>
           )}
         </div>
 
-        <p className="text-xs mt-6" style={{ color: '#94A3B8' }}>
-          Didn&apos;t receive it? Check your spam folder or resend above.
+        <p className="text-xs mt-6 max-w-xs" style={{ color: '#94A3B8' }}>
+          Still not arriving? Try a different email address by{' '}
+          <button
+            onClick={() => setConfirmSent(false)}
+            className="underline"
+            style={{ color: '#94A3B8' }}
+          >
+            going back
+          </button>.
         </p>
       </div>
     );

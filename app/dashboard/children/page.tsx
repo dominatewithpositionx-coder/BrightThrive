@@ -15,6 +15,9 @@ type Child = {
   screen_time_limit: number | null;
   points: number;
   created_at: string;
+  location_label: string | null;
+  location_name: string | null;
+  location_city: string | null;
 };
 
 type LedgerEntry = {
@@ -131,12 +134,14 @@ export default function ChildrenPage() {
   const [pinInput, setPinInput] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Child | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<string | null>(null);
+  const [locationCity, setLocationCity] = useState('');
 
   const supabase = getSupabase();
 
   async function fetchData() {
     const [childRes, walletRes, ledgerRes] = await Promise.all([
-      supabase.from('children').select('id, name, age, screen_time_limit, created_at').order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age, screen_time_limit, location_label, location_name, location_city, created_at').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }),
     ]);
@@ -154,7 +159,7 @@ export default function ChildrenPage() {
         .select('id, name, age, created_at')
         .order('created_at', { ascending: true });
       if (retry.error) console.error('[children] retry error:', retry.error.message);
-      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null }));
+      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null, location_label: null, location_name: null, location_city: null }));
     }
 
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
@@ -191,6 +196,30 @@ export default function ChildrenPage() {
     localStorage.removeItem(`bt_pin_${key}`);
     setPins((p) => { const n = { ...p }; delete n[key]; return n; });
     toast.success(`PIN removed for ${childName}`);
+  }
+
+  const LOCATION_PRESETS = [
+    { label: 'home',         name: 'Home',           emoji: '🏠' },
+    { label: 'school',       name: 'School',         emoji: '🏫' },
+    { label: 'grandparents', name: "Grandparents'",  emoji: '👴' },
+    { label: 'vacation',     name: 'Vacation',       emoji: '🏖️' },
+  ];
+
+  async function saveLocation(child: Child, label: string, customName?: string) {
+    const preset = LOCATION_PRESETS.find(p => p.label === label);
+    const location_name = customName ?? preset?.name ?? label;
+    const { error } = await supabase.from('children').update({
+      location_label: label,
+      location_name,
+      location_city: locationCity || null,
+    }).eq('id', child.id);
+    if (error) toast.error('Could not save location.');
+    else {
+      toast.success(`${child.name}'s location updated!`);
+      setEditingLocation(null);
+      setLocationCity('');
+      fetchData();
+    }
   }
 
   async function addChild(e: React.FormEvent) {
@@ -413,6 +442,52 @@ export default function ChildrenPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Location */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">📍 Location</span>
+                        {editingLocation !== child.id ? (
+                          <button
+                            onClick={() => { setEditingLocation(child.id); setLocationCity(child.location_city ?? ''); }}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
+                          >
+                            {child.location_name ? child.location_name : 'Set location'}
+                          </button>
+                        ) : (
+                          <button onClick={() => setEditingLocation(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        )}
+                      </div>
+                      {editingLocation === child.id && (
+                        <div className="mt-2 space-y-2">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {LOCATION_PRESETS.map(p => (
+                              <button
+                                key={p.label}
+                                onClick={() => saveLocation(child, p.label)}
+                                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors ${child.location_label === p.label ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                              >
+                                <span>{p.emoji}</span>{p.name}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              placeholder="City for weather (e.g. Toronto)"
+                              value={locationCity}
+                              onChange={(e) => setLocationCity(e.target.value)}
+                              className="border rounded-lg px-3 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            />
+                            <button
+                              onClick={() => saveLocation(child, child.location_label ?? 'home')}
+                              className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-teal-700 transition-colors whitespace-nowrap"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Kid View PIN */}
                     <div className="pt-2 border-t">
