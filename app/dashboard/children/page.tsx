@@ -121,6 +121,7 @@ export default function ChildrenPage() {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [name, setName] = useState('');
   const [age, setAge] = useState<number | ''>('');
+  const [screenTimeAvailable, setScreenTimeAvailable] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,10 +144,11 @@ export default function ChildrenPage() {
     if (walletRes.error) console.error('[children] wallet query error:', walletRes.error.message);
     if (ledgerRes.error) console.error('[children] ledger query error:', ledgerRes.error.message);
 
-    // daily_screen_time_goal may not exist on older production DBs — retry without it.
     let childRows = childRes.data;
     if (childRes.error) {
-      console.error('[children] query error (retrying without screen_time_limit):', childRes.error.message);
+      // screen_time_limit column missing from schema cache — retry without it
+      console.error('[children] SELECT error, retrying without screen_time_limit:', childRes.error.message);
+      setScreenTimeAvailable(false);
       const retry = await supabase
         .from('children')
         .select('id, name, age, created_at')
@@ -156,9 +158,12 @@ export default function ChildrenPage() {
     }
 
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
-    setChildren((childRows || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 })));
+    const mapped = (childRows || []).map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
+    setChildren(mapped);
     setLedger(ledgerRes.data || []);
     setLoading(false);
+    // Auto-open add form when there are no children yet
+    if (mapped.length === 0) setShowForm(true);
   }
 
   useEffect(() => {
@@ -211,8 +216,15 @@ export default function ChildrenPage() {
   async function adjustScreenTime(id: string, current: number, delta: number) {
     const next = Math.max(0, current + delta);
     const { error } = await supabase.from('children').update({ screen_time_limit: next }).eq('id', id);
-    if (error) toast.error('Error updating screen time.');
-    else {
+    if (error) {
+      // Column not yet in production schema — mark unavailable and advise
+      if (error.message?.includes('screen_time_limit') || error.message?.includes('schema cache')) {
+        setScreenTimeAvailable(false);
+        toast.error('Screen time controls need a DB migration — run migration 20260013 in Supabase.');
+      } else {
+        toast.error('Error updating screen time.');
+      }
+    } else {
       toast.success(delta > 0 ? `+${delta} min added!` : `${Math.abs(delta)} min removed.`);
       fetchData();
     }
@@ -367,38 +379,40 @@ export default function ChildrenPage() {
                       </span>
                     </div>
 
-                    {/* Screen time */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock size={15} className="text-blue-400" />
-                          <span>Daily Screen Time</span>
+                    {/* Screen time — hidden if column not in production schema */}
+                    {screenTimeAvailable && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock size={15} className="text-blue-400" />
+                            <span>Daily Screen Time</span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">{screenGoal} min</span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700">{screenGoal} min</span>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={screenGoal} aria-valuemin={0} aria-valuemax={120} aria-label={`Screen time goal: ${screenGoal} minutes`}>
+                          <div
+                            className="h-full bg-blue-400 rounded-full transition-all"
+                            style={{ width: `${screenPct}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => adjustScreenTime(child.id, screenGoal, -15)}
+                            aria-label={`Reduce ${child.name}'s screen time by 15 minutes`}
+                            className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                          >
+                            <Minus size={13} /> 15 min
+                          </button>
+                          <button
+                            onClick={() => adjustScreenTime(child.id, screenGoal, +15)}
+                            aria-label={`Add 15 minutes to ${child.name}'s screen time`}
+                            className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-lg py-1.5 text-sm text-green-700 hover:bg-green-100 transition-colors"
+                          >
+                            <Plus size={13} /> 15 min
+                          </button>
+                        </div>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={screenGoal} aria-valuemin={0} aria-valuemax={120} aria-label={`Screen time goal: ${screenGoal} minutes`}>
-                        <div
-                          className="h-full bg-blue-400 rounded-full transition-all"
-                          style={{ width: `${screenPct}%` }}
-                        />
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => adjustScreenTime(child.id, screenGoal, -15)}
-                          aria-label={`Reduce ${child.name}'s screen time by 15 minutes`}
-                          className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                          <Minus size={13} /> 15 min
-                        </button>
-                        <button
-                          onClick={() => adjustScreenTime(child.id, screenGoal, +15)}
-                          aria-label={`Add 15 minutes to ${child.name}'s screen time`}
-                          className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-lg py-1.5 text-sm text-green-700 hover:bg-green-100 transition-colors"
-                        >
-                          <Plus size={13} /> 15 min
-                        </button>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Kid View PIN */}
                     <div className="pt-2 border-t">
