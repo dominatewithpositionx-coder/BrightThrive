@@ -121,7 +121,7 @@ export default function ChildrenPage() {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [name, setName] = useState('');
   const [age, setAge] = useState<number | ''>('');
-  const [limit, setLimit] = useState<number | ''>('');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -196,13 +196,12 @@ export default function ChildrenPage() {
     const { error } = await supabase.from('children').insert([{
       name,
       age: age ? Number(age) : null,
-      screen_time_limit: limit ? Number(limit) : 60,
       parent_id: user?.id,
     }]);
     if (error) toast.error('Error adding child: ' + error.message);
     else {
       toast.success(`${name} added!`);
-      setName(''); setAge(''); setLimit('');
+      setName(''); setAge('');
       setShowForm(false);
       fetchData();
     }
@@ -286,26 +285,16 @@ export default function ChildrenPage() {
               autoFocus
               aria-label="Child's name"
             />
-            <div className="flex gap-3">
-              <input
-                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-                type="number"
-                placeholder="Age (optional)"
-                min="1"
-                max="18"
-                value={age}
-                onChange={(e) => setAge(Number(e.target.value))}
-                aria-label="Child's age (optional)"
-              />
-              <input
-                className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-                type="number"
-                placeholder="Screen limit (min)"
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                aria-label="Daily screen time limit in minutes"
-              />
-            </div>
+            <input
+              className="border rounded-lg px-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+              type="number"
+              placeholder="Age (optional)"
+              min="1"
+              max="18"
+              value={age}
+              onChange={(e) => setAge(Number(e.target.value))}
+              aria-label="Child's age (optional)"
+            />
             <button
               type="submit"
               disabled={!name || saving}
