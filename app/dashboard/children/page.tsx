@@ -231,7 +231,7 @@ export default function ChildrenPage() {
       // location columns may not exist in production DB yet
       console.warn('[children] saveLocation failed:', error.message);
       if (error.message?.includes('location_') || error.message?.includes('schema cache')) {
-        toast.error('Location save requires a DB migration — run migration 20260014 in Supabase.');
+        toast.error('Location save requires a DB migration — run 20260015_child_location.sql in Supabase.');
         return;
       }
       toast.error('Could not save location.');
@@ -270,7 +270,7 @@ export default function ChildrenPage() {
       // Column not yet in production schema — mark unavailable and advise
       if (error.message?.includes('screen_time_limit') || error.message?.includes('schema cache')) {
         setScreenTimeAvailable(false);
-        toast.error('Screen time controls need a DB migration — run migration 20260013 in Supabase.');
+        toast.error('Screen time controls need a DB migration — run 20260014_ensure_screen_time_limit.sql in Supabase.');
       } else {
         toast.error('Error updating screen time.');
       }
