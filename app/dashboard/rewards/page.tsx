@@ -140,7 +140,7 @@ export default function RewardsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Session expired. Please log in again.'); return; }
     setSaving(true);
-    const { error } = await supabase.from('rewards').insert([{
+    let { error } = await supabase.from('rewards').insert([{
       parent_id: user.id,
       title: title.trim(),
       coin_cost: Number(cost),
@@ -148,6 +148,16 @@ export default function RewardsPage() {
       is_active: true,
       sort_order: 0,
     }]);
+    if (error) {
+      // reward_type / is_active / sort_order may not exist in production schema — retry minimal
+      console.warn('[rewards] insert with optional cols failed, retrying minimal:', error.message);
+      const retry = await supabase.from('rewards').insert([{
+        parent_id: user.id,
+        title: title.trim(),
+        coin_cost: Number(cost),
+      }]);
+      error = retry.error;
+    }
     if (error) { toast.error('Could not add reward. Please try again.'); }
     else {
       toast.success('Reward added!');
@@ -171,11 +181,20 @@ export default function RewardsPage() {
     });
     if (coinError) { toast.error('Could not deduct coins. Please try again.'); setRedeeming(false); setConfirm(null); return; }
 
-    const { error: redemptionError } = await supabase.from('reward_redemptions').insert([{
+    let { error: redemptionError } = await supabase.from('reward_redemptions').insert([{
       child_id: child.id, reward_id: reward.id, parent_id: user.id,
       reward_title: reward.title, reward_type: 'standard', coin_cost: reward.coin_cost,
       status: 'fulfilled', requested_at: new Date().toISOString(), fulfilled_at: new Date().toISOString(),
     }]);
+    if (redemptionError) {
+      // Optional columns may not exist — retry with minimal required set
+      console.warn('[Rewards] redemption insert failed, retrying minimal:', redemptionError.message);
+      const retryRed = await supabase.from('reward_redemptions').insert([{
+        child_id: child.id, reward_id: reward.id, parent_id: user.id,
+        reward_title: reward.title, coin_cost: reward.coin_cost,
+      }]);
+      redemptionError = retryRed.error;
+    }
     if (redemptionError) console.error('[Rewards] redemption insert error:', redemptionError.message);
 
     trackRewardRedeemed({ child_id: child.id, reward_title: reward.title, coin_cost: reward.coin_cost });

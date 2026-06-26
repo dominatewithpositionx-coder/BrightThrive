@@ -222,18 +222,25 @@ export default function ChildrenPage() {
   async function saveLocation(child: Child, label: string, customName?: string) {
     const preset = LOCATION_PRESETS.find(p => p.label === label);
     const location_name = customName ?? preset?.name ?? label;
-    const { error } = await supabase.from('children').update({
+    let { error } = await supabase.from('children').update({
       location_label: label,
       location_name,
       location_city: locationCity || null,
     }).eq('id', child.id);
-    if (error) toast.error('Could not save location.');
-    else {
-      toast.success(`${child.name}'s location updated!`);
-      setEditingLocation(null);
-      setLocationCity('');
-      fetchData();
+    if (error) {
+      // location columns may not exist in production DB yet
+      console.warn('[children] saveLocation failed:', error.message);
+      if (error.message?.includes('location_') || error.message?.includes('schema cache')) {
+        toast.error('Location save requires a DB migration — run migration 20260014 in Supabase.');
+        return;
+      }
+      toast.error('Could not save location.');
+      return;
     }
+    toast.success(`${child.name}'s location updated!`);
+    setEditingLocation(null);
+    setLocationCity('');
+    fetchData();
   }
 
   async function addChild(e: React.FormEvent) {

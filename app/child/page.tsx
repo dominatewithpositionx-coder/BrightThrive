@@ -846,11 +846,22 @@ export default function ChildPage() {
       supabase.from('streaks').select('child_id, current_streak'),
     ]);
 
+    let childData = childRes.data;
     if (childRes.error) {
-      console.error('[child] children query error:', childRes.error.message);
-      setLoadState('query');
-      setLoading(false);
-      return;
+      // location_label / location_city columns may not exist yet — retry with base columns only.
+      console.warn('[child] children query failed, retrying without location columns:', childRes.error.message);
+      const retry = await supabase
+        .from('children')
+        .select('id, name, age, parent_id')
+        .eq('parent_id', parentId)
+        .order('created_at', { ascending: true });
+      if (retry.error) {
+        console.error('[child] children retry failed:', retry.error.message);
+        setLoadState('query');
+        setLoading(false);
+        return;
+      }
+      childData = (retry.data || []).map(c => ({ ...c, location_label: null, location_name: null, location_city: null }));
     }
 
     if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
@@ -858,7 +869,7 @@ export default function ChildPage() {
     if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
     if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
 
-    const kids = (childRes.data || []);
+    const kids = (childData || []);
     if (kids.length === 0) {
       setChildren([]);
       setLoadState('no-children');
