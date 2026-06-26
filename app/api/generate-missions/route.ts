@@ -207,7 +207,6 @@ export async function POST(req: NextRequest) {
   // Record the attempt now — will be reset if generation ultimately fails
   rateLimitMap.set(rlKey, now);
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -304,6 +303,7 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
 
   let missions: MissionDraft[] = [];
   try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
