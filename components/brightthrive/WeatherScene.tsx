@@ -211,7 +211,11 @@ export default function WeatherScene({
   // Derive display values from real weather or mock
   const condition = weather?.condition ?? mock?.label ?? 'Clear sky';
   const emoji = weather?.emoji ?? mock?.emoji ?? '☀️';
-  const temp = weather ? `${weather.tempC}°C` : mock ? `${mock.tempF}°F` : '';
+  const temp = weather
+    ? `${weather.tempC}°C`
+    : mock
+    ? `${Math.round((mock.tempF - 32) * 5 / 9)}°C`
+    : '';
   const feelsLike = weather ? `Feels like ${weather.feelsLikeC}°C` : null;
   const highLow = weather ? `↑${weather.highC}° ↓${weather.lowC}°` : null;
   const wind = weather?.windSpeed ? `${weather.windSpeed} km/h` : null;

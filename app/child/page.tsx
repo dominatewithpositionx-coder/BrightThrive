@@ -191,7 +191,7 @@ function ChildWeatherCard({ weather }: { weather: WeatherData | null }) {
 
 // ── PinDialog ─────────────────────────────────────────────────────────────────
 
-function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnlock: () => void; onCancel: () => void }) {
+function PinDialog({ childId, childName, onUnlock, onCancel }: { childId: string; childName: string; onUnlock: () => void; onCancel: () => void }) {
   const [digits, setDigits] = useState('');
   const [error, setError]   = useState(false);
 
@@ -201,7 +201,9 @@ function PinDialog({ childName, onUnlock, onCancel }: { childName: string; onUnl
     setDigits(next);
     setError(false);
     if (next.length === 4) {
-      const stored = localStorage.getItem(`bt_pin_${childName.toLowerCase()}`);
+      // Check ID-based key first, then legacy name-based key.
+      const stored = localStorage.getItem(`bt_pin_child_${childId}`)
+        ?? localStorage.getItem(`bt_pin_${childName.toLowerCase()}`);
       if (!stored || stored === next) { onUnlock(); }
       else { setTimeout(() => { setDigits(''); setError(true); }, 300); }
     }
@@ -844,11 +846,22 @@ export default function ChildPage() {
       supabase.from('streaks').select('child_id, current_streak'),
     ]);
 
+    let childData = childRes.data;
     if (childRes.error) {
-      console.error('[child] children query error:', childRes.error.message);
-      setLoadState('query');
-      setLoading(false);
-      return;
+      // location_label / location_city columns may not exist yet — retry with base columns only.
+      console.warn('[child] children query failed, retrying without location columns:', childRes.error.message);
+      const retry = await supabase
+        .from('children')
+        .select('id, name, age, parent_id')
+        .eq('parent_id', parentId)
+        .order('created_at', { ascending: true });
+      if (retry.error) {
+        console.error('[child] children retry failed:', retry.error.message);
+        setLoadState('query');
+        setLoading(false);
+        return;
+      }
+      childData = (retry.data || []).map(c => ({ ...c, location_label: null, location_name: null, location_city: null }));
     }
 
     if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
@@ -856,7 +869,7 @@ export default function ChildPage() {
     if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
     if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
 
-    const kids = (childRes.data || []);
+    const kids = (childData || []);
     if (kids.length === 0) {
       setChildren([]);
       setLoadState('no-children');
@@ -927,8 +940,23 @@ export default function ChildPage() {
       .catch(() => {});
   }
 
+  function getChildPin(child: Child): string | null {
+    // Prefer new ID-based key; migrate legacy name-based key if found.
+    const newKey = `bt_pin_child_${child.id}`;
+    const existing = localStorage.getItem(newKey);
+    if (existing) return existing;
+    const legacyKey = `bt_pin_${child.name.toLowerCase()}`;
+    const legacy = localStorage.getItem(legacyKey);
+    if (legacy) {
+      localStorage.setItem(newKey, legacy);
+      localStorage.removeItem(legacyKey);
+      return legacy;
+    }
+    return null;
+  }
+
   function handleSelect(child: Child) {
-    const pin = localStorage.getItem(`bt_pin_${child.name.toLowerCase()}`);
+    const pin = getChildPin(child);
     if (pin) { setPendingChild(child); }
     else { setSelected(child); fetchChildWeather(child); setPhase('mood-check'); }
   }
@@ -967,6 +995,8 @@ export default function ChildPage() {
     if (nowCompleted) {
       fireConfetti();
       trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
+      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙`);
+      setTimeout(() => setMissionSuccess(null), 3000);
     }
 
     setMissionError(null);
@@ -1005,6 +1035,7 @@ export default function ChildPage() {
     <>
       {pendingChild && (
         <PinDialog
+          childId={pendingChild.id}
           childName={pendingChild.name}
           onUnlock={() => { setSelected(pendingChild); fetchChildWeather(pendingChild); setPendingChild(null); setPhase('mood-check'); }}
           onCancel={() => setPendingChild(null)}
