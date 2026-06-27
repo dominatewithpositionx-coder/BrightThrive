@@ -98,21 +98,31 @@ export default function SettingsPage() {
   }
 
   async function persistPrefs(uid: string, next: Prefs) {
+    // Always read existing personalization_data first so onboarding answers are preserved
     const { data: existing } = await supabase
       .from('family_plans')
-      .select('parent_id')
+      .select('personalization_data')
       .eq('parent_id', uid)
       .maybeSingle();
+
+    const existingPd = (existing?.personalization_data as Record<string, unknown>) ?? {};
+    // Merge: only overwrite the settings fields, keep all onboarding answers intact
+    const merged = {
+      ...existingPd,
+      reward_notifications: next.reward_notifications,
+      weekly_summary: next.weekly_summary,
+      location: next.location,
+    };
 
     if (existing) {
       return supabase
         .from('family_plans')
-        .update({ personalization_data: next, updated_at: new Date().toISOString() })
+        .update({ personalization_data: merged, updated_at: new Date().toISOString() })
         .eq('parent_id', uid);
     }
     return supabase
       .from('family_plans')
-      .insert({ parent_id: uid, personalization_data: next, updated_at: new Date().toISOString() });
+      .insert({ parent_id: uid, personalization_data: merged, updated_at: new Date().toISOString() });
   }
 
   async function updatePref(field: 'reward_notifications' | 'weekly_summary', value: boolean) {
