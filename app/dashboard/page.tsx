@@ -75,16 +75,28 @@ export default function DashboardPage() {
 
   async function saveOnboardingFromSession(parentId: string) {
     if (typeof window === 'undefined') return;
-    const raw = sessionStorage.getItem('bt_onboarding');
+    // Check sessionStorage first, then fall back to localStorage backup (survives tab close)
+    const raw = sessionStorage.getItem('bt_onboarding') ?? localStorage.getItem('bt_onboarding_backup');
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
+      // Only write onboarding answers if they contain meaningful content
+      if (!data || typeof data !== 'object' || Object.keys(data).length === 0) return;
+      // Merge with any existing personalization_data so settings aren't lost
+      const { data: existing } = await supabase
+        .from('family_plans')
+        .select('personalization_data')
+        .eq('parent_id', parentId)
+        .maybeSingle();
+      const existingPd = (existing?.personalization_data as Record<string, unknown>) ?? {};
       await supabase.from('family_plans').upsert({
-        parent_id: parentId, onboarding_completed: true,
-        personalization_data: { ...data, completed_at: new Date().toISOString() },
+        parent_id: parentId,
+        onboarding_completed: true,
+        personalization_data: { ...existingPd, ...data, completed_at: new Date().toISOString() },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'parent_id' });
       sessionStorage.removeItem('bt_onboarding');
+      localStorage.removeItem('bt_onboarding_backup');
     } catch (_) {}
   }
 

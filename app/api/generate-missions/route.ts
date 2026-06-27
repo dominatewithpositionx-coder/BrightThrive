@@ -215,9 +215,23 @@ export async function POST(req: NextRequest) {
   const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
 
+  // Load family personalization data once — used for location AND Growth Profile context
+  let familyPersonalization: Record<string, unknown> = {};
+  try {
+    const planClient = createServiceSupabaseClient();
+    const { data: plan } = await planClient
+      .from('family_plans')
+      .select('personalization_data')
+      .eq('parent_id', resolvedParentId)
+      .maybeSingle();
+    familyPersonalization = (plan?.personalization_data as Record<string, unknown>) ?? {};
+  } catch {
+    // Non-fatal — mission generation continues without personalization context
+  }
+
   // Resolve child's location: request body > child DB row > parent plan
   const resolvedLocationCity: string | null =
-    locationCity ?? childRow?.location_city ?? null;
+    locationCity ?? childRow?.location_city ?? (familyPersonalization.location as string | null) ?? null;
   const resolvedLocationLabel: string =
     locationLabel ?? childRow?.location_label ?? 'home';
 
@@ -229,14 +243,7 @@ export async function POST(req: NextRequest) {
     if (!resolvedWeatherSummary) {
       let resolvedLocation: string | null = location ?? resolvedLocationCity ?? null;
       if (!resolvedLocation) {
-        // Fall back to parent plan location
-        const planClient = createServiceSupabaseClient();
-        const { data: plan } = await planClient
-          .from('family_plans')
-          .select('personalization_data')
-          .eq('parent_id', resolvedParentId)
-          .single();
-        resolvedLocation = (plan?.personalization_data as Record<string, unknown>)?.location as string ?? null;
+        resolvedLocation = (familyPersonalization.location as string | null) ?? null;
       }
       if (resolvedLocation) {
         const wxData = await fetchWeatherCached(resolvedLocation);
@@ -288,16 +295,33 @@ export async function POST(req: NextRequest) {
 
   const contextLine = `\nContext: ${timeOfDay}, ${dayType}, ${season}.`;
 
+  // Build Family Growth Profile context from onboarding answers
+  const fp = familyPersonalization;
+  const growthProfileLines: string[] = [];
+  if (fp.primary_goal)           growthProfileLines.push(`Parent's Primary Goal: ${fp.primary_goal}`);
+  if (fp.child_description)      growthProfileLines.push(`Child Profile: ${fp.child_description}`);
+  if (fp.parent_involvement)     growthProfileLines.push(`Parent Involvement Style: ${fp.parent_involvement}`);
+  if (fp.motivation_preference)  growthProfileLines.push(`What Motivates This Child: ${fp.motivation_preference}`);
+  if (Array.isArray(fp.selected_habits) && fp.selected_habits.length > 0)
+    growthProfileLines.push(`Priority Habits: ${(fp.selected_habits as string[]).join(', ')}`);
+  if (fp.screen_time_preference) growthProfileLines.push(`Screen Time Earned Per Day: ${fp.screen_time_preference}`);
+  if (fp.routine_timing)         growthProfileLines.push(`Routine Timing: ${fp.routine_timing}`);
+  if (fp.success_definition)     growthProfileLines.push(`Parent's Definition of Success: ${fp.success_definition}`);
+
+  const growthProfileSection = growthProfileLines.length > 0
+    ? `\n\nFamily Growth Profile Context:\n${growthProfileLines.join('\n')}\nUse this context to shape mission selection, wording, difficulty, emotional encouragement, and whether to include family collaboration or screen-replacement activities.`
+    : '';
+
   const systemPrompt = `You are BrytThrive's mission engine. Generate exactly ${requestedCount} child missions for age band "${band}".
 Weather: ${weatherDetails ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
-Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${locationLine}${contextLine}${themeLine}
+Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${locationLine}${contextLine}${themeLine}${growthProfileSection}
 Required distribution:
 - Daily (3-4): movement, responsibility, learning, healthy_habits
 - Bonus (3-4): creativity, kindness, mindfulness${isOutdoorFriendly ? ', outdoor, adventure' : ''}
 - Special (2-3): family_connection, emotional_intelligence
 Available categories: ${neededCategories}.${healthyHabitsLine}
 Tailor missions to the child's location (${resolvedLocationLabel}) and current context. ${isOutdoorFriendly ? 'Weather permits outdoor activities.' : 'Prioritise indoor activities.'}
-Rules: child-friendly language, max 10 words per title, no repetition, varied and fun.
+Rules: child-friendly language, max 10 words per title, no repetition, varied and fun. Never expose personalization answers directly to the child.
 Coins: easy=5, medium=10, challenging=15.
 Format: JSON array only — [{"title":"...","category":"...","screen_time_reward":5}]`;
 

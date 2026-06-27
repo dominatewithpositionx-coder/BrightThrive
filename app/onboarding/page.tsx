@@ -232,9 +232,12 @@ export default function OnboardingPage() {
     return !!((answers as Record<string, string>)[key]);
   }
 
-  function saveToSession() {
+  function saveToStorage() {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('bt_onboarding', JSON.stringify(answers));
+      const payload = JSON.stringify(answers);
+      sessionStorage.setItem('bt_onboarding', payload);
+      // localStorage survives tab close — used to recover answers after email confirmation
+      localStorage.setItem('bt_onboarding_backup', payload);
     }
   }
 
@@ -250,7 +253,7 @@ export default function OnboardingPage() {
     e.preventDefault();
     setAuthError('');
     setAuthLoading(true);
-    saveToSession();
+    saveToStorage();
 
     // Check env config before making any network call
     const config = getSupabaseConfigStatus();
@@ -361,7 +364,7 @@ export default function OnboardingPage() {
       return;
     }
     console.log('[Onboarding] Starting Google OAuth');
-    saveToSession();
+    saveToStorage();
     try {
       const supabase = getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
@@ -391,7 +394,10 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'parent_id' });
       if (error) console.error('[Onboarding] saveOnboardingRow error:', error.message);
-      else console.log('[Onboarding] Onboarding row saved');
+      else {
+        console.log('[Onboarding] Onboarding row saved');
+        if (typeof window !== 'undefined') localStorage.removeItem('bt_onboarding_backup');
+      }
     } catch (err) {
       // Non-fatal — don't block the signup flow
       console.error('[Onboarding] saveOnboardingRow threw:', err);
@@ -695,7 +701,7 @@ export default function OnboardingPage() {
           </button>
         )}
         <button
-          onClick={() => setStep(s => s + 1)}
+          onClick={() => { saveToStorage(); setStep(s => s + 1); }}
           disabled={!canAdvance()}
           className="flex-[2] text-white py-3.5 rounded-full font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-40 shadow-sm"
           style={{ background: brandGradient }}
