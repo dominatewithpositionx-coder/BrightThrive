@@ -122,7 +122,7 @@ export default function PositioningPreviewPage() {
               </h2>
               <div className="space-y-4 text-gray-600 leading-relaxed text-base">
                 <p>
-                  A few years ago, I was in the middle of another argument with my kids about screens. Not a big argument — just the same small one we seemed to have every single day. Phone down. Not yet. Five more minutes. You promised.
+                  A few years ago, I was in the middle of another argument with my kids about screens. Not a big argument — just the same small one we seemed to have every single day. iPad down. Not yet. Five more minutes. You promised.
                 </p>
                 <p>
                   I wasn&apos;t angry at my children. I was exhausted from the pattern. And I felt guilty — because I wanted to raise kind, confident, emotionally healthy kids, and this didn&apos;t feel like the way to do it.
