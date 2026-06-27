@@ -65,7 +65,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <GradientButton href="/onboarding">Start Your Family Growth Journey</GradientButton>
-            <GradientButton href="#how-it-works" secondary>See How It Works</GradientButton>
+            <GradientButton href="/how-it-works" secondary>Take the Product Tour</GradientButton>
           </div>
           <p className="mt-5 text-sm text-gray-400">Free to start · No credit card required · Built by parents</p>
         </div>
@@ -285,7 +285,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════════════
           6. HOW IT WORKS — 4 clear steps
       ══════════════════════════════════════════════════════════════════════ */}
-      <section id="how-it-works" className="py-20 px-4 bg-white scroll-mt-20">
+      <section className="py-20 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
             <SectionLabel>How BrytThrive works</SectionLabel>
@@ -517,7 +517,7 @@ export default function HomePage() {
 
           {/* Secondary links */}
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-gray-500">
-            <Link href="#how-it-works" className="hover:text-gray-300 transition-colors">How it works</Link>
+            <Link href="/how-it-works" className="hover:text-gray-300 transition-colors">How it works</Link>
             <Link href="/login" className="hover:text-gray-300 transition-colors">Parent login</Link>
             <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy policy</Link>
           </div>
