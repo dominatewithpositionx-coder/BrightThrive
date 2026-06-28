@@ -194,7 +194,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const rlKey = `parent:${resolvedParentId}`;
+  // Per-child rate limit: allows a parent to generate for all children in one batch.
+  const rlKey = `child:${childId}`;
   const now = Date.now();
   const lastGen = rateLimitMap.get(rlKey);
   if (lastGen && now - lastGen < RATE_LIMIT_MS) {

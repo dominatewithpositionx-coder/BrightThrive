@@ -468,7 +468,7 @@ function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle:
           aria-label={`Complete "${mission.title}"`}
           className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all shadow-sm press-scale flex items-center justify-center gap-2"
         >
-          <span>✓</span> Complete Adventure
+          <span>✓</span> Complete Mission
         </button>
       </div>
     </motion.div>
@@ -557,12 +557,15 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           <ChevronLeft size={16} /> Switch Explorer
         </button>
 
-        {/* Theme badge */}
-        <div className="flex justify-center mb-4">
+        {/* Theme badge + date */}
+        <div className="flex flex-col items-center gap-1.5 mb-4">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20">
             <span className="text-base">{theme.emoji}</span>
             <span className="text-white font-bold text-sm tracking-wide">{theme.name}</span>
           </div>
+          <p className="text-white/70 text-xs font-medium">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
 
         {/* Greeting */}
@@ -666,10 +669,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             className="bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 rounded-3xl p-8 text-center shadow-lift"
           >
             <div className="text-6xl mb-4 animate-float">🏆</div>
-            <p className="font-black text-white text-2xl mb-2 tracking-tight">Adventure Complete!</p>
+            <p className="font-black text-white text-2xl mb-2 tracking-tight">All Missions Done!</p>
             <p className="text-white/90 text-sm leading-relaxed mb-5 font-medium">
               You crushed every single mission today!<br />
-              Come back tomorrow for a brand-new adventure.
+              Come back tomorrow for a fresh set of missions.
             </p>
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-4 backdrop-blur-sm">
               <Trophy size={16} /> {done.length} missions · +{done.length * 10} BrytCoins

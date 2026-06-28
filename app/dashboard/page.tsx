@@ -288,7 +288,7 @@ export default function DashboardPage() {
     if (children.length === 0) return "Let's get your family set up.";
     const name = children.length === 1 ? children[0].name : 'your family';
     const h = new Date().getHours();
-    if (totalToday === 0) return `Ready to set up adventures for ${name} today?`;
+    if (totalToday === 0) return `Ready to set up missions for ${name} today?`;
     if (totalTasksDone === totalToday && totalToday > 0)
       return `${name} crushed every mission today — what an explorer! 🎉`;
     if (totalTasksDone > 0 && totalPending > 0)
@@ -355,6 +355,9 @@ export default function DashboardPage() {
               {getGreeting()}, {firstName}!
             </h1>
             <p className="text-sm text-gray-500 mt-1">{getStoryline()}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
           {/* Day theme banner */}
           <div className={`bg-gradient-to-r ${dayTheme.gradient} rounded-2xl px-5 py-3.5 flex items-center gap-3`}>
@@ -515,7 +518,7 @@ export default function DashboardPage() {
                     ) : (
                       <div className="text-center py-3">
                         <p className="text-2xl mb-1">🗺️</p>
-                        <p className="text-xs text-gray-400 font-medium">No adventures yet today.</p>
+                        <p className="text-xs text-gray-400 font-medium">No missions yet today.</p>
                         <p className="text-xs text-gray-400">Generate missions to get started!</p>
                       </div>
                     )}
