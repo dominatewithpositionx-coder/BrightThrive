@@ -194,9 +194,15 @@ Use these agents in sequence for common workflows. See `docs/agent-workflow.md` 
 
 ### When planning a new feature:
 1. `product-strategy-agent` — loop alignment + scope check
-2. `copy-positioning-agent` — draft parent-facing copy
-3. `child-experience-agent` — if feature touches Kid Mode
-4. `parent-experience-agent` — if feature touches dashboard/onboarding
+2. `growth-behavioral-science-agent` — habit formation, motivation, ethics check
+3. `copy-positioning-agent` — draft parent-facing copy
+4. `child-experience-agent` — if feature touches Kid Mode
+5. `parent-experience-agent` — if feature touches dashboard/onboarding
+
+### When designing missions, rewards, streaks, or retention mechanics:
+1. `growth-behavioral-science-agent` — behavioral science assessment and ethical review
+2. `ai-mission-agent` — mission quality and personalization
+3. `child-experience-agent` — child-facing presentation
 
 ### For UI work:
 1. `ui-polish-agent` — design system compliance
@@ -217,3 +223,5 @@ Use these agents in sequence for common workflows. See `docs/agent-workflow.md` 
 8. **Always run `npx tsc --noEmit` before reporting a task complete**
 9. **Never show raw Supabase errors to end users** — always return friendly messages
 10. **Child data belongs to the parent only** — all queries must be scoped to `parent_id`
+11. **Never recommend shame, guilt, or punishment mechanics** — BrightThrive is a positive earning loop, not a restriction system
+12. **Never recommend features that restrict screen time automatically** — restriction is the parent's role; BrightThrive enables earning

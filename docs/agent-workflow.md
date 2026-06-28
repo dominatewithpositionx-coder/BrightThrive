@@ -202,7 +202,44 @@ Confirm all are still true after the change:
 
 ---
 
-## Workflow 6: New Feature Planning
+## Workflow 6: Behavioral Science Review
+
+**When to use:** Before shipping any mission design, reward mechanic, streak system, badge, retention feature, onboarding question, or anything that shapes how children and parents feel about using BrightThrive long-term.
+
+### Step 1 — Behavioral assessment
+```
+Agent: growth-behavioral-science-agent
+Ask: "We are building [feature]. Here is how it works: [description].
+Assess: does this build lasting habits? Does it risk shame or manipulation? 
+What does SDT / habit research say about this design?"
+```
+
+### Step 2 — Ethical check
+```
+Agent: growth-behavioral-science-agent
+Ask: "Are there any dark patterns, addiction mechanics, or child welfare concerns 
+in [feature]? What should we NOT build yet?"
+```
+
+### Step 3 — Mission-specific review (if changing mission categories or content)
+```
+Agent: ai-mission-agent
+Ask: "Review the mission set for age band [X]. Do missions satisfy competence, 
+connection, contribution, creativity, or curiosity? Which are weakest?"
+```
+
+### Common behavioral red flags to check:
+- Streaks that shame children for rest days
+- Reward withdrawal as punishment
+- Social comparison between children
+- Variable/random reward schedules (slot machine mechanics)
+- Push notification guilt trips
+- Automatic screen-time restriction (BrightThrive earns, never restricts)
+- Language that frames screen time as something to be "allowed" not "earned"
+
+---
+
+## Workflow 8: New Feature Planning
 
 **When to use:** Before starting implementation of a new feature.
 
@@ -211,6 +248,13 @@ Confirm all are still true after the change:
 Agent: product-strategy-agent
 Ask: "We want to add [feature description]. Does this align with the earned screen-time loop? 
 Is it Pilot scope or Phase 2? What's the parent and child impact?"
+```
+
+### Step 1b — Behavioral science check (for missions, rewards, streaks, retention)
+```
+Agent: growth-behavioral-science-agent
+Ask: "We want to add [feature]. Does this build lasting habits or short-term compliance? 
+Are there risks of shame, anxiety, or dark patterns? What does behavioral science recommend?"
 ```
 
 ### Step 2 — Copy planning
@@ -249,6 +293,8 @@ Is any of this child PII that needs special handling?"
 | Problem | Agent |
 |---|---|
 | "Should we build this?" | `product-strategy-agent` |
+| "Does this build habits or just compliance?" | `growth-behavioral-science-agent` |
+| "Is this streak / reward mechanic healthy?" | `growth-behavioral-science-agent` |
 | "Kid Mode feels boring / confusing" | `child-experience-agent` |
 | "Dashboard is confusing parents" | `parent-experience-agent` |
 | "Missions are wrong age / generic" | `ai-mission-agent` |
