@@ -73,10 +73,11 @@ export default function TasksPage() {
       child_id: childId,
       title,
       category: 'general',
-      screen_time_reward: 0,
+      screen_time_reward: 5,
       is_completed: false,
       mission_date: today(),
     }]);
+    if (error) console.error('[dashboard/tasks] insert error:', error.message, error.code, error.details);
 
     if (error) toast.error('Error adding task: ' + error.message);
     else {
@@ -110,9 +111,10 @@ export default function TasksPage() {
     });
 
     if (coinError) {
-      console.error('Error updating coins:', coinError);
+      console.error('[dashboard/tasks] add_coins error:', coinError.message, coinError.code, coinError.details);
       toast.error('Error updating points.');
     } else {
+      console.log(`[dashboard/tasks] add_coins ok: child=${mission.child_id} amount=${pointsChange}`);
       toast.success(mission.is_completed ? 'Task undone. Points removed.' : 'Task completed! +10 pts logged.');
     }
 

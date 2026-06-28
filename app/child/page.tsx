@@ -572,10 +572,14 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
   const done    = missions.filter((m) => m.is_completed);
   const pending = missions.filter((m) => !m.is_completed);
-  const allDone = missions.length > 0 && pending.length === 0 && !isDemoMode;
+  console.log(`[ChildView] render: total=${missions.length} active=${pending.length} completed=${done.length} round=${missionRound}`);
+  // Only celebrate when a meaningful pack was actually completed (≥3 missions done, none left).
+  // A single old completed mission from a previous session must never trigger this screen.
+  const allDone = done.length >= 3 && pending.length === 0 && !isDemoMode;
   const progress = missions.length > 0 ? Math.round((done.length / missions.length) * 100) : 0;
-  const screenTimeEarned = done.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
-  const screenTimePotential = missions.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
+  // Use `|| 5` (not `?? 5`) so parent-added tasks with explicit screen_time_reward=0 still earn 5 mins.
+  const screenTimeEarned = done.reduce((sum, m) => sum + (m.screen_time_reward || 5), 0);
+  const screenTimePotential = missions.reduce((sum, m) => sum + (m.screen_time_reward || 5), 0);
 
   const pendingMorning   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'morning');
   const pendingAfternoon = pending.filter(m => getDaypartGroup(m.category ?? '') === 'afternoon');
@@ -775,7 +779,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
               You crushed every mission{missionRound > 0 ? ` in Round ${missionRound + 1}` : ' today'}!
             </p>
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-5 backdrop-blur-sm">
-              <Trophy size={16} /> {done.length} missions · +{screenTimeEarned} iPad mins earned
+              <Trophy size={16} /> {done.length} mission{done.length !== 1 ? 's' : ''} · +{screenTimeEarned} iPad mins earned
             </div>
             <div className="space-y-2.5">
               <button
@@ -1058,8 +1062,13 @@ export default function ChildPage() {
     if (planLoc) (window as unknown as Record<string, string>)['__bt_plan_loc'] = planLoc;
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
     const enrichedKids = kids.map(c => ({ ...c, points: walletMap[c.id] ?? 0 }));
+    const fetchedMissions = missionData || [];
+    const activeFetched = fetchedMissions.filter(m => !m.is_completed);
+    const completedFetched = fetchedMissions.filter(m => m.is_completed);
+    console.log(`[child/fetchData] fetched=${fetchedMissions.length} active=${activeFetched.length} completed=${completedFetched.length}`);
+
     setChildren(enrichedKids);
-    setMissions(missionData || []);
+    setMissions(fetchedMissions);
     setRewards(rewardRes.data || []);
     setStreaks(Object.fromEntries((streakRes.data || []).map(s => [s.child_id, s.current_streak])));
     setLoadState('ok');
@@ -1079,16 +1088,19 @@ export default function ChildPage() {
   useEffect(() => {
     if (loading) return;
     if (children.length === 0) return;
-    if (missions.length > 0) return;
+    // Only skip auto-gen if there are already incomplete missions — completed missions from
+    // a previous session or parent-added tasks should not block a fresh pack being generated.
+    if (missions.some(m => !m.is_completed)) return;
     if (autoGenDoneRef.current) return;
     autoGenDoneRef.current = true;
+    console.log(`[child/autoGen] triggering auto-gen for ${children.length} child(ren). Total missions=${missions.length}, completed=${missions.filter(m => m.is_completed).length}, incomplete=0`);
 
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
       for (const child of children) {
         try {
-          await fetch('/api/generate-missions', {
+          const genRes = await fetch('/api/generate-missions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1100,7 +1112,11 @@ export default function ChildPage() {
               childAge: child.age,
             }),
           });
-        } catch { /* non-fatal */ }
+          const genData = await genRes.json();
+          console.log(`[child/autoGen] child=${child.name} status=${genRes.status} generated=${genData.generated} pack=${genData.pack ?? 'none'} error=${genData.error ?? 'none'}`);
+        } catch (e) {
+          console.error('[child/autoGen] fetch error:', e);
+        }
       }
       fetchData();
     })();
