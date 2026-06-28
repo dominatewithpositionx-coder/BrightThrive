@@ -406,20 +406,20 @@ function MoodCheckIn({ childName, onSelect }: { childName: string; onSelect: (mo
           <p className="font-bold text-navy text-lg">Hey {childName}!</p>
           <p className="text-gray-500 text-sm mt-1">How are you feeling right now?</p>
         </div>
-        <div className="grid grid-cols-5 gap-1.5 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           {MOODS.map((m) => (
             <button
               key={m.key}
               onClick={() => setPick(m.key)}
               aria-label={`I'm feeling ${m.label}`}
-              className={`flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all active:scale-95 ${
+              className={`flex flex-col items-center gap-2 py-4 rounded-2xl border-2 transition-all active:scale-95 ${
                 pick === m.key
                   ? 'border-amber-400 bg-amber-50 scale-105 shadow-sm'
                   : 'border-gray-100 bg-gray-50 hover:border-amber-200'
               }`}
             >
-              <span className="text-2xl leading-none">{m.emoji}</span>
-              <span className="text-[10px] font-medium text-gray-600 leading-tight text-center">{m.label}</span>
+              <span className="text-4xl leading-none">{m.emoji}</span>
+              <span className="text-sm font-semibold text-gray-600 leading-tight text-center">{m.label}</span>
             </button>
           ))}
         </div>
