@@ -557,10 +557,11 @@ function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   );
 }
 
-function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionError, missionSuccess, weather, isDemoMode }: {
+function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
+  missionPack: string | null;
   missionError: string | null; missionSuccess: string | null;
   weather: WeatherData | null; isDemoMode?: boolean;
 }) {
@@ -824,10 +825,11 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </motion.div>
         )}
 
-        {/* Mission groups by time of day */}
-        {missionRound > 0 && (pendingMorning.length + pendingAfternoon.length + pendingEvening.length + pendingBonus.length) > 0 && (
+        {/* Pack name / round indicator */}
+        {missionPack && (pendingMorning.length + pendingAfternoon.length + pendingEvening.length + pendingBonus.length) > 0 && (
           <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
-            <span>🔄</span> Round {missionRound + 1} Missions
+            <span>{missionRound > 0 ? '🔄' : '✨'}</span>
+            {missionRound > 0 ? `Round ${missionRound + 1} — ` : ''}{missionPack}
           </div>
         )}
         <MissionGroup title="Morning Missions"   emoji="🌅" missions={pendingMorning}   onToggle={onMissionToggle} accent="bg-amber-50" />
@@ -938,6 +940,7 @@ export default function ChildPage() {
   const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
   const [weather, setWeather]       = useState<WeatherData | null>(null);
   const [missionRound, setMissionRound]     = useState(0);
+  const [missionPack, setMissionPack]       = useState<string | null>(null);
   const [generatingMore, setGeneratingMore] = useState(false);
   const [lastGenError, setLastGenError]     = useState<string | null>(null);
   const [weatherFetchedAt, setWeatherFetchedAt] = useState<string | null>(null);
@@ -1152,6 +1155,7 @@ export default function ChildPage() {
     setSelectedMood(null);
     setPhase('picker');
     setMissionRound(0);
+    setMissionPack(null);
   }
 
   async function handleGenerateMore() {
@@ -1171,13 +1175,14 @@ export default function ChildPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ childId: selected.id, count: 8 }),
+        body: JSON.stringify({ childId: selected.id, count: 8, missionRound }),
       });
       const data = await res.json();
       if (!res.ok) {
         setLastGenError(data.error ?? 'Could not generate more missions.');
       } else {
         setMissionRound(r => r + 1);
+        if (data.pack) setMissionPack(data.pack);
         await fetchData();
       }
     } catch (e) {
@@ -1323,6 +1328,7 @@ export default function ChildPage() {
             onGenerateMore={handleGenerateMore}
             generatingMore={generatingMore}
             missionRound={missionRound}
+            missionPack={missionPack}
             missionError={missionError}
             missionSuccess={missionSuccess}
             weather={weather}
