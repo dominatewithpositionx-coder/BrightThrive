@@ -163,12 +163,12 @@ const DEMO_MISSIONS: Omit<Mission, 'child_id'>[] = [
 ];
 
 const AVATAR_COLORS = [
-  { bg: 'bg-green-400',  ring: 'ring-green-300',  text: 'text-green-900',  light: 'bg-teal-50'  },
-  { bg: 'bg-blue-400',   ring: 'ring-blue-300',   text: 'text-blue-900',   light: 'bg-blue-50'   },
-  { bg: 'bg-purple-400', ring: 'ring-purple-300', text: 'text-purple-900', light: 'bg-purple-50' },
-  { bg: 'bg-orange-400', ring: 'ring-orange-300', text: 'text-orange-900', light: 'bg-orange-50' },
-  { bg: 'bg-pink-400',   ring: 'ring-pink-300',   text: 'text-pink-900',   light: 'bg-pink-50'   },
-  { bg: 'bg-teal-400',   ring: 'ring-teal-300',   text: 'text-teal-900',   light: 'bg-teal-50'   },
+  { bg: 'bg-emerald-400', glow: 'shadow-emerald-200', border: 'border-emerald-200', text: 'text-emerald-900', light: 'bg-emerald-50',  gradient: 'from-emerald-400 to-teal-400' },
+  { bg: 'bg-blue-400',    glow: 'shadow-blue-200',    border: 'border-blue-200',    text: 'text-blue-900',    light: 'bg-blue-50',     gradient: 'from-blue-400 to-indigo-400'   },
+  { bg: 'bg-violet-400',  glow: 'shadow-violet-200',  border: 'border-violet-200',  text: 'text-violet-900',  light: 'bg-violet-50',   gradient: 'from-violet-400 to-purple-400' },
+  { bg: 'bg-orange-400',  glow: 'shadow-orange-200',  border: 'border-orange-200',  text: 'text-orange-900',  light: 'bg-orange-50',   gradient: 'from-orange-400 to-amber-400'  },
+  { bg: 'bg-rose-400',    glow: 'shadow-rose-200',    border: 'border-rose-200',    text: 'text-rose-900',    light: 'bg-rose-50',     gradient: 'from-rose-400 to-pink-400'     },
+  { bg: 'bg-teal-400',    glow: 'shadow-teal-200',    border: 'border-teal-200',    text: 'text-teal-900',    light: 'bg-teal-50',     gradient: 'from-teal-400 to-cyan-400'     },
 ];
 function getColors(name: string) {
   let h = 0; for (const c of name) h += c.charCodeAt(0);
@@ -260,8 +260,8 @@ function PinDialog({ childId, childName, onUnlock, onCancel }: { childId: string
 
 function ChildHeader() {
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-      <Logo variant="full" className="h-[48px] w-auto" priority />
+    <div className="absolute top-0 left-0 right-0 flex items-center justify-center px-6 pt-safe py-4 z-10">
+      <Logo variant="full" className="h-[44px] w-auto" priority />
     </div>
   );
 }
@@ -269,21 +269,29 @@ function ChildHeader() {
 type LoadState = 'ok' | 'auth' | 'no-children' | 'query';
 
 function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loadState: LoadState; onSelect: (c: Child) => void }) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
 
-      {/* Auth gate — full-screen redirect prompt, no illustration */}
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 flex flex-col items-center justify-center px-6 py-24 animate-fade-in relative overflow-hidden">
+
+      {/* Decorative background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-teal-100/60 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-indigo-100/60 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-amber-50/40 blur-3xl" />
+      </div>
+
+      {/* Auth gate */}
       {loadState === 'auth' && (
-        <div className="text-center max-w-sm space-y-4">
-          <div className="text-5xl mb-2">🔒</div>
-          <h1 className="text-2xl font-bold text-navy">Parent login required</h1>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Kid Mode is launched from the parent dashboard. Please log in as a parent, then open Kid Mode from there.
+        <div className="relative text-center max-w-sm space-y-5">
+          <div className="text-6xl mb-2">🔒</div>
+          <h1 className="text-3xl font-black text-navy">Parent login required</h1>
+          <p className="text-gray-500 leading-relaxed">
+            Kid Mode is launched from the parent dashboard. Log in as a parent, then open Kid Mode from there.
           </p>
-          <a
-            href="/login"
-            className="inline-block mt-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
-          >
+          <a href="/login" className="inline-block mt-2 bg-teal-600 hover:bg-teal-700 text-white font-bold px-10 py-4 rounded-2xl transition-colors text-base shadow-lg shadow-teal-200">
             Parent Login
           </a>
         </div>
@@ -291,66 +299,109 @@ function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loa
 
       {/* Query / network error */}
       {loadState === 'query' && (
-        <div className="text-center max-w-xs space-y-3">
-          <div className="text-4xl mb-2">⚠️</div>
-          <p className="font-semibold text-gray-700">Could not load profiles</p>
-          <p className="text-sm text-gray-500">Check your connection and try again, or ask a parent for help.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm"
-          >
+        <div className="relative text-center max-w-xs space-y-4">
+          <div className="text-5xl mb-2">⚠️</div>
+          <p className="font-bold text-gray-700 text-lg">Could not load profiles</p>
+          <p className="text-gray-500 text-sm">Check your connection and try again, or ask a parent for help.</p>
+          <button onClick={() => window.location.reload()} className="mt-2 bg-white border border-gray-200 text-gray-700 font-semibold px-8 py-3 rounded-2xl transition-colors text-sm shadow-sm hover:shadow-md">
             Try again
           </button>
         </div>
       )}
 
-      {/* Parent has no children set up */}
+      {/* No children set up */}
       {loadState === 'no-children' && (
-        <div className="text-center max-w-sm space-y-4">
-          <div className="text-5xl mb-2">🌱</div>
-          <h1 className="text-2xl font-bold text-navy">Add a child first</h1>
-          <p className="text-sm text-gray-500 leading-relaxed">
+        <div className="relative text-center max-w-sm space-y-5">
+          <div className="text-6xl mb-2">🌱</div>
+          <h1 className="text-3xl font-black text-navy">Add a child first</h1>
+          <p className="text-gray-500 leading-relaxed">
             No child profiles are set up yet. Go to the parent dashboard to add your first child, then come back here.
           </p>
-          <a
-            href="/dashboard/children"
-            className="inline-block mt-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
-          >
+          <a href="/dashboard/children" className="inline-block mt-2 bg-teal-600 hover:bg-teal-700 text-white font-bold px-10 py-4 rounded-2xl transition-colors text-base shadow-lg shadow-teal-200">
             Add a Child
           </a>
         </div>
       )}
 
-      {/* Child picker */}
+      {/* ── Child picker ── */}
       {loadState === 'ok' && children.length > 0 && (
-        <>
-          <div className="text-center mb-10">
-            <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-navy">Who&apos;s completing missions today?</h1>
-            <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
+        <div className="relative w-full flex flex-col items-center">
+
+          {/* Heading */}
+          <div className="text-center mb-12">
+            <p className="text-teal-600 font-semibold text-base tracking-wide mb-2">{timeGreeting}! 👋</p>
+            <h1 className="text-4xl sm:text-5xl font-black text-navy leading-tight tracking-tight">
+              Who&apos;s here today?
+            </h1>
+            <p className="text-gray-400 mt-3 text-lg font-medium">Tap your name to start your missions</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
-            {children.map((child) => {
+
+          {/* Cards — 1 col on tiny screens, 2 col at sm, 3 col at md+ */}
+          <div className={`grid gap-5 w-full
+            ${children.length === 1 ? 'grid-cols-1 max-w-xs' : ''}
+            ${children.length === 2 ? 'grid-cols-2 max-w-md' : ''}
+            ${children.length >= 3 ? 'grid-cols-2 sm:grid-cols-3 max-w-2xl' : ''}
+          `}>
+            {children.map((child, i) => {
               const colors = getColors(child.name);
               return (
-                <button
+                <motion.button
                   key={child.id}
                   onClick={() => onSelect(child)}
-                  aria-label={`Select ${child.name}`}
-                  className={`${colors.light} border-2 ${colors.ring.replace('ring','border')} rounded-3xl p-6 flex flex-col items-center gap-3 hover:scale-105 active:scale-95 transition-transform duration-150 shadow-sm`}
+                  aria-label={`${child.name} — tap to start`}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: i * 0.08, ease: [0.4, 0, 0.2, 1] }}
+                  whileHover={{ scale: 1.04, y: -4 }}
+                  whileTap={{ scale: 0.96 }}
+                  className={`
+                    group relative flex flex-col items-center
+                    bg-white rounded-[2rem] p-8 pt-10 pb-7
+                    border-2 ${colors.border}
+                    shadow-xl ${colors.glow} shadow-2xl
+                    hover:shadow-2xl transition-shadow duration-300
+                    focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-400
+                  `}
                 >
-                  <div className={`w-20 h-20 rounded-full ${colors.bg} flex items-center justify-center text-4xl font-bold text-white shadow-md`}>
-                    {child.name[0].toUpperCase()}
+                  {/* Avatar */}
+                  <div className="relative mb-5">
+                    {/* Outer glow ring */}
+                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${colors.gradient} opacity-20 blur-md scale-110`} />
+                    {/* Avatar circle */}
+                    <div className={`relative w-28 h-28 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-lg`}>
+                      <span className="text-5xl font-black text-white leading-none select-none">
+                        {child.name[0].toUpperCase()}
+                      </span>
+                    </div>
+                    {/* Streak badge */}
+                    {child.points > 0 && (
+                      <div className="absolute -bottom-1 -right-1 bg-amber-400 rounded-full w-8 h-8 flex items-center justify-center shadow-md border-2 border-white">
+                        <Star size={13} fill="white" className="text-white" />
+                      </div>
+                    )}
                   </div>
-                  <span className={`text-lg font-bold ${colors.text}`}>{child.name}</span>
-                  <div className="flex items-center gap-1 text-amber-500 font-semibold text-sm">
-                    <Star size={14} fill="currentColor" />{child.points} pts
+
+                  {/* Name */}
+                  <span className="text-2xl font-black text-navy tracking-tight leading-none mb-2">
+                    {child.name}
+                  </span>
+
+                  {/* Points */}
+                  <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full px-3 py-1">
+                    <Star size={12} fill="#F59E0B" className="text-amber-400 flex-shrink-0" />
+                    <span className="text-amber-600 font-bold text-sm">{child.points} coins</span>
                   </div>
-                </button>
+
+                  {/* Tap hint — only visible on hover/focus on devices that support hover */}
+                  <div className="absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <span className="text-xs text-gray-400 font-medium">Tap to start →</span>
+                  </div>
+                </motion.button>
               );
             })}
           </div>
-        </>
+
+        </div>
       )}
     </div>
   );
@@ -1143,10 +1194,15 @@ export default function ChildPage() {
         />
       )}
 
-      {phase !== 'missions' && <ChildHeader />}
+      {/* ChildHeader floats inside ChildPicker via absolute positioning.
+          For mood-check / mood-response, render it as a normal top bar. */}
+      {phase !== 'missions' && phase !== 'picker' && <ChildHeader />}
 
       {phase === 'picker' && (
-        <ChildPicker children={children} loadState={loadState} onSelect={handleSelect} />
+        <>
+          <ChildHeader />
+          <ChildPicker children={children} loadState={loadState} onSelect={handleSelect} />
+        </>
       )}
 
       {/* Install prompt shown after child profile is selected (mood-check onwards) */}
