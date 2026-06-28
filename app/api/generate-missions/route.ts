@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceSupabaseClient } from '@/lib/supabase';
-import { getWeather, weatherMissionHint, fetchWeatherCached } from '@/lib/weather';
+import { weatherMissionHint, fetchWeatherCached } from '@/lib/weather';
 import { MOOD_MISSION_HINTS, type MoodKey } from '@/lib/mood';
 import THEMES from '@/lib/themes';
 
@@ -10,19 +10,6 @@ export const runtime = 'nodejs';
 
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 60_000;
-
-function checkRateLimit(key: string): boolean {
-  const last = rateLimitMap.get(key);
-  const now = Date.now();
-  if (last && now - last < RATE_LIMIT_MS) return false;
-  rateLimitMap.set(key, now);
-  if (rateLimitMap.size > 5000) {
-    for (const [k, ts] of rateLimitMap) {
-      if (now - ts > RATE_LIMIT_MS * 10) rateLimitMap.delete(k);
-    }
-  }
-  return true;
-}
 
 function ageBand(age: number): string {
   if (age <= 5) return '3-5';
@@ -36,11 +23,50 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
+function makeRequestId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
 type MissionDraft = {
   title: string;
   category?: string;
   screen_time_reward?: number;
 };
+
+// Structured logger — every line is prefixed with the request ID for easy log filtering.
+// Usage: log(rid, 'step_name', { key: value })
+function log(rid: string, step: string, data?: Record<string, unknown>) {
+  const payload: Record<string, unknown> = { debugRequestId: rid, step };
+  if (data) Object.assign(payload, data);
+  console.log(`[mission-debug ${rid}]`, JSON.stringify(payload));
+}
+
+// Build a structured error response. The `error` field is always user-safe.
+function errResponse(
+  rid: string,
+  status: number,
+  safeMessage: string,
+  opts: {
+    errorStep: string;
+    errorType: string;
+    fallbackAttempted?: boolean;
+    fallbackSucceeded?: boolean;
+    detail?: string;
+  }
+) {
+  log(rid, 'error_response', { status, errorStep: opts.errorStep, errorType: opts.errorType, safeMessage, detail: opts.detail });
+  return NextResponse.json(
+    {
+      error: safeMessage,
+      debugRequestId: rid,
+      errorStep: opts.errorStep,
+      errorType: opts.errorType,
+      fallbackAttempted: opts.fallbackAttempted ?? false,
+      fallbackSucceeded: opts.fallbackSucceeded ?? false,
+    },
+    { status }
+  );
+}
 
 const FALLBACK: Record<string, MissionDraft[]> = {
   '3-5': [
@@ -119,47 +145,48 @@ const FALLBACK: Record<string, MissionDraft[]> = {
 
 const CATEGORIES = ['movement', 'responsibility', 'emotional_intelligence', 'learning', 'creativity', 'family_connection', 'kindness', 'mindfulness'];
 
-// Structured logger — each entry tagged with [GM] for easy log filtering.
-function gm(step: string, data?: Record<string, unknown>) {
-  const payload: Record<string, unknown> = { step };
-  if (data) Object.assign(payload, data);
-  console.log('[GM]', JSON.stringify(payload));
-}
-
 export async function POST(req: NextRequest) {
-  gm('request_received');
+  const rid = makeRequestId();
+  log(rid, 'request_received', { url: req.url, method: req.method });
 
+  // ── Parse body ──────────────────────────────────────────────────────────────
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch (e) {
-    gm('body_parse_error', { error: String(e) });
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    log(rid, 'body_parse_error', { error: String(e) });
+    return errResponse(rid, 400, 'Invalid request.', { errorStep: 'body_parse', errorType: 'parse_error' });
   }
 
-  const { childId, childAge, parentId, location, locationLabel, locationCity, mood, weatherSummary, count } = body as {
+  const {
+    childId, childAge, parentId, location, locationLabel, locationCity,
+    mood, weatherSummary, count,
+  } = body as {
     childId?: string; childAge?: number; parentId?: string; location?: string;
     locationLabel?: string; locationCity?: string; mood?: string;
     weatherSummary?: string; count?: number;
   };
 
-  gm('params', { childId, childAge: childAge ?? null, parentId: parentId ? '[present]' : null, mood: mood ?? null, count: count ?? null });
+  log(rid, 'params', {
+    hasChildId: !!childId,
+    hasChildAge: childAge != null,
+    hasParentId: !!parentId,
+    hasMood: !!mood,
+    hasWeather: !!weatherSummary,
+    count: count ?? null,
+  });
 
   if (!childId) {
-    gm('missing_childId');
-    return NextResponse.json({ error: 'childId is required' }, { status: 400 });
+    return errResponse(rid, 400, 'childId is required.', { errorStep: 'params_validation', errorType: 'missing_param' });
   }
 
   const requestedCount = Math.min(15, Math.max(8, Number(count) || 10));
 
+  // ── Auth ─────────────────────────────────────────────────────────────────────
   const authHeader = req.headers.get('authorization') ?? '';
   const callerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  gm('auth_header', { hasToken: !!callerToken });
+  log(rid, 'auth_header_check', { hasToken: !!callerToken, path: callerToken ? 'bearer_session' : parentId ? 'kid_view_parentId' : 'none' });
 
-  // Two supported callers:
-  //  1. Parent dashboard — has a Supabase auth session (Bearer token).
-  //  2. Kid View (/child) — no auth session; passes parentId in the body and
-  //     we verify the child belongs to that parent via the service role.
   let resolvedParentId: string;
   let childRow: { id: string; age: number | null; location_label?: string | null; location_city?: string | null } | null = null;
 
@@ -172,13 +199,15 @@ export async function POST(req: NextRequest) {
   );
 
   if (callerToken) {
-    gm('auth_path', { path: 'bearer_token' });
+    // Parent dashboard — Bearer token path
     const { data: { user }, error: authError } = await anonSupabase.auth.getUser();
     if (authError || !user) {
-      gm('auth_getUser_failed', { error: authError?.message ?? 'no user' });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      log(rid, 'auth_getUser_failed', { error: authError?.message ?? 'no user returned' });
+      return errResponse(rid, 401, 'Session expired. Please refresh and try again.', {
+        errorStep: 'auth_getUser', errorType: 'auth_error', detail: authError?.message,
+      });
     }
-    gm('auth_getUser_ok', { userId: user.id });
+    log(rid, 'auth_getUser_ok', { userId: user.id });
     resolvedParentId = (parentId as string | undefined) ?? user.id;
 
     const { data, error: childError } = await anonSupabase
@@ -187,33 +216,50 @@ export async function POST(req: NextRequest) {
       .eq('id', childId)
       .eq('parent_id', resolvedParentId)
       .single();
+
     if (childError || !data) {
-      gm('child_lookup_session_failed', { error: childError?.message ?? 'no data', code: childError?.code });
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      log(rid, 'child_lookup_session_failed', {
+        error: childError?.message ?? 'no data', code: childError?.code,
+        hint: childError?.hint, details: childError?.details,
+      });
+      return errResponse(rid, 403, 'Child not found.', {
+        errorStep: 'child_lookup_session', errorType: childError?.code ?? 'not_found',
+        detail: childError?.message,
+      });
     }
-    gm('child_lookup_session_ok', { childId: (data as { id: string }).id });
+    log(rid, 'child_lookup_session_ok', { childId: (data as { id: string }).id, hasAge: (data as { age: number | null }).age != null });
     childRow = data as { id: string; age: number | null; location_label?: string | null; location_city?: string | null };
+
   } else if (parentId) {
-    gm('auth_path', { path: 'parentId_kid_view' });
-    // Kid View: verify child↔parent via service role (RLS-bypassing) read.
+    // Kid View — no session; verify child↔parent via service role read
     let serviceSupabase;
     try {
       serviceSupabase = createServiceSupabaseClient();
-      gm('service_client_created_for_child_lookup');
+      log(rid, 'service_client_created_kid_view');
     } catch (err) {
-      gm('service_client_creation_failed', { error: String(err) });
-      return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+      log(rid, 'service_client_creation_failed', { error: String(err) });
+      return errResponse(rid, 500, 'Server configuration error.', {
+        errorStep: 'service_client_init', errorType: 'config_error', detail: String(err),
+      });
     }
+
     const { data, error: childError } = await serviceSupabase
       .from('children')
       .select('id, age, parent_id, location_label, location_city')
       .eq('id', childId)
       .single();
-    if (childError || !data || (data as { parent_id: string }).parent_id !== parentId) {
-      gm('child_lookup_kid_view_failed', { error: childError?.message ?? 'mismatch', code: childError?.code });
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const parentMatch = data && (data as { parent_id: string }).parent_id === parentId;
+    if (childError || !parentMatch) {
+      log(rid, 'child_lookup_kid_view_failed', {
+        error: childError?.message ?? 'parent mismatch', code: childError?.code,
+      });
+      return errResponse(rid, 403, 'Child not found.', {
+        errorStep: 'child_lookup_kid_view', errorType: childError?.code ?? 'parent_mismatch',
+        detail: childError?.message,
+      });
     }
-    gm('child_lookup_kid_view_ok', { childId: (data as { id: string }).id });
+    log(rid, 'child_lookup_kid_view_ok', { childId: (data as { id: string }).id });
     resolvedParentId = parentId as string;
     childRow = {
       id: (data as { id: string }).id,
@@ -222,28 +268,32 @@ export async function POST(req: NextRequest) {
       location_city: (data as { location_city?: string | null }).location_city,
     };
   } else {
-    gm('no_auth_no_parentId');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    log(rid, 'no_auth_no_parentId');
+    return errResponse(rid, 401, 'Unauthorized.', { errorStep: 'auth_check', errorType: 'no_credentials' });
   }
 
-  // Per-child rate limit: allows a parent to generate for all children in one batch.
+  // ── Rate limit ───────────────────────────────────────────────────────────────
   const rlKey = `child:${childId}`;
   const now = Date.now();
   const lastGen = rateLimitMap.get(rlKey);
   if (lastGen && now - lastGen < RATE_LIMIT_MS) {
     const secondsLeft = Math.ceil((RATE_LIMIT_MS - (now - lastGen)) / 1000);
-    gm('rate_limited', { secondsLeft, childId });
-    return NextResponse.json(
-      { error: `Please wait ${secondsLeft} seconds before generating new missions.` },
-      { status: 429 }
-    );
+    log(rid, 'rate_limited', { secondsLeft });
+    return errResponse(rid, 429, `Please wait ${secondsLeft} seconds before generating new missions.`, {
+      errorStep: 'rate_limit', errorType: 'rate_limited',
+    });
   }
-  // Record the attempt now — will be reset if generation ultimately fails
   rateLimitMap.set(rlKey, now);
-  gm('rate_limit_passed', { childId });
+  if (rateLimitMap.size > 5000) {
+    for (const [k, ts] of rateLimitMap) {
+      if (now - ts > RATE_LIMIT_MS * 10) rateLimitMap.delete(k);
+    }
+  }
+  log(rid, 'rate_limit_passed');
 
+  // ── Supabase write client ────────────────────────────────────────────────────
   const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY);
-  gm('supabase_client_choice', { hasServiceKey, usingServiceRole: hasServiceKey });
+  log(rid, 'supabase_write_client', { hasServiceKey, strategy: hasServiceKey ? 'service_role' : 'anon_with_token' });
 
   const supabase = hasServiceKey
     ? createClient(
@@ -253,39 +303,46 @@ export async function POST(req: NextRequest) {
       )
     : anonSupabase;
 
-  const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
+  // ── Age band + family personalization ────────────────────────────────────────
+  const resolvedAge: number | null = (childAge as number | undefined) ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
+  log(rid, 'age_resolved', { resolvedAge, band });
 
-  // Load family personalization data once — used for location AND Growth Profile context
   let familyPersonalization: Record<string, unknown> = {};
   try {
     const planClient = createServiceSupabaseClient();
-    const { data: plan } = await planClient
+    const { data: plan, error: planError } = await planClient
       .from('family_plans')
       .select('personalization_data')
       .eq('parent_id', resolvedParentId)
       .maybeSingle();
-    familyPersonalization = (plan?.personalization_data as Record<string, unknown>) ?? {};
-  } catch {
-    // Non-fatal — mission generation continues without personalization context
+    if (planError) {
+      log(rid, 'family_plan_lookup_failed', { error: planError.message, code: planError.code });
+    } else {
+      familyPersonalization = (plan?.personalization_data as Record<string, unknown>) ?? {};
+      log(rid, 'family_plan_loaded', { hasData: Object.keys(familyPersonalization).length > 0 });
+    }
+  } catch (err) {
+    log(rid, 'family_plan_exception', { error: String(err) });
+    // Non-fatal — generation continues without personalization
   }
 
-  // Resolve child's location: request body > child DB row > parent plan
+  // ── Location resolution ───────────────────────────────────────────────────────
   const resolvedLocationCity: string | null =
-    locationCity ?? childRow?.location_city ?? (familyPersonalization.location as string | null) ?? null;
+    (locationCity as string | undefined) ?? childRow?.location_city ?? (familyPersonalization.location as string | null) ?? null;
   const resolvedLocationLabel: string =
-    locationLabel ?? childRow?.location_label ?? 'home';
+    (locationLabel as string | undefined) ?? childRow?.location_label ?? 'home';
 
-  let resolvedWeatherSummary: string | null = weatherSummary ?? null;
+  // ── Weather ───────────────────────────────────────────────────────────────────
+  let resolvedWeatherSummary: string | null = (weatherSummary as string | undefined) ?? null;
   let isOutdoorFriendly = false;
   let weatherHint = '';
   let weatherDetails = '';
+
   try {
     if (!resolvedWeatherSummary) {
-      let resolvedLocation: string | null = location ?? resolvedLocationCity ?? null;
-      if (!resolvedLocation) {
-        resolvedLocation = (familyPersonalization.location as string | null) ?? null;
-      }
+      const resolvedLocation = (location as string | undefined) ?? resolvedLocationCity ?? (familyPersonalization.location as string | null) ?? null;
+      log(rid, 'weather_lookup', { resolvedLocation: resolvedLocation ?? 'none' });
       if (resolvedLocation) {
         const wxData = await fetchWeatherCached(resolvedLocation);
         if (wxData) {
@@ -301,16 +358,24 @@ export async function POST(req: NextRequest) {
           if (wxData.uvIndex)           resolvedWeatherSummary += `, UV index ${wxData.uvIndex}`;
           weatherHint = weatherMissionHint({ condition: wxData.condition, tempC: wxData.tempC, isRainy, isSnowy, isHot, isCold, summary: '' });
           weatherDetails = resolvedWeatherSummary;
+          log(rid, 'weather_loaded', { condition: wxData.condition, isOutdoorFriendly });
+        } else {
+          log(rid, 'weather_no_data');
         }
+      } else {
+        log(rid, 'weather_skipped_no_location');
       }
     } else {
       isOutdoorFriendly = /outdoor friendly/i.test(resolvedWeatherSummary);
       weatherDetails = resolvedWeatherSummary;
+      log(rid, 'weather_from_request', { isOutdoorFriendly });
     }
-  } catch {
+  } catch (err) {
+    log(rid, 'weather_exception', { error: String(err) });
     // Weather is optional — proceed without it
   }
 
+  // ── Build prompt ──────────────────────────────────────────────────────────────
   const neededCategories = isOutdoorFriendly
     ? `${CATEGORIES.join(', ')}, outdoor, adventure`
     : CATEGORIES.join(', ');
@@ -333,16 +398,14 @@ export async function POST(req: NextRequest) {
   const locationLine = resolvedLocationCity
     ? `\nLocation: child is at ${resolvedLocationLabel} in ${resolvedLocationCity}.`
     : `\nLocation: child is at ${resolvedLocationLabel}.`;
-
   const contextLine = `\nContext: ${timeOfDay}, ${dayType}, ${season}.`;
 
-  // Build Family Growth Profile context from onboarding answers
   const fp = familyPersonalization;
   const growthProfileLines: string[] = [];
-  if (fp.primary_goal)           growthProfileLines.push(`Parent's Primary Goal: ${fp.primary_goal}`);
-  if (fp.child_description)      growthProfileLines.push(`Child Profile: ${fp.child_description}`);
-  if (fp.parent_involvement)     growthProfileLines.push(`Parent Involvement Style: ${fp.parent_involvement}`);
-  if (fp.motivation_preference)  growthProfileLines.push(`What Motivates This Child: ${fp.motivation_preference}`);
+  if (fp.primary_goal)          growthProfileLines.push(`Parent's Primary Goal: ${fp.primary_goal}`);
+  if (fp.child_description)     growthProfileLines.push(`Child Profile: ${fp.child_description}`);
+  if (fp.parent_involvement)    growthProfileLines.push(`Parent Involvement Style: ${fp.parent_involvement}`);
+  if (fp.motivation_preference) growthProfileLines.push(`What Motivates This Child: ${fp.motivation_preference}`);
   if (Array.isArray(fp.selected_habits) && fp.selected_habits.length > 0)
     growthProfileLines.push(`Priority Habits: ${(fp.selected_habits as string[]).join(', ')}`);
   if (fp.screen_time_preference) growthProfileLines.push(`Screen Time Earned Per Day: ${fp.screen_time_preference}`);
@@ -354,7 +417,7 @@ export async function POST(req: NextRequest) {
     : '';
 
   const systemPrompt = `You are BrytThrive's mission engine. Generate exactly ${requestedCount} child missions for age band "${band}".
-Weather: ${weatherDetails ?? 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
+Weather: ${weatherDetails || 'not available'}.${weatherHint ? ` ${weatherHint}` : ''}
 Mood: ${mood ?? 'not set'}.${mood && MOOD_MISSION_HINTS[mood as MoodKey] ? ` ${MOOD_MISSION_HINTS[mood as MoodKey]}` : ''}${locationLine}${contextLine}${themeLine}${growthProfileSection}
 Required distribution:
 - Daily (3-4): movement, responsibility, learning, healthy_habits
@@ -366,9 +429,11 @@ Rules: child-friendly language, max 10 words per title, no repetition, varied an
 Coins: easy=5, medium=10, challenging=15.
 Format: JSON array only — [{"title":"...","category":"...","screen_time_reward":5}]`;
 
+  // ── Claude call ───────────────────────────────────────────────────────────────
   let missions: MissionDraft[] = [];
+  let usedFallback = false;
   const hasAnthropicKey = !!(process.env.ANTHROPIC_API_KEY);
-  gm('claude_attempt', { hasAnthropicKey, model: 'claude-haiku-4-5-20251001', requestedCount, band });
+  log(rid, 'claude_attempt', { hasAnthropicKey, model: 'claude-haiku-4-5-20251001', requestedCount, band });
 
   try {
     if (!hasAnthropicKey) throw new Error('ANTHROPIC_API_KEY not set');
@@ -377,47 +442,47 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          // Privacy: only the age band string is sent — never the child's name or exact age.
-          content: `Generate exactly ${requestedCount} missions for a child in the ${band} age range. Return only a JSON array.`,
-        },
-      ],
+      messages: [{
+        role: 'user',
+        // Privacy: only the age band string is sent — never the child's name or exact age.
+        content: `Generate exactly ${requestedCount} missions for a child in the ${band} age range. Return only a JSON array.`,
+      }],
     });
+
     const text = message.content[0].type === 'text' ? message.content[0].text : '';
-    gm('claude_raw_response', { textLength: text.length, preview: text.slice(0, 200) });
-    let parsed;
+    log(rid, 'claude_response_received', { textLength: text.length, preview: text.slice(0, 300) });
+
+    let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch (parseErr) {
-      gm('claude_json_parse_error', { error: String(parseErr), raw: text.slice(0, 500) });
+      log(rid, 'claude_json_parse_error', { error: String(parseErr), rawPreview: text.slice(0, 500) });
       throw parseErr;
     }
+
     if (Array.isArray(parsed) && parsed.length > 0) {
       missions = parsed as MissionDraft[];
-      gm('claude_success', { missionCount: missions.length });
+      log(rid, 'claude_success', { missionCount: missions.length });
     } else {
-      gm('claude_empty_array', { parsed: JSON.stringify(parsed).slice(0, 200) });
+      log(rid, 'claude_unexpected_format', { type: typeof parsed, preview: JSON.stringify(parsed).slice(0, 200) });
     }
   } catch (err) {
-    gm('claude_failed_using_fallback', { error: String(err) });
+    log(rid, 'claude_failed_using_fallback', { error: String(err) });
   }
 
   if (missions.length === 0) {
+    usedFallback = true;
     const fallbacks = FALLBACK[band] ?? FALLBACK['default'];
     missions = fallbacks.slice(0, requestedCount);
-    gm('using_fallback_missions', { band, count: missions.length });
+    log(rid, 'fallback_missions_loaded', { band, count: missions.length });
   }
 
   missions = missions.slice(0, requestedCount);
 
+  // ── Delete existing incomplete missions for today ─────────────────────────────
   const missionDate = today();
+  log(rid, 'delete_start', { childId, missionDate });
 
-  // Delete today's incomplete missions. Try with mission_date first; if that column
-  // doesn't exist in the production DB, fall back to deleting all incomplete missions
-  // for this child (safe because completed missions are excluded).
-  gm('delete_attempt', { childId, missionDate, strategy: 'with_date' });
   const delWithDate = await supabase
     .from('missions')
     .delete()
@@ -426,23 +491,28 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
     .eq('mission_date', missionDate);
 
   if (delWithDate.error) {
-    gm('delete_with_date_failed', { error: delWithDate.error.message, code: delWithDate.error.code, details: delWithDate.error.details, hint: delWithDate.error.hint });
-    gm('delete_attempt', { childId, strategy: 'without_date' });
+    log(rid, 'delete_with_date_failed', {
+      error: delWithDate.error.message, code: delWithDate.error.code,
+      details: delWithDate.error.details, hint: delWithDate.error.hint,
+    });
+    // Retry without mission_date filter (column may not exist)
     const delFallback = await supabase
       .from('missions')
       .delete()
       .eq('child_id', childId)
       .eq('is_completed', false);
     if (delFallback.error) {
-      gm('delete_without_date_failed', { error: delFallback.error.message, code: delFallback.error.code, details: delFallback.error.details });
+      log(rid, 'delete_without_date_failed', {
+        error: delFallback.error.message, code: delFallback.error.code,
+      });
     } else {
-      gm('delete_without_date_ok');
+      log(rid, 'delete_without_date_ok');
     }
   } else {
-    gm('delete_with_date_ok');
+    log(rid, 'delete_ok');
   }
 
-  // Try to insert with mission_date. If that column doesn't exist, retry without it.
+  // ── Insert missions ───────────────────────────────────────────────────────────
   const rowsWithDate = missions.map((m) => ({
     child_id: childId,
     title: m.title,
@@ -452,11 +522,20 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
     mission_date: missionDate,
   }));
 
-  gm('insert_attempt', { strategy: 'with_date', rowCount: rowsWithDate.length, sampleRow: rowsWithDate[0] });
+  log(rid, 'insert_start', {
+    strategy: 'with_mission_date',
+    rowCount: rowsWithDate.length,
+    sampleRow: { ...rowsWithDate[0], title: '[redacted]' },
+  });
+
   let { data, error } = await supabase.from('missions').insert(rowsWithDate).select();
 
   if (error) {
-    gm('insert_with_date_failed', { error: error.message, code: error.code, details: error.details, hint: error.hint });
+    log(rid, 'insert_with_date_failed', {
+      error: error.message, code: error.code, details: error.details, hint: error.hint,
+    });
+
+    // Retry without mission_date (column may not exist in older schema)
     const rowsNoDate = missions.map((m) => ({
       child_id: childId,
       title: m.title,
@@ -464,22 +543,37 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
       screen_time_reward: m.screen_time_reward ?? 5,
       is_completed: false,
     }));
-    gm('insert_attempt', { strategy: 'without_date', rowCount: rowsNoDate.length });
+
+    log(rid, 'insert_retry', { strategy: 'without_mission_date', rowCount: rowsNoDate.length });
     const retry = await supabase.from('missions').insert(rowsNoDate).select();
+
     if (retry.error) {
-      gm('insert_without_date_failed', { error: retry.error.message, code: retry.error.code, details: retry.error.details, hint: retry.error.hint });
-      return NextResponse.json({
-        error: retry.error.message,
-        debug: { code: retry.error.code, details: retry.error.details, hint: retry.error.hint }
-      }, { status: 500 });
+      log(rid, 'insert_without_date_failed', {
+        error: retry.error.message, code: retry.error.code,
+        details: retry.error.details, hint: retry.error.hint,
+      });
+      return errResponse(rid, 500, 'Mission setup is taking longer than expected. Please try again.', {
+        errorStep: 'supabase_insert',
+        errorType: retry.error.code ?? 'insert_error',
+        fallbackAttempted: usedFallback,
+        fallbackSucceeded: false,
+        detail: retry.error.message,
+      });
     }
-    gm('insert_without_date_ok', { rowsInserted: retry.data?.length ?? 0 });
+
+    log(rid, 'insert_ok', { rowsInserted: retry.data?.length ?? 0, strategy: 'without_mission_date', usedFallback });
     data = retry.data;
     error = null;
   } else {
-    gm('insert_with_date_ok', { rowsInserted: data?.length ?? 0 });
+    log(rid, 'insert_ok', { rowsInserted: data?.length ?? 0, strategy: 'with_mission_date', usedFallback });
   }
 
-  gm('success', { tasksReturned: data?.length ?? 0, generated: missions.length });
-  return NextResponse.json({ tasks: data, generated: missions.length });
+  log(rid, 'complete', { tasksReturned: data?.length ?? 0, generated: missions.length, usedFallback });
+
+  return NextResponse.json({
+    tasks: data,
+    generated: missions.length,
+    debugRequestId: rid,
+    usedFallback,
+  });
 }

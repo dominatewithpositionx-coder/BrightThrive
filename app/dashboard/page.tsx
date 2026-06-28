@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [lastDebugId, setLastDebugId] = useState<string | null>(null);
   const [winText, setWinText]             = useState('');
   const [winSaved, setWinSaved]           = useState(false);
   const [winSaving, setWinSaving]         = useState(false);
@@ -251,6 +252,7 @@ export default function DashboardPage() {
     }
 
     let success = 0;
+    let lastFailDebugId: string | null = null;
     // Sequential so the per-parent rate limit is respected and successes can be counted.
     for (const child of children) {
       try {
@@ -262,10 +264,11 @@ export default function DashboardPage() {
           },
           body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
         });
+        const body = await res.json().catch(() => ({})) as { debugRequestId?: string };
         if (res.ok) {
           success += 1;
         } else {
-          const body = await res.json().catch(() => ({}));
+          lastFailDebugId = body.debugRequestId ?? null;
           console.error(`[dashboard] generateMissionsForAll: API returned ${res.status} for child ${child.name}:`, body);
         }
       } catch (err) {
@@ -273,8 +276,9 @@ export default function DashboardPage() {
       }
     }
     setGeneratedCount(success);
+    if (lastFailDebugId) setLastDebugId(lastFailDebugId);
     if (success === 0) {
-      setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
+      setGenerateError('Mission setup is taking longer than expected. Please try again.');
     }
     await init();
     setGeneratingAll(false);
@@ -588,7 +592,12 @@ export default function DashboardPage() {
           <section>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
             {generateError && (
-              <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>
+              <div className="mb-2">
+                <p className="text-sm text-gray-600 font-medium">{generateError}</p>
+                {process.env.NEXT_PUBLIC_ENABLE_DEBUG_TOOLS === 'true' && lastDebugId && (
+                  <p className="text-xs text-gray-400 mt-0.5 font-mono">Debug ID: {lastDebugId}</p>
+                )}
+              </div>
             )}
             <div className="flex flex-wrap gap-3">
               <button
