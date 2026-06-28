@@ -20,7 +20,6 @@ import ProgressRing from '@/components/brightthrive/ProgressRing';
 import WeatherScene from '@/components/brightthrive/WeatherScene';
 import { getDayTheme } from '@/lib/themes';
 import { getExplorerLevel } from '@/lib/levels';
-import { getMockWeather } from '@/lib/mock-weather';
 import { getClothingSuggestions } from '@/lib/weather';
 
 // ── PWA install prompt (shown after child profile selection) ──────────────────
@@ -144,8 +143,17 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   general:                { bg: 'bg-gray-50',    text: 'text-gray-600' },
 };
 
-const CORE_CATS = new Set(['movement', 'responsibility', 'learning', 'healthy_habits']);
-const BONUS_CATS = new Set(['creativity', 'outdoor', 'kindness', 'mindfulness', 'adventure']);
+// Time-of-day mission grouping — frontend-only, no DB column needed.
+// Categories map to dayparts; "bonus" is the catch-all for kindness/general.
+function getDaypartGroup(category: string): 'morning' | 'afternoon' | 'evening' | 'bonus' {
+  const MORNING  = new Set(['responsibility', 'healthy_habits', 'family_connection']);
+  const AFTERNOON = new Set(['movement', 'learning', 'outdoor', 'adventure']);
+  const EVENING  = new Set(['mindfulness', 'emotional_intelligence', 'creativity']);
+  if (MORNING.has(category))   return 'morning';
+  if (AFTERNOON.has(category)) return 'afternoon';
+  if (EVENING.has(category))   return 'evening';
+  return 'bonus';
+}
 
 // Demo missions shown while real missions are loading or if generation is pending.
 // These are client-side only — no DB writes. child_id is injected at render time.
@@ -177,30 +185,6 @@ function getColors(name: string) {
 
 function fireConfetti() {
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ec4899'] });
-}
-
-function weatherGradient(data: WeatherData): string {
-  const lc = data.condition.toLowerCase();
-  if (lc.includes('rain') || lc.includes('shower') || lc.includes('storm')) return 'from-indigo-100 to-blue-100';
-  if (lc.includes('snow')) return 'from-blue-100 to-cyan-100';
-  if (lc.includes('cloud') || lc.includes('fog')) return 'from-slate-100 to-gray-100';
-  return 'from-amber-100 to-orange-100';
-}
-
-function ChildWeatherCard({ weather }: { weather: WeatherData | null }) {
-  if (!weather) return null;
-  const outdoorMsg = weather.isOutdoorFriendly
-    ? "Nice day outside! Let's earn points outdoors."
-    : 'Stay cosy inside — great day for creative missions.';
-  return (
-    <div className={`mx-4 mt-4 rounded-2xl bg-gradient-to-br ${weatherGradient(weather)} p-4 flex items-center gap-4`}>
-      <span className="text-4xl leading-none">{weather.emoji}</span>
-      <div>
-        <p className="text-base font-bold text-gray-800">{weather.tempC}° — {weather.condition}</p>
-        <p className="text-sm text-gray-600 mt-0.5">{outdoorMsg}</p>
-      </div>
-    </div>
-  );
 }
 
 // ── PinDialog ─────────────────────────────────────────────────────────────────
@@ -573,15 +557,15 @@ function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   );
 }
 
-function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, missionError, missionSuccess, weather, isDemoMode }: {
+function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionError, missionSuccess, weather, isDemoMode }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
+  onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
   missionError: string | null; missionSuccess: string | null;
   weather: WeatherData | null; isDemoMode?: boolean;
 }) {
   const theme   = getDayTheme();
   const level   = getExplorerLevel(child.points);
-  const mockWx  = getMockWeather();
 
   const clothing = weather ? getClothingSuggestions(weather) : [];
 
@@ -592,9 +576,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
   const screenTimeEarned = done.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
   const screenTimePotential = missions.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
 
-  const pendingCore    = pending.filter(m => CORE_CATS.has(m.category ?? ''));
-  const pendingBonus   = pending.filter(m => BONUS_CATS.has(m.category ?? ''));
-  const pendingSpecial = pending.filter(m => !CORE_CATS.has(m.category ?? '') && !BONUS_CATS.has(m.category ?? ''));
+  const pendingMorning   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'morning');
+  const pendingAfternoon = pending.filter(m => getDaypartGroup(m.category ?? '') === 'afternoon');
+  const pendingEvening   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'evening');
+  const pendingBonus     = pending.filter(m => getDaypartGroup(m.category ?? '') === 'bonus');
 
   const [showCompleted, setShowCompleted]     = useState(false);
   const [showGenerateHint, setShowGenerateHint] = useState(false);
@@ -674,8 +659,29 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
         </div>
       </div>
 
+      {/* ── Weather card — shown first after header ── */}
+      <div className="px-4 -mt-8 max-w-lg mx-auto">
+        {weather ? (
+          <WeatherScene
+            weather={weather}
+            mock={null}
+            clothingSuggestions={clothing.length > 0 ? clothing : undefined}
+            locationName={child.location_name}
+            locationCity={child.location_city}
+          />
+        ) : (
+          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm px-5 py-4 flex items-center gap-3 text-gray-400">
+            <span className="text-2xl">🌤️</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-500">Weather unavailable right now</p>
+              <p className="text-xs text-gray-400">Missions work great whatever the weather!</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Explorer Level card ── */}
-      <div className="px-4 -mt-10 max-w-lg mx-auto">
+      <div className="px-4 mt-4 max-w-lg mx-auto">
         <div className="bg-white rounded-2xl shadow-lift border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -711,17 +717,6 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             </p>
           )}
         </div>
-      </div>
-
-      {/* ── Premium Weather Scene ── */}
-      <div className="px-4 mt-4 max-w-lg mx-auto">
-        <WeatherScene
-          weather={weather}
-          mock={!weather ? mockWx : null}
-          clothingSuggestions={clothing.length > 0 ? clothing : undefined}
-          locationName={child.location_name}
-          locationCity={child.location_city}
-        />
       </div>
 
       {/* ── Screen time earning banner ── */}
@@ -776,17 +771,18 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             <div className="text-6xl mb-4 animate-float">🏆</div>
             <p className="font-black text-white text-2xl mb-2 tracking-tight">Amazing Work!</p>
             <p className="text-white/90 text-sm leading-relaxed mb-4 font-medium">
-              You crushed every mission today!
+              You crushed every mission{missionRound > 0 ? ` in Round ${missionRound + 1}` : ' today'}!
             </p>
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-5 backdrop-blur-sm">
               <Trophy size={16} /> {done.length} missions · +{screenTimeEarned} iPad mins earned
             </div>
             <div className="space-y-2.5">
               <button
-                onClick={onBack}
-                className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm"
+                onClick={onGenerateMore}
+                disabled={generatingMore}
+                className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
               >
-                🎯 Ask for More Missions
+                {generatingMore ? '✨ Getting more missions…' : '🎯 Get More Missions'}
               </button>
               <a
                 href="#rewards"
@@ -813,7 +809,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center text-sm text-amber-700 font-medium"
           >
-            🔍 Demo preview — this is how Kid Mode works. Real missions appear after setup.
+            🔍 Parent Preview — sample missions only. Real missions appear when a child logs in.
           </motion.div>
         )}
 
@@ -828,10 +824,16 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </motion.div>
         )}
 
-        {/* Mission groups */}
-        <MissionGroup title="Daily Missions"    emoji="🏅" missions={pendingCore}    onToggle={onMissionToggle} accent="bg-amber-50" />
-        <MissionGroup title="Bonus Challenges"  emoji="🎯" missions={pendingBonus}   onToggle={onMissionToggle} accent="bg-purple-50" />
-        <MissionGroup title="Special Quests"    emoji="✨" missions={pendingSpecial} onToggle={onMissionToggle} accent="bg-pink-50" />
+        {/* Mission groups by time of day */}
+        {missionRound > 0 && (pendingMorning.length + pendingAfternoon.length + pendingEvening.length + pendingBonus.length) > 0 && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+            <span>🔄</span> Round {missionRound + 1} Missions
+          </div>
+        )}
+        <MissionGroup title="Morning Missions"   emoji="🌅" missions={pendingMorning}   onToggle={onMissionToggle} accent="bg-amber-50" />
+        <MissionGroup title="Afternoon Missions" emoji="☀️" missions={pendingAfternoon} onToggle={onMissionToggle} accent="bg-sky-50" />
+        <MissionGroup title="Evening Missions"   emoji="🌙" missions={pendingEvening}   onToggle={onMissionToggle} accent="bg-indigo-50" />
+        <MissionGroup title="Bonus Missions"     emoji="🎯" missions={pendingBonus}     onToggle={onMissionToggle} accent="bg-purple-50" />
 
         {/* Completed missions (collapsible) */}
         {done.length > 0 && (
@@ -935,6 +937,10 @@ export default function ChildPage() {
   const [missionError, setMissionError] = useState<string | null>(null);
   const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
   const [weather, setWeather]       = useState<WeatherData | null>(null);
+  const [missionRound, setMissionRound]     = useState(0);
+  const [generatingMore, setGeneratingMore] = useState(false);
+  const [lastGenError, setLastGenError]     = useState<string | null>(null);
+  const [weatherFetchedAt, setWeatherFetchedAt] = useState<string | null>(null);
   // Demo mode is ONLY active when the parent opens /child?demo=1 from the dashboard.
   // Normal child use never shows demo missions regardless of real-mission state.
   const [isExplicitDemo, setIsExplicitDemo] = useState(false);
@@ -1096,11 +1102,18 @@ export default function ChildPage() {
 
   function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
-    if (!city) return;
+    if (!city) { setWeather(null); return; }
     fetch(`/api/weather?location=${encodeURIComponent(city)}`)
       .then(r => r.json())
-      .then(json => { if (!json.error) setWeather(json as WeatherData); })
-      .catch(() => {});
+      .then(json => {
+        if (!json.error) {
+          setWeather(json as WeatherData);
+          setWeatherFetchedAt(new Date().toISOString());
+        } else {
+          setWeather(null);
+        }
+      })
+      .catch(() => { setWeather(null); });
   }
 
   function getChildPin(child: Child): string | null {
@@ -1134,8 +1147,47 @@ export default function ChildPage() {
     setSelected(null);
     setSelectedMood(null);
     setPhase('picker');
+    setMissionRound(0);
   }
 
+  async function handleGenerateMore() {
+    if (!selected) return;
+    setGeneratingMore(true);
+    setLastGenError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setLastGenError('No session — please log in again.');
+        setGeneratingMore(false);
+        return;
+      }
+      const res = await fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ childId: selected.id, count: 8 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLastGenError(data.error ?? 'Could not generate more missions.');
+      } else {
+        setMissionRound(r => r + 1);
+        await fetchData();
+      }
+    } catch (e) {
+      setLastGenError(String(e));
+    }
+    setGeneratingMore(false);
+  }
+
+  // Validation levels (future — not yet built):
+  // 1. Child self-check (current) — tap to mark done
+  // 2. Parent spot-check — periodic review notification
+  // 3. Parent approval gate for high-value rewards (>100 BrytCoins)
+  // 4. Optional photo proof — child photos completion
+  // 5. Optional AI-assisted review of submitted photos
   async function handleMissionToggle(mission: Mission) {
     if (!selected) return;
     if (mission.id.startsWith('demo-')) {
@@ -1214,13 +1266,16 @@ export default function ChildPage() {
   return (
     <>
       {isDebugMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 text-green-400 text-xs font-mono p-3 max-h-48 overflow-y-auto border-t border-green-800">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 text-green-400 text-xs font-mono p-3 max-h-56 overflow-y-auto border-t border-green-800">
           <p className="font-bold text-green-300 mb-1">🛠 BrytThrive Debug Panel (?debug=1)</p>
           <p>loadState: <span className="text-white">{loadState}</span> | phase: <span className="text-white">{phase}</span> | demo: <span className="text-white">{isDemoMode ? 'YES (?demo=1)' : 'NO'}</span></p>
-          <p>children: <span className="text-white">{children.length}</span> | selected: <span className="text-white">{selected?.name ?? 'none'} ({selected?.id?.slice(0,8) ?? '—'})</span></p>
-          <p>missions: <span className="text-white">{displayMissions.length}</span> ({isDemoMode ? 'DEMO' : childMissions.length > 0 ? 'REAL' : 'NONE'}) | weather: <span className="text-white">{weather ? `${weather.tempC}°C ${weather.condition}` : 'none (fallback/mock)'}</span></p>
+          <p>childId: <span className="text-white">{selected?.id?.slice(0,8) ?? '—'}…</span> | selected: <span className="text-white">{selected?.name ?? 'none'}</span> | children: <span className="text-white">{children.length}</span></p>
+          <p>missions: <span className="text-white">{displayMissions.length}</span> | source: <span className="text-white">{isDemoMode ? 'DEMO' : childMissions.length > 0 ? 'REAL' : 'NONE'}</span> | round: <span className="text-white">{missionRound}</span></p>
+          <p>weather: <span className="text-white">{weather ? `${weather.tempC}°C ${weather.condition} (real API)` : 'unavailable'}</span>{weatherFetchedAt ? <span className="text-gray-500"> @ {weatherFetchedAt.slice(11,16)}</span> : null}</p>
           <p>mood: <span className="text-white">{selectedMood ?? 'not set'}</span> | streak: <span className="text-white">{selected ? (streaks[selected.id] ?? 0) : '—'}</span> | coins: <span className="text-white">{selected?.points ?? '—'}</span></p>
-          <p className="text-gray-500 mt-1">Date key: {new Date().toISOString().split('T')[0]}</p>
+          {lastGenError && <p className="text-red-400">lastGenError: {lastGenError}</p>}
+          {generatingMore && <p className="text-yellow-400">Generating more missions…</p>}
+          <p className="text-gray-500 mt-1">Date: {new Date().toISOString().split('T')[0]}</p>
         </div>
       )}
       {pendingChild && (
@@ -1266,6 +1321,9 @@ export default function ChildPage() {
             streak={streaks[selected.id] ?? 0}
             onBack={handleBack}
             onMissionToggle={handleMissionToggle}
+            onGenerateMore={handleGenerateMore}
+            generatingMore={generatingMore}
+            missionRound={missionRound}
             missionError={missionError}
             missionSuccess={missionSuccess}
             weather={weather}
