@@ -65,6 +65,8 @@ export default function DashboardPage() {
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  // Separate flag for auto-gen vs manual: auto-gen failures are silent (no red text).
+  const [isAutoGen, setIsAutoGen] = useState(false);
   const [winText, setWinText]             = useState('');
   const [winSaved, setWinSaved]           = useState(false);
   const [winSaving, setWinSaving]         = useState(false);
@@ -83,6 +85,7 @@ export default function DashboardPage() {
     const todayMissionsCount = missions.filter(m => m.mission_date === todayStr()).length;
     if (todayMissionsCount > 0) return;
     autoGenDoneRef.current = true;
+    setIsAutoGen(true);
     generateMissionsForAll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, children.length, missions.length]);
@@ -231,6 +234,8 @@ export default function DashboardPage() {
     setGeneratingAll(true);
     setGeneratedCount(null);
     setGenerateError(null);
+    // If triggered manually (not auto-gen), clear the auto-gen flag so errors show.
+    if (!isAutoGen) setIsAutoGen(false);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
       console.error('[dashboard] generateMissionsForAll: no session — aborting');
@@ -273,9 +278,11 @@ export default function DashboardPage() {
       }
     }
     setGeneratedCount(success);
-    if (success === 0) {
+    // Only show a red error on manual generate clicks, not on silent auto-generation.
+    if (success === 0 && !isAutoGen) {
       setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
     }
+    setIsAutoGen(false);
     await init();
     setGeneratingAll(false);
   }
@@ -406,7 +413,7 @@ export default function DashboardPage() {
               <p className="text-white/80 text-sm">See how your child checks in, completes missions, and earns iPad screen time.</p>
             </div>
             <Link
-              href="/child"
+              href="/child?demo=1"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-shrink-0 bg-white text-teal-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-teal-50 transition-colors whitespace-nowrap min-h-[44px] flex items-center"
