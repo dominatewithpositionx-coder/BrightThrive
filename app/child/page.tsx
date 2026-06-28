@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { getSupabase } from '@/lib/supabase';
 import { BRAND } from '@/lib/brand';
@@ -696,13 +696,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-10 text-center shadow-sm"
           >
             <div className="text-6xl mb-4 animate-float">🗺️</div>
-            <p className="text-navy text-xl font-black mb-2 tracking-tight">No adventures yet!</p>
-            <p className="text-gray-500 text-sm mb-6 leading-relaxed max-w-xs mx-auto">
-              Ask a parent to generate today&apos;s missions from the dashboard, then come back here ready to explore!
+            <p className="text-navy text-xl font-black mb-2 tracking-tight">No missions yet</p>
+            <p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">
+              Your missions will appear here when they are ready. Ask your parent to set up today&apos;s missions!
             </p>
-            <a href="/dashboard" className="inline-flex items-center gap-2 min-h-[48px] bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-95 transition-all shadow-sm">
-              Open Parent Dashboard
-            </a>
           </motion.div>
         )}
 
@@ -929,7 +926,40 @@ export default function ChildPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Mission generation is parent-only. Kids display and complete missions; they never create them.
+  const autoGenDoneRef = useRef(false);
+
+  // Auto-generate missions when none exist for today — uses the parent's active session.
+  // Fires once per page load; the ref prevents re-triggering after missions are written.
+  useEffect(() => {
+    if (loading) return;
+    if (children.length === 0) return;
+    if (missions.length > 0) return;
+    if (autoGenDoneRef.current) return;
+    autoGenDoneRef.current = true;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      for (const child of children) {
+        try {
+          await fetch('/api/generate-missions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              childId: child.id,
+              parentId: session.user.id,
+              childAge: child.age,
+            }),
+          });
+        } catch { /* non-fatal */ }
+      }
+      fetchData();
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, children.length, missions.length]);
 
   function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];

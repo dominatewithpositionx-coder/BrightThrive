@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { Gift, ChevronRight, Star, Flame, Plus, Sparkles, Tablet, BookHeart, TrendingUp, Calendar } from 'lucide-react';
@@ -70,8 +70,22 @@ export default function DashboardPage() {
   const [winSaving, setWinSaving]         = useState(false);
   const [todayWin, setTodayWin]           = useState<string | null>(null);
   const router = useRouter();
+  const autoGenDoneRef = useRef(false);
 
   useEffect(() => { init(); }, []);
+
+  // Auto-generate missions on first load when none exist for today
+  useEffect(() => {
+    if (loading) return;
+    if (children.length === 0) return;
+    if (generatingAll) return;
+    if (autoGenDoneRef.current) return;
+    const todayMissionsCount = missions.filter(m => m.mission_date === todayStr()).length;
+    if (todayMissionsCount > 0) return;
+    autoGenDoneRef.current = true;
+    generateMissionsForAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, children.length, missions.length]);
 
   async function saveOnboardingFromSession(parentId: string) {
     if (typeof window === 'undefined') return;
@@ -260,7 +274,7 @@ export default function DashboardPage() {
     }
     setGeneratedCount(success);
     if (success === 0) {
-      setGenerateError('Could not generate missions. Check the browser console for details and try again.');
+      setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
     }
     await init();
     setGeneratingAll(false);
