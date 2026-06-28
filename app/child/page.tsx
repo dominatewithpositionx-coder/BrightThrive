@@ -392,52 +392,51 @@ function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loa
 }
 
 // ── MoodCheckIn ───────────────────────────────────────────────────────────────
+// Matches the MoodPickerCard design shown on /how-it-works
 
 function MoodCheckIn({ childName, onSelect }: { childName: string; onSelect: (mood: MoodKey) => void }) {
+  const [pick, setPick] = useState<MoodKey | null>(null);
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
-      <div className="text-center mb-10 max-w-xs">
-        <p className="text-gray-400 text-sm font-medium mb-2">Hi, {childName}! 👋</p>
-        <h1 className="text-2xl font-bold text-navy leading-snug">How are you feeling right now?</h1>
-        <p className="text-gray-500 text-sm mt-2">Tap the one that feels most like you.</p>
-      </div>
-      <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-        {MOODS.map((mood) => (
-          <button
-            key={mood.key}
-            onClick={() => onSelect(mood.key)}
-            aria-label={`I'm feeling ${mood.label}`}
-            className={`${mood.cardBg} border-2 ${mood.cardBorder} rounded-3xl p-5 flex flex-col items-center gap-2 active:scale-95 hover:scale-[1.03] transition-all duration-150 shadow-sm hover:shadow-lg`}
-          >
-            <span className="text-5xl leading-none">{mood.emoji}</span>
-            <span className="text-sm font-semibold text-gray-700">{mood.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── MoodResponse ──────────────────────────────────────────────────────────────
-
-function MoodResponse({ mood, onContinue }: { mood: MoodKey; onContinue: () => void }) {
-  const r     = EI_RESPONSES[mood];
-  const emoji = MOODS.find(m => m.key === mood)?.emoji ?? '😊';
-  return (
-    <div className={`min-h-screen flex flex-col items-center justify-center px-6 py-16 bg-gradient-to-br ${r.bg} animate-fade-in`}>
-      <div className="w-full max-w-sm text-center">
-        <div className="text-8xl mb-8 leading-none">{emoji}</div>
-        <div className="space-y-3 mb-10">
-          <h2 className="text-2xl font-bold text-navy leading-snug">{r.headline}</h2>
-          <p className="text-gray-600 text-base leading-relaxed max-w-xs mx-auto">{r.message}</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100 w-full max-w-sm">
+        <div className="text-center mb-5">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-sm">
+            👦
+          </div>
+          <p className="font-bold text-navy text-lg">Hey {childName}!</p>
+          <p className="text-gray-500 text-sm mt-1">How are you feeling right now?</p>
         </div>
-        <button
-          onClick={onContinue}
-          className="w-full bg-gray-900 text-white py-4 rounded-2xl text-base font-semibold active:scale-[0.98] hover:bg-gray-800 transition-all duration-150 shadow-lg"
-        >
-          {r.cta}
-        </button>
-        <p className="text-xs text-gray-400 mt-5">Your missions are ready for you</p>
+        <div className="grid grid-cols-5 gap-1.5 mb-4">
+          {MOODS.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setPick(m.key)}
+              aria-label={`I'm feeling ${m.label}`}
+              className={`flex flex-col items-center gap-1 py-3 rounded-2xl border-2 transition-all active:scale-95 ${
+                pick === m.key
+                  ? 'border-amber-400 bg-amber-50 scale-105 shadow-sm'
+                  : 'border-gray-100 bg-gray-50 hover:border-amber-200'
+              }`}
+            >
+              <span className="text-2xl leading-none">{m.emoji}</span>
+              <span className="text-[10px] font-medium text-gray-600 leading-tight text-center">{m.label}</span>
+            </button>
+          ))}
+        </div>
+        <AnimatePresence>
+          {pick && (
+            <motion.button
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              onClick={() => onSelect(pick)}
+              className="w-full bg-amber-400 hover:bg-amber-500 rounded-xl py-3 text-white text-sm font-semibold shadow-sm transition-colors min-h-[44px]"
+            >
+              Show me my missions! →
+            </motion.button>
+          )}
+        </AnimatePresence>
+        <p className="text-center text-xs text-gray-400 mt-3">BrytThrive adjusts missions to match your energy</p>
       </div>
     </div>
   );
@@ -557,8 +556,31 @@ function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   );
 }
 
-function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode }: {
-  child: Child; missions: Mission[]; rewards: Reward[]; streak: number;
+// ── Mission row (flat list design matching How-It-Works mockup) ───────────────
+
+function MissionRow({ mission, onToggle, isLast }: { mission: Mission; onToggle: (m: Mission) => void; isLast: boolean }) {
+  const emoji    = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+  const catLabel = (mission.category ?? 'general').replace(/_/g, ' ');
+  return (
+    <button
+      onClick={() => onToggle(mission)}
+      aria-label={mission.is_completed ? `Undo "${mission.title}"` : `Complete "${mission.title}"`}
+      className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 ${!isLast ? 'border-b border-gray-50' : ''}`}
+    >
+      <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${mission.is_completed ? 'bg-teal-500 text-white' : 'border-2 border-gray-200 bg-white'}`}>
+        {mission.is_completed ? '✓' : ''}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium leading-snug ${mission.is_completed ? 'line-through text-gray-400' : 'text-navy'}`}>{mission.title}</p>
+        <p className="text-xs text-gray-400 mt-0.5">{emoji} {catLabel}</p>
+      </div>
+      <span className="text-xs font-bold text-amber-500 flex-shrink-0 whitespace-nowrap">🪙 10</span>
+    </button>
+  );
+}
+
+function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode }: {
+  child: Child; missions: Mission[]; rewards: Reward[]; streak: number; mood: MoodKey | null;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
   missionPack: string | null;
@@ -586,182 +608,153 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
   const pendingEvening   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'evening');
   const pendingBonus     = pending.filter(m => getDaypartGroup(m.category ?? '') === 'bonus');
 
-  const [showCompleted, setShowCompleted]     = useState(false);
-  const [showGenerateHint, setShowGenerateHint] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showRewards, setShowRewards]     = useState(false);
 
-  const sortedRewards   = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
-  const nextReward      = sortedRewards.find((r) => r.coin_cost > child.points) ?? null;
-  const affordableRewards = sortedRewards.filter((r) => r.coin_cost <= child.points);
-  const rewardProgress  = nextReward ? Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100)) : 100;
+  const sortedRewards      = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
+  const affordableRewards  = sortedRewards.filter((r) => r.coin_cost <= child.points);
+  const nextReward         = sortedRewards.find((r) => r.coin_cost > child.points) ?? null;
 
-  const greeting = () => {
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const timeLabel = (() => {
     const h = new Date().getHours();
-    if (h < 12) return `Good morning, ${child.name}!`;
-    if (h < 17) return `Good afternoon, ${child.name}!`;
-    return `Good evening, ${child.name}!`;
-  };
-  const greetingEmoji = () => {
-    const h = new Date().getHours();
-    if (h < 12) return '☀️';
-    if (h < 17) return '🌤️';
-    return '🌙';
-  };
+    if (h < 12) return 'Morning';
+    if (h < 17) return 'After school';
+    return 'Evening';
+  })();
+  const moodLabel = mood ? MOODS.find(m => m.key === mood)?.label ?? mood : null;
+  const weatherLabel = weather ? `${weather.condition}, ${weather.tempC}°C` : null;
+  const contextLine = [moodLabel, weatherLabel, timeLabel].filter(Boolean).join(' · ');
 
   return (
-    <div className="min-h-screen pb-16 animate-fade-in bg-gray-50">
+    <div className="min-h-screen bg-gray-50 animate-fade-in pb-10">
 
-      {/* ── Themed gradient header ── */}
-      <div className={`bg-gradient-to-br ${theme.gradient} pt-safe px-5`} style={{ paddingBottom: '2.5rem' }}>
+      {/* Back button */}
+      <div className="px-4 pt-4 pb-2">
         <button
           onClick={onBack}
           aria-label="Switch explorer"
-          className="flex items-center gap-1.5 min-h-[44px] text-white/80 hover:text-white text-sm mb-1 mt-2 transition-colors font-medium"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors min-h-[44px] font-medium"
         >
           <ChevronLeft size={16} /> Switch Explorer
         </button>
-
-        {/* Theme badge + date */}
-        <div className="flex flex-col items-center gap-1.5 mb-4">
-          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/40 shadow-sm">
-            <span className="text-base">{theme.emoji}</span>
-            <span className="text-navy font-bold text-sm tracking-wide">{theme.name}</span>
-          </div>
-          <p className="text-white/70 text-xs font-medium">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-
-        {/* Greeting */}
-        <div className="text-center mb-1">
-          <span className="text-4xl">{greetingEmoji()}</span>
-        </div>
-        <h1 className="text-2xl font-black text-white text-center leading-snug tracking-tight">{greeting()}</h1>
-        <p className="text-white/80 text-sm text-center mt-1.5 font-medium">{theme.tagline}</p>
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-4 gap-2 mt-5">
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center gap-1 border border-white/20">
-            <ProgressRing progress={progress} size={44} strokeWidth={4} color="white" bgColor="rgba(255,255,255,0.25)">
-              <span className="text-white font-bold text-[9px]">{done.length}/{missions.length}</span>
-            </ProgressRing>
-            <span className="text-white/80 text-[10px] font-semibold">Progress</span>
-          </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
-            <span className="text-xl leading-none animate-float">🪙</span>
-            <span className="text-white font-black text-lg leading-none">{child.points}</span>
-            <span className="text-white/70 text-[10px] font-semibold">BrytCoins</span>
-          </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
-            <span className="text-xl leading-none">📱</span>
-            <span className="text-white font-black text-lg leading-none">{screenTimeEarned}</span>
-            <span className="text-white/70 text-[10px] font-semibold">mins earned</span>
-          </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
-            <span className="text-xl leading-none animate-flame">{streak > 0 ? '🔥' : '💤'}</span>
-            <span className="text-white font-black text-lg leading-none">{streak}</span>
-            <span className="text-white/70 text-[10px] font-semibold">{streak === 1 ? 'day' : 'days'}</span>
-          </div>
-        </div>
       </div>
 
-      {/* ── Weather card — shown first after header ── */}
-      <div className="px-4 -mt-8 max-w-lg mx-auto">
-        {weather ? (
-          <WeatherScene
-            weather={weather}
-            mock={null}
-            clothingSuggestions={clothing.length > 0 ? clothing : undefined}
-            locationName={child.location_name}
-            locationCity={child.location_city}
-          />
-        ) : (
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm px-5 py-4 flex items-center gap-3 text-gray-400">
-            <span className="text-2xl">🌤️</span>
-            <div>
-              <p className="text-sm font-semibold text-gray-500">Weather unavailable right now</p>
-              <p className="text-xs text-gray-400">Missions work great whatever the weather!</p>
-            </div>
-          </div>
-        )}
-      </div>
+      <div className="px-4 max-w-lg mx-auto space-y-4">
 
-      {/* ── Explorer Level card ── */}
-      <div className="px-4 mt-4 max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl shadow-lift border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: level.color + '20' }}>
-                {level.emoji}
-              </div>
+        {/* ── Main mission card — matches MissionStackCard from How It Works ── */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Amber top strip */}
+          <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-400" />
+
+          {/* Header */}
+          <div className="px-5 pt-4 pb-3">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-black text-navy text-sm leading-tight">{level.name} Explorer</p>
-                <p className="text-xs text-gray-400 font-medium">Level {level.level} of 7</p>
+                <h1 className="font-black text-navy text-lg leading-tight">{child.name}&apos;s missions · {dayName}</h1>
+                {contextLine && <p className="text-xs text-gray-400 mt-0.5">{contextLine}</p>}
+              </div>
+              <div className="text-right flex-shrink-0 ml-4">
+                <p className="font-black text-navy text-xl leading-none">
+                  {done.length}<span className="text-gray-300 font-normal text-base">/{missions.length}</span>
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">done</p>
               </div>
             </div>
-            <div className="text-right">
-              {level.progress < 100 ? (
-                <p className="text-sm font-bold" style={{ color: level.color }}>{level.progress}%</p>
-              ) : (
-                <span className="text-sm font-bold text-amber-500">Max! 🎉</span>
-              )}
-              <p className="text-xs text-gray-400">to next level</p>
+            {missions.length > 0 && (
+              <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Pack / round label */}
+          {missionPack && pending.length > 0 && (
+            <div className="px-5 pb-2">
+              <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wide">
+                {missionRound > 0 ? `🔄 Round ${missionRound + 1} — ` : '✨ '}{missionPack}
+              </span>
             </div>
-          </div>
-          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: level.color }}
-              initial={{ width: 0 }}
-              animate={{ width: `${level.progress}%` }}
-              transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1] }}
-            />
-          </div>
-          {level.progress < 100 && (
-            <p className="text-xs text-gray-400 mt-1.5 text-right font-medium">
-              {level.nextLevelCoins - child.points} more BrytCoins to unlock {level.level < 7 ? `Level ${level.level + 1}` : 'Legend'}
-            </p>
           )}
+
+          {/* Pending missions */}
+          {pending.length > 0 && (
+            <div className="border-t border-gray-50">
+              {pending.map((m, i) => (
+                <MissionRow key={m.id} mission={m} onToggle={onMissionToggle} isLast={i === pending.length - 1} />
+              ))}
+            </div>
+          )}
+
+          {/* Completed (collapsible) */}
+          {done.length > 0 && (
+            <div className="border-t border-gray-50">
+              <button
+                onClick={() => setShowCompleted((v) => !v)}
+                aria-label="Toggle completed missions"
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors min-h-[44px]"
+              >
+                <span>✓ {done.length} completed</span>
+                <ChevronDown size={14} className={`transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showCompleted && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    {done.map((m, i) => (
+                      <MissionRow key={m.id} mission={m} onToggle={onMissionToggle} isLast={i === done.length - 1} />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Footer: BrytCoins + streak */}
+          <div className="border-t border-gray-50 px-5 py-3.5 flex items-center justify-between bg-gray-50/50">
+            <span className="text-sm font-bold text-amber-500">🪙 {child.points} BrytCoins</span>
+            <span className="text-sm font-bold text-gray-500">
+              {streak > 0 ? '🔥' : '💤'} {streak} day streak
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* ── Screen time earning banner ── */}
-      <div className="px-4 mt-4 max-w-lg mx-auto">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl px-5 py-4 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-black text-base leading-tight">📱 Complete missions to earn iPad time!</p>
-              <p className="text-white/80 text-xs mt-0.5">Each mission = BrytCoins + screen time minutes</p>
-            </div>
-            <div className="text-right flex-shrink-0 ml-3">
-              <p className="font-black text-2xl leading-none">{screenTimeEarned}</p>
-              <p className="text-white/70 text-[10px] font-semibold">mins earned</p>
-            </div>
-          </div>
-          {missions.length > 0 && screenTimeEarned < screenTimePotential && (
-            <p className="text-white/80 text-xs mt-2.5 font-medium">
-              ✨ Complete {pending.length} more mission{pending.length !== 1 ? 's' : ''} to unlock {screenTimePotential - screenTimeEarned} more minutes
-            </p>
-          )}
-          {screenTimeEarned >= screenTimePotential && screenTimeEarned > 0 && (
-            <p className="text-white/90 text-xs mt-2.5 font-bold">
-              🎉 All screen time unlocked! Great job today.
-              {' '}<span className="font-normal opacity-80">Parent approves earned time — Apple Screen Time integration coming soon.</span>
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Missions ── */}
-      <div className="px-4 mt-5 space-y-6 max-w-lg mx-auto">
-
+        {/* Error / success banners */}
         {missionError && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5 text-sm text-red-700 text-center font-medium">
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 text-center font-medium">
             {missionError}
           </div>
         )}
         {missionSuccess && (
-          <div className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3.5 text-sm text-teal-700 text-center font-medium animate-fade-in">
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3 text-sm text-teal-700 text-center font-medium"
+          >
             {missionSuccess}
+          </motion.div>
+        )}
+
+        {/* Demo mode banner */}
+        {isDemoMode && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center text-sm text-amber-700 font-medium">
+            🔍 Parent Preview — sample missions only. Real missions appear when a child logs in.
+          </div>
+        )}
+
+        {/* No missions yet */}
+        {!isDemoMode && missions.length === 0 && (
+          <div className="bg-white border border-gray-100 rounded-3xl px-6 py-10 text-center shadow-sm">
+            <div className="text-4xl mb-3">🌟</div>
+            <p className="font-bold text-navy text-lg mb-1">No missions yet today</p>
+            <p className="text-gray-400 text-sm">Your missions are being prepared — check back in a moment!</p>
           </div>
         )}
 
@@ -781,106 +774,30 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-5 backdrop-blur-sm">
               <Trophy size={16} /> {done.length} mission{done.length !== 1 ? 's' : ''} · +{screenTimeEarned} iPad mins earned
             </div>
-            <div className="space-y-2.5">
-              <button
-                onClick={onGenerateMore}
-                disabled={generatingMore}
-                className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
-              >
-                {generatingMore ? '✨ Getting more missions…' : '🎯 Get More Missions'}
-              </button>
-              <a
-                href="#rewards"
-                onClick={(e) => { e.preventDefault(); document.getElementById('rewards-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                className="block min-h-[44px] bg-white/20 text-white font-semibold px-6 py-3 rounded-2xl hover:bg-white/30 transition-colors text-sm"
-              >
-                🎁 See My Rewards
-              </a>
-              {showGenerateHint ? (
-                <a href="/dashboard" className="block min-h-[44px] bg-white/10 text-white/80 font-medium px-6 py-3 rounded-2xl hover:bg-white/20 transition-colors text-xs">
-                  Parent Dashboard →
-                </a>
-              ) : (
-                <button onClick={() => setShowGenerateHint(true)} className="block w-full text-xs text-white/50 hover:text-white/80 transition-colors mt-1">
-                  Are you a parent?
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Demo mode banner — only shown on /child?demo=1 */}
-        {isDemoMode && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center text-sm text-amber-700 font-medium"
-          >
-            🔍 Parent Preview — sample missions only. Real missions appear when a child logs in.
-          </motion.div>
-        )}
-
-        {/* No missions yet — shown in real mode when missions haven't been generated */}
-        {!isDemoMode && missions.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-white border border-gray-100 rounded-3xl px-6 py-10 text-center shadow-sm"
-          >
-            <div className="text-4xl mb-3">🌟</div>
-            <p className="font-bold text-navy text-lg mb-1">No missions yet today</p>
-            <p className="text-gray-400 text-sm">Ask a parent to set up today&apos;s adventures!</p>
-          </motion.div>
-        )}
-
-        {/* Pack name / round indicator */}
-        {missionPack && (pendingMorning.length + pendingAfternoon.length + pendingEvening.length + pendingBonus.length) > 0 && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
-            <span>{missionRound > 0 ? '🔄' : '✨'}</span>
-            {missionRound > 0 ? `Round ${missionRound + 1} — ` : ''}{missionPack}
-          </div>
-        )}
-        <MissionGroup title="Morning Missions"   emoji="🌅" missions={pendingMorning}   onToggle={onMissionToggle} accent="bg-amber-50" />
-        <MissionGroup title="Afternoon Missions" emoji="☀️" missions={pendingAfternoon} onToggle={onMissionToggle} accent="bg-sky-50" />
-        <MissionGroup title="Evening Missions"   emoji="🌙" missions={pendingEvening}   onToggle={onMissionToggle} accent="bg-indigo-50" />
-        <MissionGroup title="Bonus Missions"     emoji="🎯" missions={pendingBonus}     onToggle={onMissionToggle} accent="bg-purple-50" />
-
-        {/* Completed missions (collapsible) */}
-        {done.length > 0 && (
-          <div>
             <button
-              onClick={() => setShowCompleted((v) => !v)}
-              aria-label="Toggle completed missions"
-              className="w-full min-h-[44px] flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wide"
+              onClick={onGenerateMore}
+              disabled={generatingMore}
+              className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
             >
-              <span>Completed today ({done.length})</span>
-              <ChevronDown size={15} className={`transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+              {generatingMore ? '✨ Getting more missions…' : '🎯 Get More Missions'}
             </button>
-            <AnimatePresence>
-              {showCompleted && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2 mt-2 overflow-hidden"
-                >
-                  {done.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => onMissionToggle(m)}
-                      aria-label={`Undo "${m.title}"`}
-                      className="w-full bg-white rounded-2xl border border-gray-100 p-3.5 flex items-center gap-3 text-left opacity-60 hover:opacity-80 active:scale-[0.98] transition-all"
-                    >
-                      <CheckCircle size={18} className="text-teal-400 flex-shrink-0" />
-                      <span className="text-gray-500 font-medium line-through text-sm flex-1">{m.title}</span>
-                      <span className="text-xs text-gray-300 flex-shrink-0">Undo</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          </motion.div>
+        )}
+
+        {/* Get more missions (when not all done) */}
+        {!allDone && !isDemoMode && (
+          <button
+            onClick={onGenerateMore}
+            disabled={generatingMore}
+            className="w-full min-h-[44px] bg-white border border-gray-200 text-gray-600 font-semibold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
+          >
+            {generatingMore ? '✨ Getting more missions…' : '🔄 Get More Missions'}
+          </button>
         )}
 
         {/* Next reward progress */}
         {nextReward && (
-          <div id="rewards-section" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Gift size={16} className="text-purple-500" />
@@ -893,7 +810,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
               <motion.div
                 className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${rewardProgress}%` }}
+                animate={{ width: `${Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100))}%` }}
                 transition={{ duration: 0.7, ease: 'easeOut' }}
               />
             </div>
@@ -927,7 +844,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
 // ── Page root ─────────────────────────────────────────────────────────────────
 
-type AppPhase = 'picker' | 'mood-check' | 'mood-response' | 'missions';
+type AppPhase = 'picker' | 'mood-check' | 'missions';
 
 export default function ChildPage() {
   const [children, setChildren]     = useState<Child[]>([]);
@@ -1163,7 +1080,7 @@ export default function ChildPage() {
   function handleMoodSelect(mood: MoodKey) {
     setSelectedMood(mood);
     if (selected) trackMoodSelected({ mood, child_id: selected.id });
-    setPhase('mood-response');
+    setPhase('missions');
   }
 
   function handleBack() {
@@ -1308,8 +1225,8 @@ export default function ChildPage() {
       )}
 
       {/* ChildHeader floats inside ChildPicker via absolute positioning.
-          For mood-check / mood-response, render it as a normal top bar. */}
-      {phase !== 'missions' && phase !== 'picker' && <ChildHeader />}
+          For mood-check, render it as a normal top bar. */}
+      {phase === 'mood-check' && <ChildHeader />}
 
       {phase === 'picker' && (
         <>
@@ -1318,17 +1235,13 @@ export default function ChildPage() {
         </>
       )}
 
-      {/* Install prompt shown after child profile is selected (mood-check onwards) */}
-      {phase !== 'picker' && phase !== 'missions' && (
+      {/* Install prompt shown on mood-check screen */}
+      {phase === 'mood-check' && (
         <KidInstallBannerFull prompt={installPrompt} />
       )}
 
       {phase === 'mood-check' && selected && (
         <MoodCheckIn childName={selected.name} onSelect={handleMoodSelect} />
-      )}
-
-      {phase === 'mood-response' && selectedMood && (
-        <MoodResponse mood={selectedMood} onContinue={() => setPhase('missions')} />
       )}
 
       {phase === 'missions' && selected && (
@@ -1339,6 +1252,7 @@ export default function ChildPage() {
             missions={displayMissions}
             rewards={rewards}
             streak={streaks[selected.id] ?? 0}
+            mood={selectedMood}
             onBack={handleBack}
             onMissionToggle={handleMissionToggle}
             onGenerateMore={handleGenerateMore}

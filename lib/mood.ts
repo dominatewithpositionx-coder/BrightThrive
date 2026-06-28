@@ -9,7 +9,7 @@ export const MOODS: {
 }[] = [
   { key: 'Happy',      emoji: '😊', label: 'Happy',      cardBg: 'bg-amber-50',  cardBorder: 'border-amber-200' },
   { key: 'Calm',       emoji: '😌', label: 'Calm',       cardBg: 'bg-sky-50',    cardBorder: 'border-sky-200' },
-  { key: 'Energetic',  emoji: '⚡', label: 'Energetic',  cardBg: 'bg-orange-50', cardBorder: 'border-orange-200' },
+  { key: 'Energetic',  emoji: '⚡', label: 'Excited',    cardBg: 'bg-orange-50', cardBorder: 'border-orange-200' },
   { key: 'Tired',      emoji: '😴', label: 'Tired',      cardBg: 'bg-purple-50', cardBorder: 'border-purple-200' },
   { key: 'Sad',        emoji: '😔', label: 'Sad',        cardBg: 'bg-blue-50',   cardBorder: 'border-blue-200' },
   { key: 'Frustrated', emoji: '😠', label: 'Frustrated', cardBg: 'bg-rose-50',   cardBorder: 'border-rose-200' },
