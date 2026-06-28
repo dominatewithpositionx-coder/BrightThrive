@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { getSupabase } from '@/lib/supabase';
 import { BRAND } from '@/lib/brand';
@@ -147,6 +147,21 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 
 const CORE_CATS = new Set(['movement', 'responsibility', 'learning', 'healthy_habits']);
 const BONUS_CATS = new Set(['creativity', 'outdoor', 'kindness', 'mindfulness', 'adventure']);
+
+// Demo missions shown while real missions are loading or if generation is pending.
+// These are client-side only — no DB writes. child_id is injected at render time.
+const DEMO_MISSIONS: Omit<Mission, 'child_id'>[] = [
+  { id: 'demo-1', title: 'Make your bed neatly', category: 'responsibility', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-2', title: 'Move your body for 15 minutes', category: 'movement', screen_time_reward: 10, is_completed: false },
+  { id: 'demo-3', title: 'Read for 15 minutes', category: 'learning', screen_time_reward: 10, is_completed: false },
+  { id: 'demo-4', title: 'Draw what you\'re grateful for today', category: 'emotional_intelligence', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-5', title: 'Do 20 jumping jacks', category: 'movement', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-6', title: 'Help clean one thing in the house', category: 'responsibility', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-7', title: 'Say something kind to someone today', category: 'kindness', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-8', title: 'Take 5 slow deep breaths', category: 'mindfulness', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-9', title: 'Drink 2 glasses of water', category: 'healthy_habits', screen_time_reward: 5, is_completed: false },
+  { id: 'demo-10', title: 'Spend 10 minutes outside', category: 'outdoor', screen_time_reward: 10, is_completed: false },
+];
 
 const AVATAR_COLORS = [
   { bg: 'bg-green-400',  ring: 'ring-green-300',  text: 'text-green-900',  light: 'bg-teal-50'  },
@@ -312,7 +327,7 @@ function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loa
         <>
           <div className="text-center mb-10">
             <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
+            <h1 className="text-3xl font-bold text-navy">Who&apos;s completing missions today?</h1>
             <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
@@ -456,10 +471,16 @@ function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle:
               <span className="text-xs text-gray-400 font-medium">⏱ {time}</span>
             </div>
           </div>
-          {/* Coin reward badge */}
-          <div className="flex-shrink-0 bg-gradient-to-b from-amber-400 to-amber-500 rounded-2xl px-3 py-2 text-center shadow-coin ml-1">
-            <p className="text-white font-black text-sm leading-none">+{reward}</p>
-            <p className="text-amber-100 text-xs leading-none mt-0.5">🪙</p>
+          {/* Reward badges: coins + screen time */}
+          <div className="flex-shrink-0 flex flex-col gap-1.5 ml-1">
+            <div className="bg-gradient-to-b from-amber-400 to-amber-500 rounded-xl px-2.5 py-1.5 text-center shadow-coin">
+              <p className="text-white font-black text-xs leading-none">+{reward}</p>
+              <p className="text-amber-100 text-[10px] leading-none mt-0.5">🪙</p>
+            </div>
+            <div className="bg-gradient-to-b from-blue-400 to-blue-500 rounded-xl px-2.5 py-1.5 text-center shadow-sm">
+              <p className="text-white font-black text-xs leading-none">+{reward}</p>
+              <p className="text-blue-100 text-[10px] leading-none mt-0.5">📱</p>
+            </div>
           </div>
         </div>
 
@@ -468,7 +489,7 @@ function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle:
           aria-label={`Complete "${mission.title}"`}
           className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all shadow-sm press-scale flex items-center justify-center gap-2"
         >
-          <span>✓</span> Complete Adventure
+          <span>✓</span> Complete Mission
         </button>
       </div>
     </motion.div>
@@ -502,11 +523,11 @@ function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   );
 }
 
-function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, missionError, missionSuccess, weather }: {
+function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, missionError, missionSuccess, weather, isDemoMode }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   missionError: string | null; missionSuccess: string | null;
-  weather: WeatherData | null;
+  weather: WeatherData | null; isDemoMode?: boolean;
 }) {
   const theme   = getDayTheme();
   const level   = getExplorerLevel(child.points);
@@ -516,8 +537,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
   const done    = missions.filter((m) => m.is_completed);
   const pending = missions.filter((m) => !m.is_completed);
-  const allDone = missions.length > 0 && pending.length === 0;
+  const allDone = missions.length > 0 && pending.length === 0 && !isDemoMode;
   const progress = missions.length > 0 ? Math.round((done.length / missions.length) * 100) : 0;
+  const screenTimeEarned = done.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
+  const screenTimePotential = missions.reduce((sum, m) => sum + (m.screen_time_reward ?? 5), 0);
 
   const pendingCore    = pending.filter(m => CORE_CATS.has(m.category ?? ''));
   const pendingBonus   = pending.filter(m => BONUS_CATS.has(m.category ?? ''));
@@ -557,12 +580,15 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           <ChevronLeft size={16} /> Switch Explorer
         </button>
 
-        {/* Theme badge */}
-        <div className="flex justify-center mb-4">
+        {/* Theme badge + date */}
+        <div className="flex flex-col items-center gap-1.5 mb-4">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20">
             <span className="text-base">{theme.emoji}</span>
             <span className="text-white font-bold text-sm tracking-wide">{theme.name}</span>
           </div>
+          <p className="text-white/70 text-xs font-medium">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
 
         {/* Greeting */}
@@ -573,22 +599,27 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
         <p className="text-white/80 text-sm text-center mt-1.5 font-medium">{theme.tagline}</p>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-2.5 mt-5">
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center gap-1.5 border border-white/20">
-            <ProgressRing progress={progress} size={56} strokeWidth={5} color="white" bgColor="rgba(255,255,255,0.25)">
-              <span className="text-white font-bold text-[10px]">{done.length}/{missions.length}</span>
+        <div className="grid grid-cols-4 gap-2 mt-5">
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center gap-1 border border-white/20">
+            <ProgressRing progress={progress} size={44} strokeWidth={4} color="white" bgColor="rgba(255,255,255,0.25)">
+              <span className="text-white font-bold text-[9px]">{done.length}/{missions.length}</span>
             </ProgressRing>
-            <span className="text-white/80 text-xs font-semibold">Progress</span>
+            <span className="text-white/80 text-[10px] font-semibold">Progress</span>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5 border border-white/20">
-            <span className="text-2xl leading-none animate-float">🪙</span>
-            <span className="text-white font-black text-xl leading-none">{child.points}</span>
-            <span className="text-white/70 text-[11px] font-semibold">BrytCoins</span>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
+            <span className="text-xl leading-none animate-float">🪙</span>
+            <span className="text-white font-black text-lg leading-none">{child.points}</span>
+            <span className="text-white/70 text-[10px] font-semibold">BrytCoins</span>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center justify-center gap-0.5 border border-white/20">
-            <span className="text-2xl leading-none animate-flame">{streak > 0 ? '🔥' : '💤'}</span>
-            <span className="text-white font-black text-xl leading-none">{streak}</span>
-            <span className="text-white/70 text-[11px] font-semibold">{streak === 1 ? 'day' : 'days'}</span>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
+            <span className="text-xl leading-none">📱</span>
+            <span className="text-white font-black text-lg leading-none">{screenTimeEarned}</span>
+            <span className="text-white/70 text-[10px] font-semibold">mins earned</span>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 flex flex-col items-center justify-center gap-0.5 border border-white/20">
+            <span className="text-xl leading-none animate-flame">{streak > 0 ? '🔥' : '💤'}</span>
+            <span className="text-white font-black text-lg leading-none">{streak}</span>
+            <span className="text-white/70 text-[10px] font-semibold">{streak === 1 ? 'day' : 'days'}</span>
           </div>
         </div>
       </div>
@@ -643,6 +674,33 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
         />
       </div>
 
+      {/* ── Screen time earning banner ── */}
+      <div className="px-4 mt-4 max-w-lg mx-auto">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl px-5 py-4 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-black text-base leading-tight">📱 Complete missions to earn iPad time!</p>
+              <p className="text-white/80 text-xs mt-0.5">Each mission = BrytCoins + screen time minutes</p>
+            </div>
+            <div className="text-right flex-shrink-0 ml-3">
+              <p className="font-black text-2xl leading-none">{screenTimeEarned}</p>
+              <p className="text-white/70 text-[10px] font-semibold">mins earned</p>
+            </div>
+          </div>
+          {missions.length > 0 && screenTimeEarned < screenTimePotential && (
+            <p className="text-white/80 text-xs mt-2.5 font-medium">
+              ✨ Complete {pending.length} more mission{pending.length !== 1 ? 's' : ''} to unlock {screenTimePotential - screenTimeEarned} more minutes
+            </p>
+          )}
+          {screenTimeEarned >= screenTimePotential && screenTimeEarned > 0 && (
+            <p className="text-white/90 text-xs mt-2.5 font-bold">
+              🎉 All screen time unlocked! Great job today.
+              {' '}<span className="font-normal opacity-80">Parent approves earned time — Apple Screen Time integration coming soon.</span>
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* ── Missions ── */}
       <div className="px-4 mt-5 space-y-6 max-w-lg mx-auto">
 
@@ -666,10 +724,10 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             className="bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 rounded-3xl p-8 text-center shadow-lift"
           >
             <div className="text-6xl mb-4 animate-float">🏆</div>
-            <p className="font-black text-white text-2xl mb-2 tracking-tight">Adventure Complete!</p>
+            <p className="font-black text-white text-2xl mb-2 tracking-tight">All Missions Done!</p>
             <p className="text-white/90 text-sm leading-relaxed mb-5 font-medium">
               You crushed every single mission today!<br />
-              Come back tomorrow for a brand-new adventure.
+              Come back tomorrow for a fresh set of missions.
             </p>
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-4 backdrop-blur-sm">
               <Trophy size={16} /> {done.length} missions · +{done.length * 10} BrytCoins
@@ -688,21 +746,12 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </motion.div>
         )}
 
-        {/* Empty state — no missions */}
-        {missions.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-10 text-center shadow-sm"
+        {/* Demo mode banner */}
+        {isDemoMode && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center text-sm text-amber-700 font-medium"
           >
-            <div className="text-6xl mb-4 animate-float">🗺️</div>
-            <p className="text-navy text-xl font-black mb-2 tracking-tight">No adventures yet!</p>
-            <p className="text-gray-500 text-sm mb-6 leading-relaxed max-w-xs mx-auto">
-              Ask a parent to generate today&apos;s missions from the dashboard, then come back here ready to explore!
-            </p>
-            <a href="/dashboard" className="inline-flex items-center gap-2 min-h-[48px] bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-8 py-3 rounded-2xl font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-95 transition-all shadow-sm">
-              Open Parent Dashboard
-            </a>
+            ✨ Preview mode — here&apos;s what your missions will look like! Real missions are on the way.
           </motion.div>
         )}
 
@@ -929,7 +978,40 @@ export default function ChildPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Mission generation is parent-only. Kids display and complete missions; they never create them.
+  const autoGenDoneRef = useRef(false);
+
+  // Auto-generate missions when none exist for today — uses the parent's active session.
+  // Fires once per page load; the ref prevents re-triggering after missions are written.
+  useEffect(() => {
+    if (loading) return;
+    if (children.length === 0) return;
+    if (missions.length > 0) return;
+    if (autoGenDoneRef.current) return;
+    autoGenDoneRef.current = true;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      for (const child of children) {
+        try {
+          await fetch('/api/generate-missions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              childId: child.id,
+              parentId: session.user.id,
+              childAge: child.age,
+            }),
+          });
+        } catch { /* non-fatal */ }
+      }
+      fetchData();
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, children.length, missions.length]);
 
   function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
@@ -975,6 +1057,11 @@ export default function ChildPage() {
 
   async function handleMissionToggle(mission: Mission) {
     if (!selected) return;
+    if (mission.id.startsWith('demo-')) {
+      setMissionSuccess('✨ Your real missions are almost ready — check back in a moment!');
+      setTimeout(() => setMissionSuccess(null), 3000);
+      return;
+    }
     const nowCompleted = !mission.is_completed;
     const { error: missionErr } = await supabase
       .from('missions')
@@ -995,7 +1082,8 @@ export default function ChildPage() {
     if (nowCompleted) {
       fireConfetti();
       trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
-      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙`);
+      const screenMin = mission.screen_time_reward ?? 5;
+      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙  +${screenMin} mins 📱`);
       setTimeout(() => setMissionSuccess(null), 3000);
     }
 
@@ -1030,6 +1118,10 @@ export default function ChildPage() {
   }
 
   const childMissions = selected ? missions.filter((m) => m.child_id === selected.id) : [];
+  const isDemoMode = childMissions.length === 0 && selected !== null && loadState === 'ok' && !loading;
+  const displayMissions: Mission[] = isDemoMode && selected
+    ? DEMO_MISSIONS.map(m => ({ ...m, child_id: selected.id }))
+    : childMissions;
 
   return (
     <>
@@ -1066,7 +1158,7 @@ export default function ChildPage() {
           <KidInstallBanner prompt={installPrompt} />
           <ChildView
             child={selected}
-            missions={childMissions}
+            missions={displayMissions}
             rewards={rewards}
             streak={streaks[selected.id] ?? 0}
             onBack={handleBack}
@@ -1074,6 +1166,7 @@ export default function ChildPage() {
             missionError={missionError}
             missionSuccess={missionSuccess}
             weather={weather}
+            isDemoMode={isDemoMode}
           />
         </>
       )}

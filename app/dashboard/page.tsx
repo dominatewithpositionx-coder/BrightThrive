@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { Gift, ChevronRight, Star, Flame, Plus, Sparkles, Tablet, BookHeart, TrendingUp, Calendar } from 'lucide-react';
@@ -18,7 +18,7 @@ import { getExplorerLevel } from '@/lib/levels';
 const supabase = getSupabase();
 
 type Child = { id: string; name: string; age: number | null; points: number; streak: number };
-type Mission = { id: string; child_id: string; title: string; category?: string; is_completed: boolean; mission_date?: string; updated_at?: string; generated_by?: string };
+type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; mission_date?: string; updated_at?: string; generated_by?: string };
 const CAT_EMOJI: Record<string, string> = {
   movement: '🏃',
   responsibility: '🧹',
@@ -70,8 +70,22 @@ export default function DashboardPage() {
   const [winSaving, setWinSaving]         = useState(false);
   const [todayWin, setTodayWin]           = useState<string | null>(null);
   const router = useRouter();
+  const autoGenDoneRef = useRef(false);
 
   useEffect(() => { init(); }, []);
+
+  // Auto-generate missions on first load when none exist for today
+  useEffect(() => {
+    if (loading) return;
+    if (children.length === 0) return;
+    if (generatingAll) return;
+    if (autoGenDoneRef.current) return;
+    const todayMissionsCount = missions.filter(m => m.mission_date === todayStr()).length;
+    if (todayMissionsCount > 0) return;
+    autoGenDoneRef.current = true;
+    generateMissionsForAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, children.length, missions.length]);
 
   async function saveOnboardingFromSession(parentId: string) {
     if (typeof window === 'undefined') return;
@@ -138,7 +152,7 @@ export default function DashboardPage() {
     if (childIds.length > 0) {
       const missionRes = await supabase
         .from('missions')
-        .select('id, child_id, title, category, is_completed, mission_date, updated_at, generated_by')
+        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by')
         .in('child_id', childIds)
         .gte('mission_date', sevenDaysAgo);
 
@@ -146,7 +160,7 @@ export default function DashboardPage() {
         console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
         const retry = await supabase
           .from('missions')
-          .select('id, child_id, title, category, is_completed, mission_date, updated_at')
+          .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
           .in('child_id', childIds);
         if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
         missionData = retry.data;
@@ -260,7 +274,7 @@ export default function DashboardPage() {
     }
     setGeneratedCount(success);
     if (success === 0) {
-      setGenerateError('Could not generate missions. Check the browser console for details and try again.');
+      setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
     }
     await init();
     setGeneratingAll(false);
@@ -274,7 +288,7 @@ export default function DashboardPage() {
     if (children.length === 0) return "Let's get your family set up.";
     const name = children.length === 1 ? children[0].name : 'your family';
     const h = new Date().getHours();
-    if (totalToday === 0) return `Ready to set up adventures for ${name} today?`;
+    if (totalToday === 0) return `Ready to set up missions for ${name} today?`;
     if (totalTasksDone === totalToday && totalToday > 0)
       return `${name} crushed every mission today — what an explorer! 🎉`;
     if (totalTasksDone > 0 && totalPending > 0)
@@ -287,6 +301,7 @@ export default function DashboardPage() {
   const totalTasksDone = todayMissions.filter((m) => m.is_completed).length;
   const totalPending   = todayMissions.filter((m) => !m.is_completed).length;
   const coinsEarnedToday = todayMissions.filter((m) => m.is_completed).length * 10;
+  const screenTimeEarnedToday = todayMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
   const hasTodayMissions = totalToday > 0;
   const childName = (id: string) => children.find((c) => c.id === id)?.name || 'Unknown';
 
@@ -341,6 +356,9 @@ export default function DashboardPage() {
               {getGreeting()}, {firstName}!
             </h1>
             <p className="text-sm text-gray-500 mt-1">{getStoryline()}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
           {/* Day theme banner */}
           <div className={`bg-gradient-to-r ${dayTheme.gradient} rounded-2xl px-5 py-3.5 flex items-center gap-3`}>
@@ -380,6 +398,24 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Preview Kid Mode card */}
+        {children.length > 0 && (
+          <section className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="font-bold text-base mb-0.5">Preview Your Child&apos;s BrytThrive Experience</h2>
+              <p className="text-white/80 text-sm">See how your child checks in, completes missions, and earns iPad screen time.</p>
+            </div>
+            <Link
+              href="/child"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 bg-white text-teal-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-teal-50 transition-colors whitespace-nowrap min-h-[44px] flex items-center"
+            >
+              Preview Kid Mode →
+            </Link>
+          </section>
+        )}
+
         {/* 3. Today's mission summary */}
         {children.length > 0 && (
           <section>
@@ -403,10 +439,10 @@ export default function DashboardPage() {
             )}
             {!autoGenerated && !weatherAware && <div className="mb-3" />}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <SummaryStat label="Total" value={totalToday} accent="text-navy" bg="bg-gray-50" />
+              <SummaryStat label="Missions" value={totalToday} accent="text-navy" bg="bg-gray-50" />
               <SummaryStat label="Completed" value={totalTasksDone} accent="text-teal-600" bg={totalTasksDone > 0 ? 'bg-teal-50' : 'bg-gray-50'} />
-              <SummaryStat label="Remaining" value={totalPending} accent="text-amber-500" bg={totalPending > 0 ? 'bg-amber-50' : 'bg-gray-50'} />
-              <SummaryStat label="Coins today" value={coinsEarnedToday} accent="text-purple-500" bg={coinsEarnedToday > 0 ? 'bg-purple-50' : 'bg-gray-50'} />
+              <SummaryStat label="Coins earned" value={coinsEarnedToday} accent="text-amber-500" bg={coinsEarnedToday > 0 ? 'bg-amber-50' : 'bg-gray-50'} />
+              <SummaryStat label="Screen mins earned" value={screenTimeEarnedToday} accent="text-blue-500" bg={screenTimeEarnedToday > 0 ? 'bg-blue-50' : 'bg-gray-50'} />
             </div>
           </section>
         )}
@@ -422,6 +458,7 @@ export default function DashboardPage() {
                 const done = childMissions.filter((m) => m.is_completed).length;
                 const completionPct = childMissions.length > 0
                   ? Math.round((done / childMissions.length) * 100) : 0;
+                const childScreenTime = childMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
                 const badge = streakBadge(child.streak);
                 const previewMissions = childMissions.slice(0, 3);
                 const explorerLevel = getExplorerLevel(child.points);
@@ -450,16 +487,25 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Stats row */}
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="bg-amber-50 rounded-xl px-3 py-2 text-center">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="bg-amber-50 rounded-xl px-2 py-2 text-center">
                         <p className="text-base font-bold text-amber-600">{child.points}</p>
-                        <p className="text-xs text-amber-500 font-medium">BrytCoins</p>
+                        <p className="text-xs text-amber-500 font-medium">Coins</p>
                       </div>
-                      <div className="bg-teal-50 rounded-xl px-3 py-2 text-center">
+                      <div className="bg-teal-50 rounded-xl px-2 py-2 text-center">
                         <p className="text-base font-bold text-teal-600">{done}/{childMissions.length || 0}</p>
-                        <p className="text-xs text-teal-500 font-medium">Done today</p>
+                        <p className="text-xs text-teal-500 font-medium">Done</p>
+                      </div>
+                      <div className={`rounded-xl px-2 py-2 text-center ${childScreenTime > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                        <p className={`text-base font-bold ${childScreenTime > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{childScreenTime}</p>
+                        <p className={`text-xs font-medium ${childScreenTime > 0 ? 'text-blue-500' : 'text-gray-400'}`}>📱 mins</p>
                       </div>
                     </div>
+                    {childScreenTime > 0 && done === childMissions.length && childMissions.length > 0 && (
+                      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 font-semibold text-center">
+                        🎉 {childScreenTime} mins screen time ready — approve it!
+                      </div>
+                    )}
 
                     {badge && (
                       <span className="inline-block mb-3 text-xs font-semibold bg-orange-50 text-orange-600 rounded-full px-2.5 py-1">
@@ -501,7 +547,7 @@ export default function DashboardPage() {
                     ) : (
                       <div className="text-center py-3">
                         <p className="text-2xl mb-1">🗺️</p>
-                        <p className="text-xs text-gray-400 font-medium">No adventures yet today.</p>
+                        <p className="text-xs text-gray-400 font-medium">No missions yet today.</p>
                         <p className="text-xs text-gray-400">Generate missions to get started!</p>
                       </div>
                     )}
