@@ -941,6 +941,10 @@ export default function ChildPage() {
   const [generatingMore, setGeneratingMore] = useState(false);
   const [lastGenError, setLastGenError]     = useState<string | null>(null);
   const [weatherFetchedAt, setWeatherFetchedAt] = useState<string | null>(null);
+  const [isDebugMode] = useState(() =>
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('debug') === '1' || process.env.NODE_ENV === 'development')
+  );
   // Demo mode is ONLY active when the parent opens /child?demo=1 from the dashboard.
   // Normal child use never shows demo missions regardless of real-mission state.
   const [isExplicitDemo, setIsExplicitDemo] = useState(false);
@@ -1257,11 +1261,6 @@ export default function ChildPage() {
   const displayMissions: Mission[] = isDemoMode && selected
     ? DEMO_MISSIONS.map(m => ({ ...m, child_id: selected.id }))
     : childMissions;
-
-  const [isDebugMode] = useState(() =>
-    typeof window !== 'undefined' &&
-    (new URLSearchParams(window.location.search).get('debug') === '1' || process.env.NODE_ENV === 'development')
-  );
 
   return (
     <>
