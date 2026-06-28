@@ -805,6 +805,17 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </motion.div>
         )}
 
+        {/* No missions yet — shown in real mode when missions haven't been generated */}
+        {!isDemoMode && missions.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="bg-white border border-gray-100 rounded-3xl px-6 py-10 text-center shadow-sm"
+          >
+            <div className="text-4xl mb-3">🌟</div>
+            <p className="font-bold text-navy text-lg mb-1">No missions yet today</p>
+            <p className="text-gray-400 text-sm">Ask a parent to set up today&apos;s adventures!</p>
+          </motion.div>
+        )}
+
         {/* Mission groups */}
         <MissionGroup title="Daily Missions"    emoji="🏅" missions={pendingCore}    onToggle={onMissionToggle} accent="bg-amber-50" />
         <MissionGroup title="Bonus Challenges"  emoji="🎯" missions={pendingBonus}   onToggle={onMissionToggle} accent="bg-purple-50" />

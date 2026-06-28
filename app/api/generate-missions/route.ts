@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       console.error('[generate-missions] auth.getUser failed:', authError?.message);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    resolvedParentId = parentId ?? user.id;
+    resolvedParentId = user.id;
 
     const { data, error: childError } = await anonSupabase
       .from('children')
@@ -333,7 +333,7 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-3-5-20241022',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [
@@ -345,7 +345,8 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
       ],
     });
     const text = message.content[0].type === 'text' ? message.content[0].text : '';
-    const parsed = JSON.parse(text);
+    const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(stripped);
     if (Array.isArray(parsed) && parsed.length > 0) {
       missions = parsed as MissionDraft[];
     }
