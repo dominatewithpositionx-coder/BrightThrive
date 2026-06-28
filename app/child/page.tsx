@@ -943,6 +943,10 @@ export default function ChildPage() {
       setIsExplicitDemo(new URLSearchParams(window.location.search).get('demo') === '1');
     }
   }, []);
+  const [isDebugMode] = useState(() =>
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('debug') === '1' || process.env.NODE_ENV === 'development')
+  );
   const installPrompt               = useInstallPrompt();
 
   const supabase = getSupabase();
@@ -1205,11 +1209,6 @@ export default function ChildPage() {
   const displayMissions: Mission[] = isDemoMode && selected
     ? DEMO_MISSIONS.map(m => ({ ...m, child_id: selected.id }))
     : childMissions;
-
-  const [isDebugMode] = useState(() =>
-    typeof window !== 'undefined' &&
-    (new URLSearchParams(window.location.search).get('debug') === '1' || process.env.NODE_ENV === 'development')
-  );
 
   return (
     <>
