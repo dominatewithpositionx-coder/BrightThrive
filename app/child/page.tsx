@@ -327,7 +327,7 @@ function ChildPicker({ children, loadState, onSelect }: { children: Child[]; loa
         <>
           <div className="text-center mb-10">
             <KidWelcomeIllustration className="w-64 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-navy">Who&apos;s doing tasks today?</h1>
+            <h1 className="text-3xl font-bold text-navy">Who&apos;s completing missions today?</h1>
             <p className="text-gray-500 mt-2 text-base">Tap your name to get started!</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full max-w-lg">
@@ -1082,7 +1082,8 @@ export default function ChildPage() {
     if (nowCompleted) {
       fireConfetti();
       trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
-      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙`);
+      const screenMin = mission.screen_time_reward ?? 5;
+      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙  +${screenMin} mins 📱`);
       setTimeout(() => setMissionSuccess(null), 3000);
     }
 

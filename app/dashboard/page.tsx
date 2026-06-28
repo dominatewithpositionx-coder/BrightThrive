@@ -458,6 +458,7 @@ export default function DashboardPage() {
                 const done = childMissions.filter((m) => m.is_completed).length;
                 const completionPct = childMissions.length > 0
                   ? Math.round((done / childMissions.length) * 100) : 0;
+                const childScreenTime = childMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
                 const badge = streakBadge(child.streak);
                 const previewMissions = childMissions.slice(0, 3);
                 const explorerLevel = getExplorerLevel(child.points);
@@ -486,16 +487,25 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Stats row */}
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="bg-amber-50 rounded-xl px-3 py-2 text-center">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="bg-amber-50 rounded-xl px-2 py-2 text-center">
                         <p className="text-base font-bold text-amber-600">{child.points}</p>
-                        <p className="text-xs text-amber-500 font-medium">BrytCoins</p>
+                        <p className="text-xs text-amber-500 font-medium">Coins</p>
                       </div>
-                      <div className="bg-teal-50 rounded-xl px-3 py-2 text-center">
+                      <div className="bg-teal-50 rounded-xl px-2 py-2 text-center">
                         <p className="text-base font-bold text-teal-600">{done}/{childMissions.length || 0}</p>
-                        <p className="text-xs text-teal-500 font-medium">Done today</p>
+                        <p className="text-xs text-teal-500 font-medium">Done</p>
+                      </div>
+                      <div className={`rounded-xl px-2 py-2 text-center ${childScreenTime > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                        <p className={`text-base font-bold ${childScreenTime > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{childScreenTime}</p>
+                        <p className={`text-xs font-medium ${childScreenTime > 0 ? 'text-blue-500' : 'text-gray-400'}`}>📱 mins</p>
                       </div>
                     </div>
+                    {childScreenTime > 0 && done === childMissions.length && childMissions.length > 0 && (
+                      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 font-semibold text-center">
+                        🎉 {childScreenTime} mins screen time ready — approve it!
+                      </div>
+                    )}
 
                     {badge && (
                       <span className="inline-block mb-3 text-xs font-semibold bg-orange-50 text-orange-600 rounded-full px-2.5 py-1">
