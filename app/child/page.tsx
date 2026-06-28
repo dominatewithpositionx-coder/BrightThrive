@@ -3,9 +3,8 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import Image from 'next/image';
 import { getSupabase } from '@/lib/supabase';
-import { BRAND } from '@/lib/brand';
+import Logo from '@/components/brightthrive/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -262,7 +261,7 @@ function PinDialog({ childId, childName, onUnlock, onCancel }: { childId: string
 function ChildHeader() {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-      <Image src={BRAND.mark} alt={BRAND.name} width={BRAND.markWidth} height={BRAND.markHeight} className="w-[48px] h-[48px] object-contain" priority />
+      <Logo variant="full" className="h-[48px] w-auto" priority />
     </div>
   );
 }
