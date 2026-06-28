@@ -30,3 +30,5 @@ tsconfig.tsbuildinfo
 tests/report/
 tests/screenshots/
 .claude/
+!.claude/agents/
+!.claude/agents/*.md
