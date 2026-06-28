@@ -621,7 +621,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
     <div className="min-h-screen pb-16 animate-fade-in bg-gray-50">
 
       {/* ── Themed gradient header ── */}
-      <div className={`bg-gradient-to-br ${theme.gradient} pt-safe px-5`} style={{ paddingBottom: '3.5rem' }}>
+      <div className={`bg-gradient-to-br ${theme.gradient} pt-safe px-5`} style={{ paddingBottom: '2.5rem' }}>
         <button
           onClick={onBack}
           aria-label="Switch explorer"
@@ -632,9 +632,9 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
         {/* Theme badge + date */}
         <div className="flex flex-col items-center gap-1.5 mb-4">
-          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20">
+          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/40 shadow-sm">
             <span className="text-base">{theme.emoji}</span>
-            <span className="text-white font-bold text-sm tracking-wide">{theme.name}</span>
+            <span className="text-navy font-bold text-sm tracking-wide">{theme.name}</span>
           </div>
           <p className="text-white/70 text-xs font-medium">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -774,25 +774,37 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
             className="bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 rounded-3xl p-8 text-center shadow-lift"
           >
             <div className="text-6xl mb-4 animate-float">🏆</div>
-            <p className="font-black text-white text-2xl mb-2 tracking-tight">All Missions Done!</p>
-            <p className="text-white/90 text-sm leading-relaxed mb-5 font-medium">
-              You crushed every single mission today!<br />
-              Come back tomorrow for a fresh set of missions.
+            <p className="font-black text-white text-2xl mb-2 tracking-tight">Amazing Work!</p>
+            <p className="text-white/90 text-sm leading-relaxed mb-4 font-medium">
+              You crushed every mission today!
             </p>
-            <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-4 backdrop-blur-sm">
-              <Trophy size={16} /> {done.length} missions · +{done.length * 10} BrytCoins
+            <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-5 backdrop-blur-sm">
+              <Trophy size={16} /> {done.length} missions · +{screenTimeEarned} iPad mins earned
             </div>
-            {showGenerateHint ? (
-              <div className="mt-2">
-                <a href="/dashboard" className="inline-block min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm">
-                  Go to Parent Dashboard
-                </a>
-              </div>
-            ) : (
-              <button onClick={() => setShowGenerateHint(true)} className="block mx-auto text-xs text-white/60 hover:text-white/90 transition-colors mt-1">
-                Are you a parent?
+            <div className="space-y-2.5">
+              <button
+                onClick={onBack}
+                className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm"
+              >
+                🎯 Ask for More Missions
               </button>
-            )}
+              <a
+                href="#rewards"
+                onClick={(e) => { e.preventDefault(); document.getElementById('rewards-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                className="block min-h-[44px] bg-white/20 text-white font-semibold px-6 py-3 rounded-2xl hover:bg-white/30 transition-colors text-sm"
+              >
+                🎁 See My Rewards
+              </a>
+              {showGenerateHint ? (
+                <a href="/dashboard" className="block min-h-[44px] bg-white/10 text-white/80 font-medium px-6 py-3 rounded-2xl hover:bg-white/20 transition-colors text-xs">
+                  Parent Dashboard →
+                </a>
+              ) : (
+                <button onClick={() => setShowGenerateHint(true)} className="block w-full text-xs text-white/50 hover:text-white/80 transition-colors mt-1">
+                  Are you a parent?
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -860,7 +872,7 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
 
         {/* Next reward progress */}
         {nextReward && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div id="rewards-section" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Gift size={16} className="text-purple-500" />
@@ -1194,8 +1206,23 @@ export default function ChildPage() {
     ? DEMO_MISSIONS.map(m => ({ ...m, child_id: selected.id }))
     : childMissions;
 
+  const [isDebugMode] = useState(() =>
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('debug') === '1' || process.env.NODE_ENV === 'development')
+  );
+
   return (
     <>
+      {isDebugMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 text-green-400 text-xs font-mono p-3 max-h-48 overflow-y-auto border-t border-green-800">
+          <p className="font-bold text-green-300 mb-1">🛠 BrytThrive Debug Panel (?debug=1)</p>
+          <p>loadState: <span className="text-white">{loadState}</span> | phase: <span className="text-white">{phase}</span> | demo: <span className="text-white">{isDemoMode ? 'YES (?demo=1)' : 'NO'}</span></p>
+          <p>children: <span className="text-white">{children.length}</span> | selected: <span className="text-white">{selected?.name ?? 'none'} ({selected?.id?.slice(0,8) ?? '—'})</span></p>
+          <p>missions: <span className="text-white">{displayMissions.length}</span> ({isDemoMode ? 'DEMO' : childMissions.length > 0 ? 'REAL' : 'NONE'}) | weather: <span className="text-white">{weather ? `${weather.tempC}°C ${weather.condition}` : 'none (fallback/mock)'}</span></p>
+          <p>mood: <span className="text-white">{selectedMood ?? 'not set'}</span> | streak: <span className="text-white">{selected ? (streaks[selected.id] ?? 0) : '—'}</span> | coins: <span className="text-white">{selected?.points ?? '—'}</span></p>
+          <p className="text-gray-500 mt-1">Date key: {new Date().toISOString().split('T')[0]}</p>
+        </div>
+      )}
       {pendingChild && (
         <PinDialog
           childId={pendingChild.id}

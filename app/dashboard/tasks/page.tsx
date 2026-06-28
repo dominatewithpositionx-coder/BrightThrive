@@ -42,7 +42,6 @@ export default function TasksPage() {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [generating, setGenerating] = useState<string | null>(null);
 
   const supabase = getSupabase();
 
@@ -77,7 +76,6 @@ export default function TasksPage() {
       screen_time_reward: 0,
       is_completed: false,
       mission_date: today(),
-      status: 'active',
     }]);
 
     if (error) toast.error('Error adding task: ' + error.message);
@@ -93,7 +91,7 @@ export default function TasksPage() {
     const nowCompleted = !mission.is_completed;
     const { error } = await supabase
       .from('missions')
-      .update({ is_completed: nowCompleted, status: nowCompleted ? 'completed' : 'active' })
+      .update({ is_completed: nowCompleted })
       .eq('id', mission.id);
 
     if (error) { toast.error('Error updating task.'); return; }
@@ -128,32 +126,8 @@ export default function TasksPage() {
     else { toast.success('Task deleted.'); fetchData(); }
   }
 
-  async function generateMissions(child: Child) {
-    setGenerating(child.id);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/generate-missions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ childId: child.id, childName: child.name, count: 5 }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`Generated ${data.generated} missions for ${child.name}!`);
-        fetchData();
-      } else {
-        toast.error('Generation failed: ' + data.error);
-      }
-    } catch {
-      toast.error('Could not reach AI service.');
-    }
-    setGenerating(null);
-  }
 
-  if (fetching) {
+if (fetching) {
     return (
       <div className="p-6 space-y-4 animate-pulse">
         <div className="h-8 bg-gray-200 rounded w-24" />
@@ -167,33 +141,16 @@ export default function TasksPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Tasks</h1>
+      <h1 className="text-2xl font-bold mb-1">Parent Tasks</h1>
+      <p className="text-sm text-gray-500 mb-6">Add your own custom tasks. AI-generated missions are created from the Dashboard.</p>
 
-      {/* AI Mission Generator */}
+      {/* Note: AI mission generation is handled from the main Dashboard */}
       {children.length > 0 && (
-        <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-5 max-w-md mb-6">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">✨</span>
-            <div className="flex-1">
-              <p className="font-semibold text-green-900 text-sm">AI Mission Generator</p>
-              <p className="text-xs text-green-700 mt-0.5 mb-3">Let AI instantly create 5 age-appropriate missions for a child.</p>
-              <div className="space-y-2">
-                {children.map((child) => (
-                  <button
-                    key={child.id}
-                    type="button"
-                    onClick={() => generateMissions(child)}
-                    disabled={generating === child.id}
-                    className="flex items-center justify-between w-full bg-white border border-green-200 rounded-lg px-3 py-2 text-sm hover:bg-green-50 disabled:opacity-60 transition-colors"
-                  >
-                    <span className="font-medium text-gray-800">{child.name}</span>
-                    <span className="text-green-600 text-xs font-medium">
-                      {generating === child.id ? '✨ Generating…' : 'Generate missions →'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 max-w-md mb-6 flex items-center gap-3">
+          <span className="text-lg">✨</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">AI missions are created from the Dashboard</p>
+            <p className="text-xs text-blue-700 mt-0.5">Use the <a href="/dashboard" className="underline font-medium">Dashboard</a> to generate today&apos;s personalised missions for each child.</p>
           </div>
         </div>
       )}

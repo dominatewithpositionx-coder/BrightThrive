@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { Gift, ChevronRight, Star, Flame, Plus, Sparkles, Tablet, BookHeart, TrendingUp, Calendar } from 'lucide-react';
+import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
 import WeatherCard from './components/WeatherCard';
@@ -65,8 +65,8 @@ export default function DashboardPage() {
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  // Separate flag for auto-gen vs manual: auto-gen failures are silent (no red text).
-  const [isAutoGen, setIsAutoGen] = useState(false);
+  // Ref (not state) so generateMissionsForAll always reads the live value, not a stale closure.
+  const isAutoGenRef = useRef(false);
   const [winText, setWinText]             = useState('');
   const [winSaved, setWinSaved]           = useState(false);
   const [winSaving, setWinSaving]         = useState(false);
@@ -85,7 +85,7 @@ export default function DashboardPage() {
     const todayMissionsCount = missions.filter(m => m.mission_date === todayStr()).length;
     if (todayMissionsCount > 0) return;
     autoGenDoneRef.current = true;
-    setIsAutoGen(true);
+    isAutoGenRef.current = true;
     generateMissionsForAll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, children.length, missions.length]);
@@ -234,8 +234,8 @@ export default function DashboardPage() {
     setGeneratingAll(true);
     setGeneratedCount(null);
     setGenerateError(null);
-    // If triggered manually (not auto-gen), clear the auto-gen flag so errors show.
-    if (!isAutoGen) setIsAutoGen(false);
+    // Manual trigger resets the auto-gen flag so errors are shown.
+    if (!isAutoGenRef.current) isAutoGenRef.current = false;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
       console.error('[dashboard] generateMissionsForAll: no session — aborting');
@@ -279,10 +279,10 @@ export default function DashboardPage() {
     }
     setGeneratedCount(success);
     // Only show a red error on manual generate clicks, not on silent auto-generation.
-    if (success === 0 && !isAutoGen) {
+    if (success === 0 && !isAutoGenRef.current) {
       setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
     }
-    setIsAutoGen(false);
+    isAutoGenRef.current = false;
     await init();
     setGeneratingAll(false);
   }
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                   disabled={generatingAll}
                   className="min-h-[44px] px-4 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-60"
                 >
-                  {generatingAll ? '✨ Generating…' : generatedCount !== null && generatedCount > 0 ? '✓ Missions created' : '✨ Generate for today'}
+                  {generatingAll ? '✨ Creating…' : generatedCount !== null && generatedCount > 0 ? '✓ Missions created' : '✨ Create Missions Now'}
                 </button>
               )}
             </div>
@@ -554,8 +554,14 @@ export default function DashboardPage() {
                     ) : (
                       <div className="text-center py-3">
                         <p className="text-2xl mb-1">🗺️</p>
-                        <p className="text-xs text-gray-400 font-medium">No missions yet today.</p>
-                        <p className="text-xs text-gray-400">Generate missions to get started!</p>
+                        <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
+                        <button
+                          onClick={generateMissionsForAll}
+                          disabled={generatingAll}
+                          className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {generatingAll ? '✨ Creating…' : '✨ Create Missions Now'}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -598,18 +604,6 @@ export default function DashboardPage() {
               <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>
             )}
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={generateMissionsForAll}
-                disabled={generatingAll}
-                className="min-h-[44px] flex items-center gap-2 bg-teal-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-60"
-              >
-                <Sparkles size={16} />
-                {generatingAll
-                  ? 'Generating…'
-                  : generatedCount !== null && generatedCount > 0
-                    ? `✓ Missions created for ${generatedCount} ${generatedCount === 1 ? 'child' : 'children'}`
-                    : "Generate Today's Missions"}
-              </button>
               <Link
                 href="/dashboard/children"
                 className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"

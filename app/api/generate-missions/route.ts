@@ -415,5 +415,5 @@ Format: JSON array only — [{"title":"...","category":"...","screen_time_reward
     error = null;
   }
 
-  return NextResponse.json({ tasks: data, generated: missions.length });
+  return NextResponse.json({ tasks: data, generated: data?.length ?? 0, requested: missions.length });
 }
