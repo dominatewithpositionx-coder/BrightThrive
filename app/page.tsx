@@ -458,40 +458,6 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Testimonials */}
-          <div className="bg-gradient-to-r from-teal-50 to-green-50 rounded-3xl p-8 border border-teal-100 mb-8">
-            <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-4">Early family stories</p>
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  quote: 'We\'ve tried so many apps. BrytThrive is the first one my kids actually look forward to. The arguments have almost completely stopped.',
-                  name: 'Sarah M.',
-                  detail: 'Mum of two · Ages 7 & 10',
-                },
-                {
-                  quote: 'My son asked me if he could do an extra mission so he could earn more coins. That sentence alone tells you everything you need to know.',
-                  name: 'David K.',
-                  detail: 'Dad of one · Age 8',
-                },
-              ].map((t) => (
-                <div key={t.name} className="bg-white rounded-2xl p-6 shadow-sm">
-                  <p className="text-gray-600 text-sm leading-relaxed mb-4 italic">&ldquo;{t.quote}&rdquo;</p>
-                  <p className="font-semibold text-navy text-sm">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Expert panel teaser */}
-          <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-center">
-            <p className="text-gray-400 text-sm font-medium">
-              🎓 Expert advisor panel — coming soon
-            </p>
-            <p className="text-gray-400 text-xs mt-1">
-              We&apos;re partnering with child psychologists and behaviour specialists to deepen the science behind BrytThrive.
-            </p>
-          </div>
         </div>
       </section>
 
