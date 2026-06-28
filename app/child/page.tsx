@@ -746,12 +746,12 @@ function ChildView({ child, missions, rewards, streak, onBack, onMissionToggle, 
           </motion.div>
         )}
 
-        {/* Demo mode banner */}
+        {/* Demo mode banner — only shown on /child?demo=1 */}
         {isDemoMode && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center text-sm text-amber-700 font-medium"
           >
-            ✨ Preview mode — here&apos;s what your missions will look like! Real missions are on the way.
+            🔍 Demo preview — this is how Kid Mode works. Real missions appear after setup.
           </motion.div>
         )}
 
@@ -862,6 +862,14 @@ export default function ChildPage() {
   const [missionError, setMissionError] = useState<string | null>(null);
   const [missionSuccess, setMissionSuccess] = useState<string | null>(null);
   const [weather, setWeather]       = useState<WeatherData | null>(null);
+  // Demo mode is ONLY active when the parent opens /child?demo=1 from the dashboard.
+  // Normal child use never shows demo missions regardless of real-mission state.
+  const [isExplicitDemo, setIsExplicitDemo] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsExplicitDemo(new URLSearchParams(window.location.search).get('demo') === '1');
+    }
+  }, []);
   const installPrompt               = useInstallPrompt();
 
   const supabase = getSupabase();
@@ -1118,7 +1126,9 @@ export default function ChildPage() {
   }
 
   const childMissions = selected ? missions.filter((m) => m.child_id === selected.id) : [];
-  const isDemoMode = childMissions.length === 0 && selected !== null && loadState === 'ok' && !loading;
+  // Demo mode: ONLY when ?demo=1 is in the URL (parent explicitly previewing).
+  // Real child sessions never show demo missions, even if real missions haven't loaded yet.
+  const isDemoMode = isExplicitDemo;
   const displayMissions: Mission[] = isDemoMode && selected
     ? DEMO_MISSIONS.map(m => ({ ...m, child_id: selected.id }))
     : childMissions;

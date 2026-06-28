@@ -208,10 +208,13 @@ export async function POST(req: NextRequest) {
   // Record the attempt now — will be reset if generation ultimately fails
   rateLimitMap.set(rlKey, now);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // Prefer service role (bypasses RLS) for mission writes.
+  // If service role key is absent, fall back to the authenticated caller client
+  // which carries the user's Bearer token — RLS will allow the parent to insert
+  // missions for their own children. Never use bare anon key (no auth context).
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : anonSupabase;
 
   const resolvedAge: number | null = childAge ?? childRow?.age ?? null;
   const band = resolvedAge ? ageBand(resolvedAge) : '8-10';
