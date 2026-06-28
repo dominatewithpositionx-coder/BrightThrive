@@ -454,117 +454,139 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* 4. Per-child mission cards */}
+        {/* 4. Today's Progress — per-child cards */}
         {children.length > 0 && (
           <section>
-            <SectionHeader title="Your Children" href="/dashboard/children" linkLabel="Manage" />
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today&apos;s Progress</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Live snapshot of each child&apos;s missions</p>
+              </div>
+              <Link href="/dashboard/children" className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-0.5">
+                Manage <ChevronRight size={14} />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child) => {
                 const avatar = getAvatar(child.name);
                 const childMissions = missions.filter((m) => m.child_id === child.id && m.mission_date === today);
                 const done = childMissions.filter((m) => m.is_completed).length;
-                const completionPct = childMissions.length > 0
-                  ? Math.round((done / childMissions.length) * 100) : 0;
+                const total = childMissions.length;
+                const completionPct = total > 0 ? Math.round((done / total) * 100) : 0;
+                const childCoins = done * 10;
                 const childScreenTime = childMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
                 const badge = streakBadge(child.streak);
                 const previewMissions = childMissions.slice(0, 3);
                 const explorerLevel = getExplorerLevel(child.points);
+
+                // Status label
+                const statusLabel = total === 0
+                  ? { label: 'Not started', bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-300' }
+                  : done === total
+                  ? { label: 'Mission pack complete', bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500' }
+                  : { label: 'In progress', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' };
 
                 return (
                   <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow card-lift">
                     {/* Accent strip */}
                     <div className={`h-1.5 w-full ${avatar.bg}`} />
                     <div className="p-5">
-                    {/* Child header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-12 h-12 rounded-2xl ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm`}>
-                        {child.name[0].toUpperCase()}
+                      {/* Child header */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-12 h-12 rounded-2xl ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm`}>
+                          {child.name[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-navy truncate">{child.name}</p>
+                          <span className="text-xs font-medium text-gray-500">
+                            {explorerLevel.emoji} {explorerLevel.name}
+                          </span>
+                        </div>
+                        {child.streak > 0 && (
+                          <div className="flex items-center gap-1 bg-orange-50 rounded-full px-2.5 py-1 flex-shrink-0">
+                            <span className="text-xs font-bold text-orange-500">{child.streak}🔥</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-navy truncate">{child.name}</p>
-                        <span className="text-xs font-medium text-gray-500">
-                          {explorerLevel.emoji} {explorerLevel.name}
-                        </span>
+
+                      {/* Status badge */}
+                      <div className={`inline-flex items-center gap-1.5 ${statusLabel.bg} rounded-full px-3 py-1 mb-3`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusLabel.dot}`} />
+                        <span className={`text-xs font-semibold ${statusLabel.text}`}>{statusLabel.label}</span>
                       </div>
-                      {child.streak > 0 && (
-                        <div className="flex items-center gap-1 bg-orange-50 rounded-full px-2.5 py-1 flex-shrink-0">
-                          <span className="text-xs font-bold text-orange-500">{child.streak}🔥</span>
+
+                      {/* Stats row */}
+                      <div className="grid grid-cols-4 gap-1.5 mb-3">
+                        <div className="bg-gray-50 rounded-xl px-1 py-2 text-center">
+                          <p className="text-sm font-bold text-navy">{done}/{total}</p>
+                          <p className="text-[10px] text-gray-400 font-medium leading-tight">Done</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-xl px-1 py-2 text-center">
+                          <p className="text-sm font-bold text-amber-600">{childCoins}</p>
+                          <p className="text-[10px] text-amber-500 font-medium leading-tight">🪙 Coins</p>
+                        </div>
+                        <div className={`rounded-xl px-1 py-2 text-center ${childScreenTime > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                          <p className={`text-sm font-bold ${childScreenTime > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{childScreenTime}</p>
+                          <p className={`text-[10px] font-medium leading-tight ${childScreenTime > 0 ? 'text-blue-500' : 'text-gray-400'}`}>📱 mins</p>
+                        </div>
+                        <div className="bg-orange-50 rounded-xl px-1 py-2 text-center">
+                          <p className="text-sm font-bold text-orange-500">{child.streak}</p>
+                          <p className="text-[10px] text-orange-400 font-medium leading-tight">🔥 days</p>
+                        </div>
+                      </div>
+
+                      {childMissions.length > 0 ? (
+                        <>
+                          {/* Progress bar */}
+                          <div className="mb-3">
+                            <div className="flex justify-between text-xs text-gray-400 mb-1">
+                              <span>{completionPct}% complete</span>
+                              <span>{done} of {total} missions</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-500"
+                                style={{ width: `${completionPct}%` }}
+                              />
+                            </div>
+                          </div>
+                          {/* Mission preview */}
+                          <ul className="space-y-1.5 mb-3">
+                            {previewMissions.map((m) => (
+                              <li key={m.id} className="flex items-center gap-2 text-sm">
+                                <span className="text-sm flex-shrink-0">{CAT_EMOJI[m.category ?? 'general'] ?? '⭐'}</span>
+                                <span className={`truncate ${m.is_completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{m.title}</span>
+                                {m.is_completed && <span className="ml-auto text-teal-400 text-xs flex-shrink-0">✓</span>}
+                              </li>
+                            ))}
+                            {total > 3 && (
+                              <li className="text-xs text-gray-400 pl-6">+{total - 3} more missions</li>
+                            )}
+                          </ul>
+                          {done === total && total > 0 && (
+                            <div className="mb-3 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2 text-xs text-teal-700 font-semibold text-center">
+                              🎉 All done! {childScreenTime} mins screen time ready — approve it!
+                            </div>
+                          )}
+                          <Link href="/child" target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
+                            Open Kid View <ChevronRight size={12} />
+                          </Link>
+                        </>
+                      ) : (
+                        <div className="text-center py-3">
+                          <p className="text-2xl mb-1">🗺️</p>
+                          <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
+                          <button
+                            onClick={generateMissionsForAll}
+                            disabled={generatingAll}
+                            className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {generatingAll ? '✨ Creating…' : '✨ Create Missions Now'}
+                          </button>
                         </div>
                       )}
                     </div>
-
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="bg-amber-50 rounded-xl px-2 py-2 text-center">
-                        <p className="text-base font-bold text-amber-600">{child.points}</p>
-                        <p className="text-xs text-amber-500 font-medium">Coins</p>
-                      </div>
-                      <div className="bg-teal-50 rounded-xl px-2 py-2 text-center">
-                        <p className="text-base font-bold text-teal-600">{done}/{childMissions.length || 0}</p>
-                        <p className="text-xs text-teal-500 font-medium">Done</p>
-                      </div>
-                      <div className={`rounded-xl px-2 py-2 text-center ${childScreenTime > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                        <p className={`text-base font-bold ${childScreenTime > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{childScreenTime}</p>
-                        <p className={`text-xs font-medium ${childScreenTime > 0 ? 'text-blue-500' : 'text-gray-400'}`}>📱 mins</p>
-                      </div>
-                    </div>
-                    {childScreenTime > 0 && done === childMissions.length && childMissions.length > 0 && (
-                      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 font-semibold text-center">
-                        🎉 {childScreenTime} mins screen time ready — approve it!
-                      </div>
-                    )}
-
-                    {badge && (
-                      <span className="inline-block mb-3 text-xs font-semibold bg-orange-50 text-orange-600 rounded-full px-2.5 py-1">
-                        {badge}
-                      </span>
-                    )}
-
-                    {childMissions.length > 0 ? (
-                      <>
-                        <div className="mb-3">
-                          <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                            <span>Today&apos;s progress</span>
-                            <span className="font-medium">{completionPct}%</span>
-                          </div>
-                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-500"
-                              style={{ width: `${completionPct}%` }}
-                            />
-                          </div>
-                        </div>
-                        <ul className="space-y-1.5 mb-3">
-                          {previewMissions.map((m) => (
-                            <li key={m.id} className="flex items-center gap-2 text-sm">
-                              <span className="text-sm">{CAT_EMOJI[m.category ?? 'general'] ?? '⭐'}</span>
-                              <span className={`truncate ${m.is_completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{m.title}</span>
-                              {m.is_completed && <span className="ml-auto text-teal-400 text-xs flex-shrink-0">✓</span>}
-                            </li>
-                          ))}
-                          {childMissions.length > 3 && (
-                            <li className="text-xs text-gray-400 pl-6">+{childMissions.length - 3} more missions</li>
-                          )}
-                        </ul>
-                        <Link href="/child" target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
-                          Open Kid View <ChevronRight size={12} />
-                        </Link>
-                      </>
-                    ) : (
-                      <div className="text-center py-3">
-                        <p className="text-2xl mb-1">🗺️</p>
-                        <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
-                        <button
-                          onClick={generateMissionsForAll}
-                          disabled={generatingAll}
-                          className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          {generatingAll ? '✨ Creating…' : '✨ Create Missions Now'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
                   </div>
                 );
               })}
