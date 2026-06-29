@@ -80,6 +80,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/login" className="hover:text-gray-900 font-medium transition-colors">
               Parent Login
             </Link>
+            <Link href="/contact" className="hover:text-gray-900 font-medium transition-colors">
+              Contact
+            </Link>
             <Link
               href="/onboarding"
               className="text-white px-5 py-2.5 rounded-xl font-semibold min-h-[44px] flex items-center transition-opacity hover:opacity-90"
