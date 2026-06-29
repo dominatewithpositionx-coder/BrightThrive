@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [loading, setLoading]         = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
+  const [generatingChildIds, setGeneratingChildIds] = useState<Set<string>>(new Set());
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   // Ref (not state) so generateMissionsForAll always reads the live value, not a stale closure.
@@ -238,12 +239,33 @@ export default function DashboardPage() {
     setWinSaving(false);
   }
 
+  async function generateMissionsForChild(childId: string, sessionToken: string, weatherSummary?: string): Promise<boolean> {
+    const child = children.find(c => c.id === childId);
+    if (!child) return false;
+    setGeneratingChildIds(prev => new Set(prev).add(childId));
+    try {
+      const res = await fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
+        body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
+      });
+      if (res.ok) return true;
+      const body = await res.json().catch(() => ({}));
+      console.error(`[dashboard] generateMissionsForChild: API ${res.status} for ${child.name}:`, body);
+      return false;
+    } catch (err) {
+      console.error('[dashboard] generateMissionsForChild: network error for', child.name, err);
+      return false;
+    } finally {
+      setGeneratingChildIds(prev => { const s = new Set(prev); s.delete(childId); return s; });
+    }
+  }
+
   async function generateMissionsForAll() {
     if (generatingAll || children.length === 0) return;
     setGeneratingAll(true);
     setGeneratedCount(null);
     setGenerateError(null);
-    // Manual trigger resets the auto-gen flag so errors are shown.
     if (!isAutoGenRef.current) isAutoGenRef.current = false;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
@@ -265,35 +287,42 @@ export default function DashboardPage() {
     }
 
     let success = 0;
-    // Sequential so the per-parent rate limit is respected and successes can be counted.
     for (const child of children) {
-      try {
-        const res = await fetch('/api/generate-missions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
-        });
-        if (res.ok) {
-          success += 1;
-        } else {
-          const body = await res.json().catch(() => ({}));
-          console.error(`[dashboard] generateMissionsForAll: API returned ${res.status} for child ${child.name}:`, body);
-        }
-      } catch (err) {
-        console.error('[dashboard] generateMissionsForAll: network error for child', child.name, err);
+      const ok = await generateMissionsForChild(child.id, session.access_token, weatherSummary);
+      if (ok) success += 1;
+      // 1500ms gap between children to avoid Anthropic API 429s
+      if (child !== children[children.length - 1]) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
+
     setGeneratedCount(success);
-    // Only show a red error on manual generate clicks, not on silent auto-generation.
     if (success === 0 && !isAutoGenRef.current) {
       setGenerateError("Couldn't create missions right now. Please try again in a moment — your family's profile is saved.");
     }
     isAutoGenRef.current = false;
     await init();
     setGeneratingAll(false);
+  }
+
+  async function generateMissionsForSingleChild(childId: string) {
+    if (generatingChildIds.has(childId) || generatingAll) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    let weatherSummary: string | undefined;
+    if (familyLocation) {
+      try {
+        const wxRes = await fetch(`/api/weather?location=${encodeURIComponent(familyLocation)}`);
+        const wxData = await wxRes.json();
+        if (!wxData.error) {
+          weatherSummary = `${wxData.condition}, ${wxData.tempC}°C, ${wxData.isOutdoorFriendly ? 'outdoor friendly' : 'indoor recommended'}`;
+        }
+      } catch { /* weather is optional */ }
+    }
+
+    await generateMissionsForChild(childId, session.access_token, weatherSummary);
+    await init();
   }
 
   const firstName = user?.email?.split('@')[0] ?? 'there';
@@ -500,10 +529,12 @@ export default function DashboardPage() {
                   ? { label: 'Mission pack complete', bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500' }
                   : { label: 'In progress', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' };
 
+                const isGeneratingThisChild = generatingChildIds.has(child.id);
+
                 return (
-                  <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow card-lift">
-                    {/* Accent strip */}
-                    <div className={`h-1.5 w-full ${avatar.bg}`} />
+                  <div key={child.id} className={`bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow card-lift ${isGeneratingThisChild ? 'opacity-80' : ''}`}>
+                    {/* Accent strip — pulses while this child's missions are being created */}
+                    <div className={`h-1.5 w-full ${avatar.bg} ${isGeneratingThisChild ? 'animate-pulse' : ''}`} />
                     <div className="p-5">
                       {/* Child header */}
                       <div className="flex items-center gap-3 mb-3">
@@ -589,15 +620,21 @@ export default function DashboardPage() {
                         </>
                       ) : (
                         <div className="text-center py-3">
-                          <p className="text-2xl mb-1">🗺️</p>
-                          <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
-                          <button
-                            onClick={generateMissionsForAll}
-                            disabled={generatingAll}
-                            className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            {generatingAll ? '✨ Creating…' : '✨ Create Missions Now'}
-                          </button>
+                          {generatingChildIds.has(child.id) ? (
+                            <p className="text-xs text-teal-600 font-semibold animate-pulse">✨ Creating missions…</p>
+                          ) : (
+                            <>
+                              <p className="text-2xl mb-1">🗺️</p>
+                              <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
+                              <button
+                                onClick={() => generateMissionsForSingleChild(child.id)}
+                                disabled={generatingChildIds.has(child.id) || generatingAll}
+                                className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                ✨ Create Missions Now
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
