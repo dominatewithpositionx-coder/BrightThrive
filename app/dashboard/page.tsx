@@ -371,8 +371,8 @@ export default function DashboardPage() {
           <div className={`bg-gradient-to-r ${dayTheme.gradient} rounded-2xl px-5 py-3.5 flex items-center gap-3`}>
             <span className="text-2xl">{dayTheme.emoji}</span>
             <div className="flex-1">
-              <p className="text-white font-bold text-sm">{dayTheme.name}</p>
-              <p className="text-white/80 text-xs">{dayTheme.tagline}</p>
+              <p className="text-gray-900 font-bold text-sm">{dayTheme.name}</p>
+              <p className="text-gray-700 text-xs">{dayTheme.tagline}</p>
             </div>
           </div>
         </div>
