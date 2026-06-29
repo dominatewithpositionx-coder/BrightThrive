@@ -39,9 +39,11 @@ export function getSupabase(): SupabaseClient {
 
 // Server-only service-role client. Bypasses RLS — never import into client code.
 export function createServiceSupabaseClient(): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
