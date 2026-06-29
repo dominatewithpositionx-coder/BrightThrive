@@ -556,6 +556,83 @@ function MissionGroup({ title, emoji, missions, onToggle, accent }: {
   );
 }
 
+// ── Mission loading screen — shown while auto-gen is in flight ────────────────
+
+const LOADING_MESSAGES = [
+  'Creating your mission pack…',
+  'Checking your mood and goals…',
+  "Matching missions to today's rhythm…",
+  'Personalising your adventure…',
+  'Almost there — missions incoming!',
+];
+
+function MissionLoadingScreen({ childName, onRetry, failed }: { childName: string; onRetry: () => void; failed: boolean }) {
+  const [msgIdx, setMsgIdx] = useState(0);
+
+  useEffect(() => {
+    if (failed) return;
+    const t = setInterval(() => setMsgIdx(i => (i + 1) % LOADING_MESSAGES.length), 2000);
+    return () => clearInterval(t);
+  }, [failed]);
+
+  if (failed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 animate-fade-in">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 w-full max-w-sm p-8 text-center">
+          <div className="text-5xl mb-4">😕</div>
+          <p className="font-black text-navy text-lg mb-2">Couldn&apos;t load missions</p>
+          <p className="text-gray-400 text-sm mb-6 leading-relaxed">Check your connection and try again — your progress is saved.</p>
+          <button
+            onClick={onRetry}
+            className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-xl text-sm transition-colors min-h-[44px]"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 animate-fade-in">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 w-full max-w-sm p-8">
+        {/* Animated seedling */}
+        <div className="flex justify-center mb-5">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-400 animate-pulse opacity-30" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-3xl">
+              🌱
+            </div>
+          </div>
+        </div>
+        <p className="text-center font-black text-navy text-lg mb-1">Hey {childName}!</p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={msgIdx}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.3 }}
+            className="text-center text-gray-500 text-sm mb-6"
+          >
+            {LOADING_MESSAGES[msgIdx]}
+          </motion.p>
+        </AnimatePresence>
+        {/* Skeleton mission rows */}
+        <div className="space-y-3">
+          {[0.9, 0.75, 0.85, 0.6, 0.8].map((w, i) => (
+            <div key={i} className="flex items-center gap-3 animate-pulse" style={{ animationDelay: `${i * 0.1}s` }}>
+              <div className="w-6 h-6 rounded-full bg-gray-100 flex-shrink-0" />
+              <div className="h-4 rounded-full bg-gray-100 flex-1" style={{ width: `${w * 100}%` }} />
+              <div className="w-10 h-4 rounded-full bg-amber-50 flex-shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Mission row (flat list design matching How-It-Works mockup) ───────────────
 
 function MissionRow({ mission, onToggle, isLast }: { mission: Mission; onToggle: (m: Mission) => void; isLast: boolean }) {
@@ -579,13 +656,14 @@ function MissionRow({ mission, onToggle, isLast }: { mission: Mission; onToggle:
   );
 }
 
-function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode }: {
+function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number; mood: MoodKey | null;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
   missionPack: string | null;
   missionError: string | null; missionSuccess: string | null;
   weather: WeatherData | null; isDemoMode?: boolean;
+  isAutoGenerating?: boolean; autoGenFailed?: boolean; onRetryGen?: () => void;
 }) {
   const theme   = getDayTheme();
   const level   = getExplorerLevel(child.points);
@@ -625,6 +703,11 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const moodLabel = mood ? MOODS.find(m => m.key === mood)?.label ?? mood : null;
   const weatherLabel = weather ? `${weather.condition}, ${weather.tempC}°C` : null;
   const contextLine = [moodLabel, weatherLabel, timeLabel].filter(Boolean).join(' · ');
+
+  // Show loading screen while auto-gen is in flight and no missions exist yet
+  if ((isAutoGenerating || autoGenFailed) && missions.length === 0 && !isDemoMode) {
+    return <MissionLoadingScreen childName={child.name} failed={!!autoGenFailed} onRetry={onRetryGen ?? (() => {})} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 animate-fade-in pb-10">
@@ -999,6 +1082,8 @@ export default function ChildPage() {
   useEffect(() => { fetchData(); }, []);
 
   const autoGenDoneRef = useRef(false);
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [autoGenFailed, setAutoGenFailed] = useState(false);
 
   // Auto-generate missions when none exist for today — uses the parent's active session.
   // Fires once per page load; the ref prevents re-triggering after missions are written.
@@ -1010,11 +1095,14 @@ export default function ChildPage() {
     if (missions.some(m => !m.is_completed)) return;
     if (autoGenDoneRef.current) return;
     autoGenDoneRef.current = true;
+    setAutoGenerating(true);
+    setAutoGenFailed(false);
     console.log(`[child/autoGen] triggering auto-gen for ${children.length} child(ren). Total missions=${missions.length}, completed=${missions.filter(m => m.is_completed).length}, incomplete=0`);
 
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) { setAutoGenerating(false); setAutoGenFailed(true); return; }
+      let anySuccess = false;
       for (const child of children) {
         try {
           const genRes = await fetch('/api/generate-missions', {
@@ -1031,14 +1119,25 @@ export default function ChildPage() {
           });
           const genData = await genRes.json();
           console.log(`[child/autoGen] child=${child.name} status=${genRes.status} generated=${genData.generated} pack=${genData.pack ?? 'none'} error=${genData.error ?? 'none'}`);
+          if (genRes.ok) anySuccess = true;
         } catch (e) {
           console.error('[child/autoGen] fetch error:', e);
         }
       }
-      fetchData();
+      await fetchData();
+      setAutoGenerating(false);
+      if (!anySuccess) setAutoGenFailed(true);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, children.length, missions.length]);
+
+  function handleRetryAutoGen() {
+    autoGenDoneRef.current = false;
+    setAutoGenFailed(false);
+    setAutoGenerating(false);
+    // Re-trigger by bumping missions.length dependency via fetchData
+    fetchData();
+  }
 
   function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
@@ -1263,6 +1362,9 @@ export default function ChildPage() {
             missionSuccess={missionSuccess}
             weather={weather}
             isDemoMode={isDemoMode}
+            isAutoGenerating={autoGenerating}
+            autoGenFailed={autoGenFailed}
+            onRetryGen={handleRetryAutoGen}
           />
         </>
       )}
