@@ -121,16 +121,16 @@ export default function HomePage() {
               </h2>
               <div className="space-y-4 text-gray-600 leading-relaxed text-base">
                 <p>
-                  A few years ago, I was in the middle of another argument with my kids about screens. Not a big argument — just the same small one we seemed to have every single day. iPad down. Not yet. Five more minutes. You promised.
+                  Last year, I was in the middle of another argument with my kids about screens. Not a big argument, just the same small one we seemed to have every single day. iPad down. Not yet. Five more minutes. You promised.
                 </p>
                 <p>
-                  I wasn&apos;t angry at my children. I was exhausted from the pattern. And I felt guilty — because I wanted to raise kind, confident, emotionally healthy kids, and this didn&apos;t feel like the way to do it.
+                  I wasn&apos;t angry at my children. I was exhausted from the pattern. And I felt guilty, because I wanted to raise kind, confident, emotionally healthy kids, and this didn&apos;t feel like the way to do it.
                 </p>
                 <p>
                   I tried chore charts. Reward stickers. Screen-time apps. Nothing felt right. Either too rigid, too complicated, or too easy to ignore after a week.
                 </p>
                 <p className="font-medium text-navy">
-                  So I built BrytThrive — the tool I wished I had. Not to punish. Not to control. But to create a calmer, more connected family through small daily wins.
+                  So I built BrytThrive, the tool I wished I had. Not to punish. Not to control. But to create a calmer, more connected family through small daily wins.
                 </p>
               </div>
             </div>

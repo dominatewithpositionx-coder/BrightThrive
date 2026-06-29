@@ -208,6 +208,17 @@ function computeTimeOfDay(hour: number): 'morning' | 'afternoon' | 'evening' {
   return 'evening';
 }
 
+// Returns the ideal mission count for a child based on mood and time of day.
+// Late evening (8pm+) hard-caps at 3 regardless of mood.
+function computeMissionCount(mood: string | null, hour: number): number {
+  if (hour >= 20) return 3; // late evening hard cap
+  const m = mood?.toLowerCase() ?? '';
+  if (m === 'tired' || m === 'frustrated') return 3;
+  if (m === 'calm') return 4;
+  if (m === 'happy' || m === 'excited') return 5;
+  return 5; // default
+}
+
 function computeDifficulty(
   currentStreak: number,
   totalCompletedMissions: number,
@@ -381,7 +392,7 @@ export async function buildMissionContext(params: {
     overrepresentedCategories,
     underrepresentedCategories,
     familyPersonalization,
-    requestedCount: Math.min(15, Math.max(8, requestedCount)),
+    requestedCount: computeMissionCount(mood ?? null, hour),
   };
 }
 
@@ -434,6 +445,22 @@ function buildSystemPrompt(ctx: MissionContext): string {
     ? `- Weather: ${ctx.weatherDetails}.${ctx.weatherHint ? ` ${ctx.weatherHint}` : ''} ${ctx.isOutdoorFriendly ? 'Outdoor missions are appropriate.' : 'Prefer indoor missions.'}`
     : '- Weather: unavailable — skip weather-specific missions.';
 
+  // Extract temp for weather rules (parse first number from weatherDetails)
+  const tempMatch = ctx.weatherDetails?.match(/(-?\d+)°C/);
+  const tempC = tempMatch ? parseInt(tempMatch[1], 10) : null;
+  const isEvening = ctx.timeOfDay === 'evening';
+  const isLateEvening = new Date().getHours() >= 20;
+  const weatherCondLower = (ctx.weatherDetails ?? '').toLowerCase();
+  const isRainyOrCloudy = weatherCondLower.includes('rain') || weatherCondLower.includes('shower') || weatherCondLower.includes('cloud') || weatherCondLower.includes('overcast');
+
+  const outdoorRule = (() => {
+    if (tempC !== null && tempC < 5) return 'Temperature is below 5°C — strictly indoor missions only. No outdoor missions.';
+    if (tempC !== null && tempC < 10) return 'Temperature is below 10°C — no outdoor missions. Replace with indoor movement, creative, or mindfulness alternatives.';
+    if (isRainyOrCloudy && isEvening) return 'Rainy or cloudy evening — no outdoor missions. Replace with indoor alternatives.';
+    if (tempC !== null && tempC >= 18 && ctx.isOutdoorFriendly) return 'Sunny and warm — outdoor missions are encouraged and should appear in at least 1-2 slots.';
+    return ctx.isOutdoorFriendly ? 'Outdoor missions are appropriate.' : 'Prefer indoor missions.';
+  })();
+
   return `You are BrytThrive's AI parenting coach and mission designer.
 Your job: generate exactly ${ctx.requestedCount} personalized child missions that feel fresh, meaningful, and age-appropriate.
 
@@ -443,10 +470,22 @@ CHILD CONTEXT:
 - Streak: ${ctx.currentStreak} day${ctx.currentStreak !== 1 ? 's' : ''}
 - Current mission round today: ${ctx.currentRound} (0 = first pack, 1+ = bonus rounds)
 - ${locationLine}
-- Time: ${ctx.timeOfDay}, ${ctx.dayType}, ${ctx.season}
+- Time: ${ctx.timeOfDay}${isLateEvening ? ' (late evening — wind-down only)' : ''}, ${ctx.dayType}, ${ctx.season}
 - Today's theme: ${ctx.dayTheme.name} — lean toward ${ctx.dayTheme.focusCategories.join(', ')}
 ${weatherLine}
 ${growthProfileSection}
+
+MOOD ENERGY RULES — follow these strictly:
+- tired or calm: NO high-energy missions (no running, dancing, jumping, outdoor adventures). Choose reading, drawing, breathing exercises, gentle creative tasks, journaling, quiet family connection.
+- frustrated: Begin with ONE physical release mission (movement), then transition to calm creative or connection missions.
+- excited or happy: Full variety allowed. Prioritise outdoor and movement if weather permits.
+- Any mood in evening (after 6pm): Favour wind-down missions — mindfulness, reading, gratitude, family connection, creative calm. No outdoor missions after dark or in cold weather (below 15°C).
+
+WEATHER RULES:
+- ${outdoorRule}
+- Below 10°C or rainy/cloudy evening: No outdoor missions. Replace with indoor movement, creative, or mindfulness alternatives.
+- Below 5°C: Strictly indoor missions only.
+- Sunny and above 18°C: Outdoor missions are encouraged and should appear in at least 1-2 slots.
 
 DIFFICULTY LEVEL: ${ctx.difficultyLevel.toUpperCase()}
 ${difficultyInstruction}

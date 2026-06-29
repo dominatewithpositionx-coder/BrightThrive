@@ -38,18 +38,8 @@ function mapWeatherCode(code: number): { condition: string; emoji: string; isOut
   return { condition: 'Cloudy', emoji: '☁️', isOutdoorFriendly: true };
 }
 
-export async function fetchWeather(location: string): Promise<WeatherData | null> {
+async function fetchWeatherByLatLon(lat: number, lon: number, name: string): Promise<WeatherData | null> {
   try {
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!geoRes.ok) return null;
-    const geoData = await geoRes.json();
-    const place = geoData?.results?.[0];
-    if (!place) return null;
-
-    const { latitude: lat, longitude: lon, name } = place;
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m,relative_humidity_2m` +
@@ -83,6 +73,36 @@ export async function fetchWeather(location: string): Promise<WeatherData | null
     };
   } catch {
     return null;
+  }
+}
+
+export async function fetchWeather(location: string): Promise<WeatherData | null> {
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!geoRes.ok) return null;
+    const geoData = await geoRes.json();
+    const place = geoData?.results?.[0];
+    if (!place) return null;
+    return fetchWeatherByLatLon(place.latitude, place.longitude, place.name);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWeatherByCoords(lat: number, lon: number): Promise<WeatherData | null> {
+  try {
+    // Reverse-geocode to get a city name
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=en&format=json`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const name = geoRes.ok ? ((await geoRes.json())?.results?.[0]?.name ?? 'Your location') : 'Your location';
+    return fetchWeatherByLatLon(lat, lon, name);
+  } catch {
+    return fetchWeatherByLatLon(lat, lon, 'Your location');
   }
 }
 

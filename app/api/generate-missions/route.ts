@@ -9,6 +9,9 @@ const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 60_000;
 
 export async function POST(req: NextRequest) {
+  // Env-var health check — logged on every request so Vercel logs show the config state
+  console.log('[generate-missions] env check — SUPABASE_URL:', !!process.env.NEXT_PUBLIC_SUPABASE_URL, '| ANON_KEY:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, '| SERVICE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY, '| ANTHROPIC_KEY:', !!process.env.ANTHROPIC_API_KEY);
+
   const {
     childId, childAge, parentId, location, locationLabel, locationCity,
     mood, weatherSummary, count, missionRound,
@@ -177,8 +180,8 @@ export async function POST(req: NextRequest) {
     }));
     const retry = await supabase.from('missions').insert(rowsNoDate).select();
     if (retry.error) {
-      console.error('[generate-missions] mission insert failed (both attempts):', retry.error.message);
-      return NextResponse.json({ error: retry.error.message }, { status: 500 });
+      console.error('[generate-missions] mission insert failed (both attempts):', retry.error);
+      return NextResponse.json({ error: retry.error.message, code: retry.error.code }, { status: 500 });
     }
     data = retry.data;
     error = null;
