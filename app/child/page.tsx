@@ -701,8 +701,8 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
     return 'Evening';
   })();
   const moodLabel = mood ? MOODS.find(m => m.key === mood)?.label ?? mood : null;
-  const weatherLabel = weather ? `${weather.condition}, ${weather.tempC}°C` : null;
-  const contextLine = [moodLabel, weatherLabel, timeLabel].filter(Boolean).join(' · ');
+  const weatherLabel = weather ? `${weather.emoji} ${weather.tempC}°C` : null;
+  const contextLine = [moodLabel, timeLabel, weatherLabel].filter(Boolean).join(' · ');
 
   // Show loading screen while auto-gen is in flight and no missions exist yet
   if ((isAutoGenerating || autoGenFailed) && missions.length === 0 && !isDemoMode) {
