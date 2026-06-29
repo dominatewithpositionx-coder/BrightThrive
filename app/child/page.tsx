@@ -1161,18 +1161,34 @@ export default function ChildPage() {
 
   function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
-    if (!city) { setWeather(null); return; }
-    fetch(`/api/weather?location=${encodeURIComponent(city)}`)
-      .then(r => r.json())
-      .then(json => {
-        if (!json.error) {
-          setWeather(json as WeatherData);
-          setWeatherFetchedAt(new Date().toISOString());
-        } else {
-          setWeather(null);
-        }
-      })
-      .catch(() => { setWeather(null); });
+
+    const applyWeatherJson = (json: Record<string, unknown>) => {
+      if (!json.error) {
+        setWeather(json as unknown as WeatherData);
+        setWeatherFetchedAt(new Date().toISOString());
+      }
+    };
+
+    if (city) {
+      fetch(`/api/weather?location=${encodeURIComponent(city)}`)
+        .then(r => r.json())
+        .then(applyWeatherJson)
+        .catch(() => {});
+      return;
+    }
+
+    // No stored location — fall back to browser geolocation
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        fetch(`/api/weather?lat=${latitude}&lon=${longitude}`)
+          .then(r => r.json())
+          .then(applyWeatherJson)
+          .catch(() => {});
+      },
+      () => { /* user denied or unavailable — weather stays null */ }
+    );
   }
 
   function getChildPin(child: Child): string | null {

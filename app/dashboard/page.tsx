@@ -189,6 +189,18 @@ export default function DashboardPage() {
         .then(r => r.json())
         .then(json => { if (!json.error) setDashWeather(json as WeatherData); })
         .catch(() => {});
+    } else if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      // No stored location — try browser geolocation silently
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          fetch(`/api/weather?lat=${latitude}&lon=${longitude}`)
+            .then(r => r.json())
+            .then(json => { if (!json.error) setDashWeather(json as WeatherData); })
+            .catch(() => {});
+        },
+        () => { /* denied — weather stays null */ }
+      );
     }
 
     setLoading(false);
