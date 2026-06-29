@@ -18,6 +18,7 @@ import {
 import { KidWelcomeIllustration } from '@/components/brightthrive/Illustrations';
 import ProgressRing from '@/components/brightthrive/ProgressRing';
 import WeatherScene from '@/components/brightthrive/WeatherScene';
+import WeatherWidget from '@/components/WeatherWidget';
 import { getDayTheme } from '@/lib/themes';
 import { getExplorerLevel } from '@/lib/levels';
 import { getClothingSuggestions } from '@/lib/weather';
@@ -704,6 +705,19 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const weatherLabel = weather ? `${weather.emoji} ${weather.tempC}°C` : null;
   const contextLine = [moodLabel, timeLabel, weatherLabel].filter(Boolean).join(' · ');
 
+  const headerGradient = (() => {
+    if (!weather) return null;
+    const hour = new Date().getHours();
+    if (hour >= 19) return 'from-indigo-50 to-purple-50';
+    const lc = weather.condition.toLowerCase();
+    if (lc.includes('snow') || lc.includes('freez')) return 'from-blue-50 to-white';
+    if (lc.includes('rain') || lc.includes('shower') || lc.includes('drizzle')) return 'from-blue-50 to-slate-100';
+    if (lc.includes('cloud') || lc.includes('overcast')) return 'from-slate-50 to-gray-100';
+    if (lc.includes('partly') || lc.includes('mostly')) return 'from-sky-50 to-slate-50';
+    if (lc.includes('sun') || lc.includes('clear')) return 'from-amber-50 to-orange-50';
+    return null;
+  })();
+
   // Show loading screen while auto-gen is in flight and no missions exist yet
   if ((isAutoGenerating || autoGenFailed) && missions.length === 0 && !isDemoMode) {
     return <MissionLoadingScreen childName={child.name} failed={!!autoGenFailed} onRetry={onRetryGen ?? (() => {})} />;
@@ -726,7 +740,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
       <div className="px-4 max-w-lg mx-auto space-y-4">
 
         {/* ── Main mission card — matches MissionStackCard from How It Works ── */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className={`rounded-3xl shadow-sm border border-gray-100 overflow-hidden ${headerGradient ? `bg-gradient-to-br ${headerGradient}` : 'bg-white'}`}>
           {/* Amber top strip */}
           <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-400" />
 
@@ -752,6 +766,11 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.6, ease: 'easeOut' }}
                 />
+              </div>
+            )}
+            {weather && (
+              <div className="mt-4 flex justify-center border-t border-gray-100/60 pt-3">
+                <WeatherWidget tempC={weather.tempC} condition={weather.condition} emoji={weather.emoji} size="lg" />
               </div>
             )}
           </div>

@@ -9,6 +9,8 @@ import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp } from 'lucide-
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
 import WeatherCard from './components/WeatherCard';
+import WeatherWidget from '@/components/WeatherWidget';
+import { type WeatherData } from '@/lib/weather';
 import DailyBriefing from './components/DailyBriefing';
 import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 import { streakBadge } from '@/lib/streaks';
@@ -60,6 +62,7 @@ export default function DashboardPage() {
   const [children, setChildren]       = useState<Child[]>([]);
   const [missions, setMissions]       = useState<Mission[]>([]);
   const [familyLocation, setFamilyLocation] = useState<string | null>(null);
+  const [dashWeather, setDashWeather]       = useState<WeatherData | null>(null);
   const [loading, setLoading]         = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -179,7 +182,13 @@ export default function DashboardPage() {
     setMissions(missionData || []);
 
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
-    if (loc) setFamilyLocation(loc);
+    if (loc) {
+      setFamilyLocation(loc);
+      fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
+        .then(r => r.json())
+        .then(json => { if (!json.error) setDashWeather(json as WeatherData); })
+        .catch(() => {});
+    }
 
     setLoading(false);
 
@@ -459,7 +468,12 @@ export default function DashboardPage() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today&apos;s Progress</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today&apos;s Progress</h2>
+                  {dashWeather && (
+                    <WeatherWidget tempC={dashWeather.tempC} condition={dashWeather.condition} emoji={dashWeather.emoji} size="sm" />
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 mt-0.5">Live snapshot of each child&apos;s missions</p>
               </div>
               <Link href="/dashboard/children" className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-0.5">
