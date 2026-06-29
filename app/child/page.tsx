@@ -1134,6 +1134,7 @@ export default function ChildPage() {
               childId: child.id,
               parentId: session.user.id,
               childAge: child.age,
+              mood: selectedMood ?? null,
             }),
           });
           const genData = await genRes.json();
@@ -1226,7 +1227,7 @@ export default function ChildPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ childId: selected.id, count: 8, missionRound }),
+        body: JSON.stringify({ childId: selected.id, count: 8, missionRound, mood: selectedMood ?? null }),
       });
       const data = await res.json();
       if (!res.ok) {
