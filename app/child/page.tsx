@@ -1288,21 +1288,14 @@ export default function ChildPage() {
       return;
     }
     const nowCompleted = !mission.is_completed;
-    const { error: missionErr } = await supabase
-      .from('missions')
-      .update({ is_completed: nowCompleted })
-      .eq('id', mission.id);
-    if (missionErr) { setMissionError('Oops! Could not save that. Try again.'); return; }
+    const pointsChange = nowCompleted ? +10 : -10;
+    const newPoints = selected.points + pointsChange;
 
-    const pointsChange = mission.is_completed ? -10 : +10;
-    const { error: coinsError } = await supabase.rpc('add_coins', {
-      p_child_id: selected.id,
-      p_amount: pointsChange,
-      p_type: pointsChange > 0 ? 'earned' : 'deducted',
-      p_description: mission.is_completed ? `Undid task: ${mission.title}` : `Completed task: ${mission.title}`,
-      p_mission_id: mission.id,
-    });
-    if (coinsError) { setMissionError('Points could not be updated. Ask a parent.'); return; }
+    // Optimistic UI update — checkbox responds immediately
+    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: nowCompleted } : m));
+    setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
+    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
+    setMissionError(null);
 
     if (nowCompleted) {
       fireConfetti();
@@ -1312,11 +1305,36 @@ export default function ChildPage() {
       setTimeout(() => setMissionSuccess(null), 3000);
     }
 
-    setMissionError(null);
-    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: nowCompleted } : m));
-    const newPoints = selected.points + pointsChange;
-    setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
-    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
+    // DB write — after optimistic update
+    const { error: missionErr } = await supabase
+      .from('missions')
+      .update({ is_completed: nowCompleted })
+      .eq('id', mission.id);
+
+    if (missionErr) {
+      console.error('[mission toggle] mission update failed:', missionErr);
+      // Revert optimistic update
+      setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: mission.is_completed } : m));
+      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
+      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
+      setMissionError('Oops! Could not save that. Try again.');
+      return;
+    }
+
+    // Coins update — non-blocking; mission completion already saved
+    const { error: coinsError } = await supabase.rpc('add_coins', {
+      p_child_id: selected.id,
+      p_amount: pointsChange,
+      p_type: pointsChange > 0 ? 'earned' : 'deducted',
+      p_description: nowCompleted ? `Completed task: ${mission.title}` : `Undid task: ${mission.title}`,
+      p_mission_id: mission.id,
+    });
+    if (coinsError) {
+      console.error('[mission toggle] add_coins failed:', coinsError);
+      // Mission is saved; revert only coin balance in UI
+      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
+      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
+    }
 
     // Streak reflects whether any mission is still completed today after this toggle.
     const stillHasCompleted = missions.some((m) =>
