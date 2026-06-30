@@ -3,7 +3,7 @@ export default function Privacy() {
     <main className="min-h-screen bg-white py-16 px-4">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Effective date: June 28, 2026 · Last updated: June 28, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: June 29, 2026</p>
 
         <p className="text-gray-700 leading-relaxed mb-10">
           BrytThrive Inc. (&ldquo;BrytThrive&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) is committed to protecting the privacy
