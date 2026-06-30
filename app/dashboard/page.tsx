@@ -460,7 +460,7 @@ export default function DashboardPage() {
     setGeneratingChildIds(prev => { const s = new Set(prev); s.delete(childId); return s; });
   }
 
-  const firstName = user?.email?.split('@')[0] ?? 'there';
+  const firstName = user?.email ?? 'there';
   const today = todayStr();
   const todayMissions = missions.filter((m) => m.mission_date === today);
 
