@@ -3,10 +3,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Settings, Gamepad2 } from 'lucide-react';
+import { Home, Settings, Gamepad2, LogOut } from 'lucide-react';
 import { BRAND } from '@/lib/brand';
+import { getSupabase } from '@/lib/supabase';
 
 type NavItem = {
   name: string;
@@ -23,6 +24,13 @@ const kidLink = { name: 'Kid View', href: '/child', icon: Gamepad2 };
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router   = useRouter();
+  const supabase = getSupabase();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push('/login');
+  }
 
   return (
     <aside className="w-64 shrink-0 border-r bg-white shadow-md">
@@ -63,6 +71,17 @@ export default function Sidebar() {
               </Link>
             );
           })}
+        </div>
+
+        {/* Sign out */}
+        <div className="px-4 pt-2">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors text-sm font-medium"
+          >
+            <LogOut size={18} />
+            <span>Sign out</span>
+          </button>
         </div>
 
         {/* Kid View launcher */}

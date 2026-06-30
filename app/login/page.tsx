@@ -14,13 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingEmail, setExistingEmail] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.push('/dashboard');
+      if (user?.email) setExistingEmail(user.email);
     });
-  }, [router]);
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -96,6 +97,23 @@ export default function LoginPage() {
             Get started free
           </Link>
         </p>
+
+        {existingEmail && (
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Signed in as <span className="font-medium text-gray-500">{existingEmail}</span>.{' '}
+            Not you?{' '}
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                setExistingEmail(null);
+              }}
+              className="text-green-600 hover:underline font-medium"
+            >
+              Sign out
+            </button>
+            {' '}and use a different account.
+          </p>
+        )}
       </div>
     </div>
   );
