@@ -346,6 +346,9 @@ export default function DashboardPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
 
+    const child = children.find(c => c.id === childId);
+    if (!child) return;
+
     let weatherSummary: string | undefined;
     if (familyLocation) {
       try {
@@ -357,8 +360,24 @@ export default function DashboardPage() {
       } catch { /* weather is optional */ }
     }
 
-    await generateMissionsForChild(childId, session.access_token, weatherSummary);
+    // Own the loading state for the full cycle (API call + dashboard refresh) so the
+    // card never flashes back to "No missions yet today" between generation and re-fetch.
+    setGeneratingChildIds(prev => new Set(prev).add(childId));
+    try {
+      const res = await fetch('/api/generate-missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error(`[dashboard] generateMissionsForSingleChild: API ${res.status} for ${child.name}:`, body);
+      }
+    } catch (err) {
+      console.error('[dashboard] generateMissionsForSingleChild: network error for', child.name, err);
+    }
     await init();
+    setGeneratingChildIds(prev => { const s = new Set(prev); s.delete(childId); return s; });
   }
 
   const firstName = user?.email?.split('@')[0] ?? 'there';
