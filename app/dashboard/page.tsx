@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
-import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp } from 'lucide-react';
+import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp, X, Users } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
 import WeatherCard from './components/WeatherCard';
@@ -21,6 +21,23 @@ const supabase = getSupabase();
 
 type Child = { id: string; name: string; age: number | null; points: number; streak: number };
 type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; mission_date?: string; updated_at?: string; generated_by?: string };
+type Reward = { id: string; title: string; coin_cost: number };
+
+const REWARD_PRESETS: Record<string, Array<{ title: string; coin_cost: number; emoji: string }>> = {
+  '3-5':  [{ title: 'Choose a bedtime story', coin_cost: 10, emoji: '📚' }, { title: 'Extra playtime (15 min)', coin_cost: 20, emoji: '🎮' }, { title: 'Pick dessert tonight', coin_cost: 30, emoji: '🍦' }],
+  '6-7':  [{ title: "Choose tonight's movie", coin_cost: 20, emoji: '🎬' }, { title: 'Extra playtime (20 min)', coin_cost: 30, emoji: '🎮' }, { title: 'Stay up 20 min later', coin_cost: 50, emoji: '🌙' }],
+  '8-10': [{ title: '30 min extra screen time', coin_cost: 40, emoji: '📱' }, { title: 'Pick the movie tonight', coin_cost: 50, emoji: '🎬' }, { title: 'Friend playdate', coin_cost: 100, emoji: '🧑‍🤝‍🧑' }],
+  '11-13':[{ title: '30 min Roblox or gaming', coin_cost: 50, emoji: '🎮' }, { title: '1 hour phone time', coin_cost: 70, emoji: '📱' }, { title: 'Friend sleepover', coin_cost: 150, emoji: '🛌' }],
+  '14+':  [{ title: '1 hour gaming session', coin_cost: 60, emoji: '🎮' }, { title: 'Later curfew (30 min)', coin_cost: 90, emoji: '🌙' }, { title: 'Outing with friends', coin_cost: 220, emoji: '⭐' }],
+};
+function ageBand(age: number | null): string {
+  if (age == null) return '8-10';
+  if (age <= 5) return '3-5';
+  if (age <= 7) return '6-7';
+  if (age <= 10) return '8-10';
+  if (age <= 13) return '11-13';
+  return '14+';
+}
 const CAT_EMOJI: Record<string, string> = {
   movement: '🏃',
   responsibility: '🧹',
@@ -75,6 +92,20 @@ export default function DashboardPage() {
   const [winSaved, setWinSaved]           = useState(false);
   const [winSaving, setWinSaving]         = useState(false);
   const [todayWin, setTodayWin]           = useState<string | null>(null);
+  // Inline section state
+  const [rewards, setRewards]             = useState<Reward[]>([]);
+  const [showAddTask, setShowAddTask]     = useState(false);
+  const [addTaskChild, setAddTaskChild]   = useState('');
+  const [addTaskTitle, setAddTaskTitle]   = useState('');
+  const [addingTask, setAddingTask]       = useState(false);
+  const [showAddReward, setShowAddReward] = useState(false);
+  const [addRewardTitle, setAddRewardTitle] = useState('');
+  const [addRewardCost, setAddRewardCost] = useState<number | ''>('');
+  const [addingReward, setAddingReward]   = useState(false);
+  const [showAddChild, setShowAddChild]   = useState(false);
+  const [addChildName, setAddChildName]   = useState('');
+  const [addChildAge, setAddChildAge]     = useState<number | ''>('');
+  const [addingChild, setAddingChild]     = useState(false);
   const router = useRouter();
   const autoGenDoneRef = useRef(false);
 
@@ -186,6 +217,9 @@ export default function DashboardPage() {
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
     if (loc) setFamilyLocation(loc);
 
+    const { data: rewardData } = await supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false });
+    setRewards(rewardData || []);
+
     async function loadWeather() {
       // Attempt 1: stored city name
       if (loc) {
@@ -257,6 +291,51 @@ export default function DashboardPage() {
     localStorage.setItem('bt_onboarding_done', '1');
     setShowOnboarding(false);
     init();
+  }
+
+  async function handleAddTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addTaskChild || !addTaskTitle.trim() || addingTask) return;
+    setAddingTask(true);
+    const { error } = await supabase.from('missions').insert([{
+      child_id: addTaskChild,
+      title: addTaskTitle.trim(),
+      category: 'general',
+      screen_time_reward: 5,
+      is_completed: false,
+      mission_date: todayStr(),
+    }]);
+    if (!error) { setAddTaskTitle(''); setShowAddTask(false); await init(); }
+    else console.error('[dashboard] add task error:', error.message);
+    setAddingTask(false);
+  }
+
+  async function handleAddReward(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addRewardTitle.trim() || !addRewardCost || addingReward) return;
+    setAddingReward(true);
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) { setAddingReward(false); return; }
+    let { error } = await supabase.from('rewards').insert([{ parent_id: u.id, title: addRewardTitle.trim(), coin_cost: Number(addRewardCost), reward_type: 'standard', is_active: true, sort_order: 0 }]);
+    if (error) {
+      const retry = await supabase.from('rewards').insert([{ parent_id: u.id, title: addRewardTitle.trim(), coin_cost: Number(addRewardCost) }]);
+      error = retry.error;
+    }
+    if (!error) { setAddRewardTitle(''); setAddRewardCost(''); setShowAddReward(false); await init(); }
+    else console.error('[dashboard] add reward error:', error.message);
+    setAddingReward(false);
+  }
+
+  async function handleAddChild(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addChildName.trim() || addingChild) return;
+    setAddingChild(true);
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) { setAddingChild(false); return; }
+    const { error } = await supabase.from('children').insert([{ parent_id: u.id, name: addChildName.trim(), age: addChildAge !== '' ? Number(addChildAge) : null }]);
+    if (!error) { setAddChildName(''); setAddChildAge(''); setShowAddChild(false); await init(); }
+    else console.error('[dashboard] add child error:', error.message);
+    setAddingChild(false);
   }
 
   async function saveWin() {
@@ -554,9 +633,9 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">Live snapshot of each child&apos;s missions</p>
               </div>
-              <Link href="/dashboard/children" className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-0.5">
-                Manage <ChevronRight size={14} />
-              </Link>
+              <button onClick={() => setShowAddChild(true)} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
+                <Plus size={14} /> Add child
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child) => {
@@ -718,26 +797,18 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* 5. Quick actions */}
+        {/* 5. Quick Actions — inline task add */}
         {children.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
-            {generateError && (
-              <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/dashboard/children"
+            {generateError && <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>}
+            <div className="flex flex-wrap gap-3 mb-3">
+              <button
+                onClick={() => setShowAddTask((v) => !v)}
                 className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
               >
-                <Plus size={16} /> Add Child
-              </Link>
-              <Link
-                href="/dashboard/rewards"
-                className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                <Gift size={16} /> Add Reward
-              </Link>
+                <Plus size={16} /> Add a task
+              </button>
               <Link
                 href="/child"
                 target="_blank"
@@ -747,8 +818,199 @@ export default function DashboardPage() {
                 <Tablet size={16} /> Open Kid View
               </Link>
             </div>
+            {showAddTask && (
+              <form onSubmit={handleAddTask} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-navy">Add a task for today</p>
+                  <button type="button" onClick={() => setShowAddTask(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+                </div>
+                <select
+                  value={addTaskChild}
+                  onChange={(e) => setAddTaskChild(e.target.value)}
+                  required
+                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                >
+                  <option value="">Select a child…</option>
+                  {children.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <input
+                  type="text"
+                  value={addTaskTitle}
+                  onChange={(e) => setAddTaskTitle(e.target.value)}
+                  placeholder="e.g. Read for 20 minutes"
+                  required
+                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                />
+                <button
+                  type="submit"
+                  disabled={addingTask || !addTaskChild || !addTaskTitle.trim()}
+                  className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {addingTask ? 'Adding…' : 'Add task'}
+                </button>
+              </form>
+            )}
           </section>
         )}
+
+        {/* 5b. Rewards — inline */}
+        {children.length > 0 && (() => {
+          const firstChild = children[0];
+          const band = ageBand(firstChild.age);
+          const presets = REWARD_PRESETS[band] ?? REWARD_PRESETS['8-10'];
+          const existingTitles = new Set(rewards.map((r) => r.title.toLowerCase()));
+          const suggestedPresets = presets.filter((p) => !existingTitles.has(p.title.toLowerCase())).slice(0, 3);
+          return (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rewards</h2>
+                <button onClick={() => setShowAddReward((v) => !v)} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
+                  <Plus size={14} /> Add reward
+                </button>
+              </div>
+
+              {/* Existing rewards */}
+              {rewards.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {rewards.slice(0, 5).map((r) => (
+                    <div key={r.id} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full px-3 py-1.5 text-sm font-medium text-amber-700">
+                      <Gift size={13} /> {r.title} · {r.coin_cost}🪙
+                    </div>
+                  ))}
+                  {rewards.length > 5 && <span className="text-xs text-gray-400 self-center">+{rewards.length - 5} more</span>}
+                </div>
+              )}
+
+              {/* Suggested presets */}
+              {suggestedPresets.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-400 mb-2">Suggested for age {band}:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedPresets.map((p) => (
+                      <button
+                        key={p.title}
+                        onClick={async () => {
+                          const { data: { user: u } } = await supabase.auth.getUser();
+                          if (!u) return;
+                          const { error: pe } = await supabase.from('rewards').insert([{ parent_id: u.id, title: p.title, coin_cost: p.coin_cost }]);
+                          if (pe) console.error('[dashboard] preset reward error:', pe.message);
+                          await init();
+                        }}
+                        className="flex items-center gap-1.5 bg-white border border-dashed border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-600 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                      >
+                        {p.emoji} {p.title} · {p.coin_cost}🪙
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inline add form */}
+              {showAddReward && (
+                <form onSubmit={handleAddReward} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-semibold text-navy">Add a reward</p>
+                    <button type="button" onClick={() => setShowAddReward(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+                  </div>
+                  <input
+                    type="text"
+                    value={addRewardTitle}
+                    onChange={(e) => setAddRewardTitle(e.target.value)}
+                    placeholder="Reward name"
+                    required
+                    className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  />
+                  <input
+                    type="number"
+                    value={addRewardCost}
+                    onChange={(e) => setAddRewardCost(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="BrytCoins cost (e.g. 50)"
+                    required
+                    min={1}
+                    className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={addingReward || !addRewardTitle.trim() || !addRewardCost}
+                    className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {addingReward ? 'Saving…' : 'Save reward'}
+                  </button>
+                </form>
+              )}
+            </section>
+          );
+        })()}
+
+        {/* 5c. Family — inline child profiles + add child */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-teal-600" />
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Family</h2>
+            </div>
+            <button onClick={() => setShowAddChild((v) => !v)} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
+              <Plus size={14} /> Add child
+            </button>
+          </div>
+
+          {children.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+              {children.map((child) => {
+                const av = getAvatar(child.name);
+                const el = getExplorerLevel(child.points);
+                return (
+                  <div key={child.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl ${av.bg} flex items-center justify-center text-white font-bold text-base flex-shrink-0`}>
+                      {child.name[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-navy text-sm truncate">{child.name}</p>
+                      <p className="text-xs text-gray-400">{child.age ? `Age ${child.age}` : 'Age unknown'} · {el.emoji} {el.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-semibold text-amber-600">{child.points}🪙</span>
+                        {child.streak > 0 && <span className="text-xs font-semibold text-orange-500">{child.streak}🔥</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {showAddChild && (
+            <form onSubmit={handleAddChild} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-navy">Add a child</p>
+                <button type="button" onClick={() => setShowAddChild(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+              </div>
+              <input
+                type="text"
+                value={addChildName}
+                onChange={(e) => setAddChildName(e.target.value)}
+                placeholder="Child's name"
+                required
+                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              />
+              <input
+                type="number"
+                value={addChildAge}
+                onChange={(e) => setAddChildAge(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Age (optional)"
+                min={2}
+                max={18}
+                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              />
+              <button
+                type="submit"
+                disabled={addingChild || !addChildName.trim()}
+                className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {addingChild ? 'Adding…' : 'Add child'}
+              </button>
+            </form>
+          )}
+        </section>
 
         {/* 6. Win Journal */}
         <section>

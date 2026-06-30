@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Users, BarChart3, Gift, Settings, ClipboardList, Gamepad2 } from 'lucide-react';
+import { Home, Settings, Gamepad2 } from 'lucide-react';
 import { BRAND } from '@/lib/brand';
 
 type NavItem = {
@@ -15,11 +15,7 @@ type NavItem = {
 };
 
 const navLinks: NavItem[] = [
-  { name: 'Overview', href: '/dashboard', icon: Home },
-  { name: 'Children', href: '/dashboard/children', icon: Users },
-  { name: 'Tasks', href: '/dashboard/tasks', icon: ClipboardList },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Rewards', href: '/dashboard/rewards', icon: Gift },
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
