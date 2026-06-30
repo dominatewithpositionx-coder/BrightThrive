@@ -1159,35 +1159,49 @@ export default function ChildPage() {
     fetchData();
   }
 
-  function fetchChildWeather(child: Child) {
+  async function fetchChildWeather(child: Child) {
     const city = child.location_city ?? (window as unknown as Record<string, string>)['__bt_plan_loc'];
 
-    const applyWeatherJson = (json: Record<string, unknown>) => {
-      if (!json.error) {
+    const applyJson = (json: Record<string, unknown>): boolean => {
+      if (json && !json.error) {
         setWeather(json as unknown as WeatherData);
         setWeatherFetchedAt(new Date().toISOString());
+        return true;
       }
+      return false;
     };
 
+    // Attempt 1: stored city name
     if (city) {
-      fetch(`/api/weather?location=${encodeURIComponent(city)}`)
-        .then(r => r.json())
-        .then(applyWeatherJson)
-        .catch(() => {});
-      return;
+      try {
+        const res = await fetch(`/api/weather?location=${encodeURIComponent(city)}`);
+        const json = await res.json();
+        if (applyJson(json)) return;
+        console.warn('[child] stored city weather failed:', json?.error);
+      } catch (err) {
+        console.warn('[child] stored city fetch error, trying geolocation:', err);
+      }
     }
 
-    // No stored location — fall back to browser geolocation
+    // Attempt 2: browser geolocation (runs if city missing OR city lookup failed)
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude, longitude } = pos.coords;
-        fetch(`/api/weather?lat=${latitude}&lon=${longitude}`)
-          .then(r => r.json())
-          .then(applyWeatherJson)
-          .catch(() => {});
+        try {
+          const res = await fetch(`/api/weather?lat=${latitude}&lon=${longitude}`);
+          const json = await res.json();
+          if (!applyJson(json)) {
+            console.warn('[child] geolocation weather fetch failed:', json);
+          }
+        } catch (err) {
+          console.warn('[child] geolocation weather fetch error:', err);
+        }
       },
-      () => { /* user denied or unavailable — weather stays null */ }
+      (err) => {
+        console.warn('[child] geolocation denied or unavailable:', err.message);
+      },
+      { timeout: 8000 }
     );
   }
 

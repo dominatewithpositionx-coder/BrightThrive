@@ -183,25 +183,49 @@ export default function DashboardPage() {
     setMissions(missionData || []);
 
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
-    if (loc) {
-      setFamilyLocation(loc);
-      fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
-        .then(r => r.json())
-        .then(json => { if (!json.error) setDashWeather(json as WeatherData); })
-        .catch(() => {});
-    } else if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      // No stored location — try browser geolocation silently
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          fetch(`/api/weather?lat=${latitude}&lon=${longitude}`)
-            .then(r => r.json())
-            .then(json => { if (!json.error) setDashWeather(json as WeatherData); })
-            .catch(() => {});
-        },
-        () => { /* denied — weather stays null */ }
-      );
+    if (loc) setFamilyLocation(loc);
+
+    async function loadWeather() {
+      // Attempt 1: stored city name
+      if (loc) {
+        try {
+          const res = await fetch(`/api/weather?location=${encodeURIComponent(loc)}`);
+          const json = await res.json();
+          if (json && !json.error) {
+            setDashWeather(json as WeatherData);
+            return;
+          }
+          console.warn('[dashboard] stored location weather failed:', json?.error);
+        } catch (err) {
+          console.warn('[dashboard] stored location fetch error, trying geolocation:', err);
+        }
+      }
+
+      // Attempt 2: browser geolocation (runs if loc missing OR city lookup failed)
+      if (typeof window !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              const res = await fetch(`/api/weather?lat=${latitude}&lon=${longitude}`);
+              const json = await res.json();
+              if (json && !json.error) {
+                setDashWeather(json as WeatherData);
+              } else {
+                console.warn('[dashboard] geolocation weather fetch failed:', json);
+              }
+            } catch (err) {
+              console.warn('[dashboard] geolocation weather fetch error:', err);
+            }
+          },
+          (err) => {
+            console.warn('[dashboard] geolocation denied or unavailable:', err.message);
+          },
+          { timeout: 8000 }
+        );
+      }
     }
+    loadWeather();
 
     setLoading(false);
 
