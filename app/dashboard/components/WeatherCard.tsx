@@ -32,14 +32,34 @@ export default function WeatherCard({ location, weatherMissions }: { location: s
   const [error, setError]     = useState(false);
 
   useEffect(() => {
-    if (!location) { setLoading(false); setError(true); return; }
-    fetch(`/api/weather?location=${encodeURIComponent(location)}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) { setError(true); } else { setData(json as WeatherData); }
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    function tryGeolocation() {
+      if (typeof window === 'undefined' || !navigator.geolocation) {
+        setError(true); setLoading(false); return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await fetch(`/api/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+            const json = await res.json();
+            if (json.error) { setError(true); } else { setData(json as WeatherData); }
+          } catch { setError(true); }
+          setLoading(false);
+        },
+        () => { setError(true); setLoading(false); },
+        { timeout: 8000 },
+      );
+    }
+
+    if (location) {
+      fetch(`/api/weather?location=${encodeURIComponent(location)}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.error) { tryGeolocation(); } else { setData(json as WeatherData); setLoading(false); }
+        })
+        .catch(() => tryGeolocation());
+    } else {
+      tryGeolocation();
+    }
   }, [location]);
 
   if (loading) {

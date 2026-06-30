@@ -697,8 +697,9 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const timeLabel = (() => {
     const h = new Date().getHours();
+    if (h >= 20 || h < 5) return 'Night';
     if (h < 12) return 'Morning';
-    if (h < 17) return 'After school';
+    if (h < 17) return 'Afternoon';
     return 'Evening';
   })();
   const moodLabel = mood ? MOODS.find(m => m.key === mood)?.label ?? mood : null;

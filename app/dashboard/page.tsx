@@ -161,14 +161,15 @@ export default function DashboardPage() {
         .from('missions')
         .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by')
         .in('child_id', childIds)
-        .gte('mission_date', sevenDaysAgo);
+        .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
 
       if (missionRes.error) {
         console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
         const retry = await supabase
           .from('missions')
           .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
-          .in('child_id', childIds);
+          .in('child_id', childIds)
+          .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
         if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
         missionData = retry.data;
       } else {
@@ -480,16 +481,9 @@ export default function DashboardPage() {
         )}
 
         {/* 2. Weather card */}
-        {familyLocation ? (
-          <WeatherCard location={familyLocation} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />
-        ) : children.length > 0 ? (
-          <Link
-            href="/dashboard/settings"
-            className="block rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-500 hover:border-teal-300 hover:bg-teal-50 transition-colors"
-          >
-            📍 Add your city in Settings to see today&apos;s weather and weather-aware missions.
-          </Link>
-        ) : null}
+        {children.length > 0 && (
+          <WeatherCard location={familyLocation ?? ''} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />
+        )}
 
         {/* ── No children state ── */}
         {children.length === 0 && (
@@ -567,11 +561,11 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child) => {
                 const avatar = getAvatar(child.name);
-                const childMissions = missions.filter((m) => m.child_id === child.id && m.mission_date === today);
+                const childMissions = missions.filter((m) => m.child_id === child.id && (m.mission_date === today || !m.mission_date));
                 const done = childMissions.filter((m) => m.is_completed).length;
                 const total = childMissions.length;
                 const completionPct = total > 0 ? Math.round((done / total) * 100) : 0;
-                const childCoins = done * 10;
+                const childCoins = child.points;
                 const childScreenTime = childMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
                 const badge = streakBadge(child.streak);
                 const previewMissions = childMissions.slice(0, 3);

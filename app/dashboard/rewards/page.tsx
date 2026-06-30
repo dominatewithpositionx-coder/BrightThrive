@@ -361,6 +361,7 @@ export default function RewardsPage() {
         <div>
           <h1 className="text-2xl font-bold text-navy">Rewards</h1>
           <p className="text-sm text-gray-500 mt-1">Create rewards. Kids earn them by completing missions.</p>
+          <p className="text-xs text-gray-400 mt-1">Rewards are available to all children in your family.</p>
         </div>
 
         {/* Suggested rewards */}
