@@ -689,6 +689,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
 
   const [showCompleted, setShowCompleted] = useState(false);
   const [showRewards, setShowRewards]     = useState(false);
+  const [redeemedIds, setRedeemedIds]     = useState<Set<string>>(new Set());
 
   const sortedRewards      = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
   const affordableRewards  = sortedRewards.filter((r) => r.coin_cost <= child.points);
@@ -898,45 +899,87 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </button>
         )}
 
-        {/* Next reward progress */}
-        {nextReward && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Gift size={16} className="text-purple-500" />
-                <span className="font-semibold text-gray-700 text-sm">Next Reward</span>
+        {/* ── My Wallet ─────────────────────────────────────────── */}
+        {sortedRewards.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Wallet header */}
+            <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-5 py-4">
+              <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-0.5">My Wallet</p>
+              <div className="flex items-end gap-2">
+                <span className="text-4xl font-black text-white leading-none">{child.points}</span>
+                <span className="text-white/90 font-bold text-lg mb-0.5">🪙 BrytCoins</span>
               </div>
-              <span className="text-xs text-gray-400">{child.points} / {nextReward.coin_cost} 🪙</span>
-            </div>
-            <p className="font-bold text-navy mb-3">{nextReward.title}</p>
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100))}%` }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5 text-right">{nextReward.coin_cost - child.points} BrytCoins to go! 🎁</p>
-          </div>
-        )}
-
-        {/* Ready to redeem */}
-        {affordableRewards.length > 0 && (
-          <div className="bg-gradient-to-br from-teal-50 to-green-50 border border-teal-200 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Gift size={16} className="text-teal-600" />
-              <span className="font-bold text-teal-800">Ready to redeem!</span>
-            </div>
-            <div className="space-y-2">
-              {affordableRewards.map((r) => (
-                <div key={r.id} className="flex justify-between items-center bg-white/60 rounded-xl px-3 py-2">
-                  <span className="text-gray-800 font-medium text-sm">{r.title}</span>
-                  <span className="text-teal-600 font-bold text-sm">{r.coin_cost} 🪙</span>
+              {nextReward && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-white/80 mb-1 font-medium">
+                    <span>Next: {nextReward.title}</span>
+                    <span>{child.points}/{nextReward.coin_cost}</span>
+                  </div>
+                  <div className="h-2 bg-white/30 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-white rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, Math.round((child.points / nextReward.coin_cost) * 100))}%` }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                    />
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
-            <p className="text-xs text-teal-600 mt-3 font-medium text-center">Ask a parent to redeem! 🎉</p>
+
+            {/* Rewards list */}
+            <div className="divide-y divide-gray-50">
+              {/* Unlocked first */}
+              {affordableRewards.map((r) => {
+                const redeemed = redeemedIds.has(r.id);
+                return (
+                  <div key={r.id} className="px-5 py-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-xl flex-shrink-0">
+                      🎁
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-navy text-sm truncate">{r.title}</p>
+                      <p className="text-xs text-amber-500 font-semibold">{r.coin_cost} 🪙</p>
+                    </div>
+                    {redeemed ? (
+                      <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-full px-3 py-1.5">
+                        <CheckCircle size={14} className="text-teal-500 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-teal-700 whitespace-nowrap">Ask a parent! 🎉</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRedeemedIds((prev) => new Set(prev).add(r.id))}
+                        className="min-h-[36px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full transition-all flex-shrink-0"
+                      >
+                        Redeem ✨
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Locked rewards */}
+              {sortedRewards.filter((r) => r.coin_cost > child.points).map((r, i) => {
+                const coinsNeeded = r.coin_cost - child.points;
+                const isClosest = i === 0;
+                return (
+                  <div key={r.id} className="px-5 py-4 flex items-center gap-3 opacity-50">
+                    <div className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <Lock size={16} className="text-gray-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-500 text-sm truncate">{r.title}</p>
+                      <p className="text-xs text-gray-400 font-medium">{r.coin_cost} 🪙</p>
+                      {isClosest && (
+                        <p className="text-xs text-purple-500 font-semibold mt-0.5">
+                          Earn {coinsNeeded} more to unlock!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
