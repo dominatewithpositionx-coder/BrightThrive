@@ -157,8 +157,16 @@ export default function DashboardPage() {
   }
 
   async function init() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
+    console.log('[AUTH:4] dashboard init — pathname:', typeof window !== 'undefined' ? window.location.pathname : 'ssr');
+    const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+    console.log('[AUTH:5] dashboard getSession — session exists:', !!session, '| error:', sessionErr?.message ?? null, '| user.id:', session?.user?.id ?? null);
+    const { data: { user: verifiedUser }, error: getUserErr } = await supabase.auth.getUser();
+    console.log('[AUTH:6] dashboard getUser  — user exists:', !!verifiedUser, '| error:', getUserErr?.message ?? null);
+    if (!session) {
+      console.log('[AUTH:7] REDIRECT REASON: no session from getSession()');
+      router.push('/login'); return;
+    }
+    const user = session.user;
     setUser(user);
 
     await saveOnboardingFromSession(user.id);

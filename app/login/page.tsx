@@ -30,11 +30,15 @@ export default function LoginPage() {
     e.preventDefault();
     setMessage('');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log('[AUTH:1] before signInWithPassword');
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log('[AUTH:2] after signInWithPassword — error:', error?.message ?? null, '| user.id:', data?.user?.id ?? null, '| session exists:', !!data?.session);
     if (error) {
       setMessage(error.message);
       setLoading(false);
     } else {
+      const { data: { session: preNavSession } } = await supabase.auth.getSession();
+      console.log('[AUTH:3] pre-nav getSession — session exists:', !!preNavSession, '| access_token prefix:', preNavSession?.access_token?.slice(0, 20) ?? null);
       // Hard redirect so the middleware reads the fresh auth cookie
       window.location.href = '/dashboard';
     }
@@ -157,7 +161,6 @@ export default function LoginPage() {
             Get started free
           </Link>
         </p>
-
       </div>
     </div>
   );
