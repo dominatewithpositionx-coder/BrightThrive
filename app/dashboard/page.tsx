@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
@@ -16,7 +16,11 @@ import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 import { streakBadge } from '@/lib/streaks';
 import { getExplorerLevel } from '@/lib/levels';
 
-const supabase = getSupabase();
+// Cookie-aware client — reads the same session the middleware uses
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 type Child = { id: string; name: string; age: number | null; points: number; streak: number };
 type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; mission_date?: string; updated_at?: string; generated_by?: string };
