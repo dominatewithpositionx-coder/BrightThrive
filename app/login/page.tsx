@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [existingEmail, setExistingEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -24,6 +25,7 @@ export default function LoginPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) setExistingEmail(user.email);
+      setAuthChecked(true);
     });
   }, []);
 
@@ -158,7 +160,7 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        {existingEmail && (
+        {authChecked && existingEmail && (
           <p className="text-center text-xs text-gray-400 mt-4">
             Signed in as <span className="font-medium text-gray-500">{existingEmail}</span>.{' '}
             Not you?{' '}
