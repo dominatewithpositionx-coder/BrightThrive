@@ -356,29 +356,6 @@ export default function OnboardingPage() {
     setResendLoading(false);
   }
 
-  async function handleGoogle() {
-    const config = getSupabaseConfigStatus();
-    if (!config.ok) {
-      setAuthError('There may be a configuration issue. Please try signing up with email instead.');
-      return;
-    }
-    saveToStorage();
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
-      });
-      if (error) {
-        setAuthError(error.message.includes('not enabled')
-          ? 'Google sign-in is not yet enabled. Please use email and password below.'
-          : friendlyError(error));
-      }
-    } catch (err) {
-      console.error('[Onboarding] Google OAuth threw:', err);
-      setAuthError(friendlyError(err));
-    }
-  }
-
   async function saveOnboardingRow(parentId: string) {
     try {
       const { error } = await supabase.from('family_plans').upsert({
