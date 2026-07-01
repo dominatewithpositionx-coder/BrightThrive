@@ -3,11 +3,16 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
+import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
+
+// Cookie-aware client so the middleware (which reads cookies) can see the session
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +26,6 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
-
-  const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -39,7 +42,8 @@ export default function LoginPage() {
       setMessage(error.message);
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      // Hard redirect so the middleware reads the fresh auth cookie
+      window.location.href = '/dashboard';
     }
   }
 
