@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [existingEmail, setExistingEmail] = useState<string | null>(null);
 
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -29,7 +28,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email) setExistingEmail(user.email);
+      if (user?.email) {
+        // Already logged in — send straight to dashboard
+        window.location.href = '/dashboard';
+      }
     });
   }, []);
 
@@ -165,22 +167,6 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        {existingEmail && (
-          <p className="text-center text-xs text-gray-400 mt-4">
-            Signed in as <span className="font-medium text-gray-500">{existingEmail}</span>.{' '}
-            Not you?{' '}
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setExistingEmail(null);
-              }}
-              className="text-green-600 hover:underline font-medium"
-            >
-              Sign out
-            </button>
-            {' '}and use a different account.
-          </p>
-        )}
       </div>
     </div>
   );
