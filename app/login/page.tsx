@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
@@ -22,8 +21,6 @@ export default function LoginPage() {
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
 
-  const router = useRouter();
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) setExistingEmail(user.email);
@@ -39,7 +36,7 @@ export default function LoginPage() {
       setMessage(error.message);
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   }
 
