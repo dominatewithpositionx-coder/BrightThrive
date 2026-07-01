@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
+import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
+
+// Cookie-aware client so the session is written to cookies (not localStorage)
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 type State = 'loading' | 'ready' | 'invalid' | 'success';
 
@@ -15,7 +20,6 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -61,7 +65,7 @@ export default function ResetPasswordPage() {
       setError(updateError.message);
     } else {
       setPageState('success');
-      setTimeout(() => router.push('/dashboard'), 2000);
+      setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
     }
   }
 

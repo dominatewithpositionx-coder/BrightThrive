@@ -1,15 +1,33 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabase, getSupabaseConfigStatus } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
+import { getSupabaseConfigStatus } from '@/lib/supabase';
 import { CheckCircle, Sparkles } from 'lucide-react';
+
+// Cookie-aware client — session gets written to a cookie so the middleware can read it
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 const brandGradient = 'linear-gradient(90deg, #22C55E 0%, #14B8A6 50%, #0EA5E9 100%)';
 
 // ── Question data ────────────────────────────────────────────────────────────
 
 const QUESTIONS = [
+  {
+    key: 'num_children',
+    question: 'How many kids will be using BrytThrive?',
+    subtitle: 'You\'ll set up each child\'s profile after signing up — with their own missions, goals, and rewards.',
+    multi: false,
+    options: [
+      { label: '1 child',   icon: '👦' },
+      { label: '2 children', icon: '👧👦' },
+      { label: '3 children', icon: '👧👦👶' },
+      { label: '4 or more',  icon: '👨‍👩‍👧‍👦' },
+    ],
+  },
   {
     key: 'primary_goal',
     question: 'What would you most like help with right now?',
@@ -26,8 +44,8 @@ const QUESTIONS = [
   },
   {
     key: 'child_description',
-    question: 'What best describes your child?',
-    subtitle: 'We\'ll tailor missions to fit their personality.',
+    question: 'How would you describe your kids overall?',
+    subtitle: 'You can customise each child\'s profile individually after sign-up.',
     multi: false,
     options: [
       { label: 'Easily distracted',         icon: '🌀' },
@@ -51,8 +69,8 @@ const QUESTIONS = [
   },
   {
     key: 'motivation_preference',
-    question: 'What motivates your child most?',
-    subtitle: 'We\'ll use this to make rewards feel exciting.',
+    question: 'What motivates your kids most?',
+    subtitle: 'You can set different rewards per child in the dashboard.',
     multi: false,
     options: [
       { label: 'Screen time',               icon: '📱' },
@@ -124,6 +142,7 @@ const QUESTIONS = [
 type QuestionKey = typeof QUESTIONS[number]['key'];
 
 type Answers = {
+  num_children: string;
   primary_goal: string;
   child_description: string;
   parent_involvement: string;
@@ -190,8 +209,7 @@ function OptionCard({ icon, label, selected, onClick, disabled }: OptionCardProp
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
-  const router = useRouter();
-  const [step, setStep] = useState(1); // 1–8 = questions, 9 = plan, 10 = account
+  const [step, setStep] = useState(1); // 1–N = questions, N+1 = plan, N+2 = account
   const [answers, setAnswers] = useState<Partial<Answers>>({});
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -264,12 +282,12 @@ export default function OnboardingPage() {
     }
 
     try {
-      const supabase = getSupabase();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          // After email confirmation, land on /login (cookie is set, auto-redirect kicks in)
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -288,7 +306,8 @@ export default function OnboardingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
         }).catch(() => {});
-        router.push('/dashboard');
+        // Hard redirect so middleware reads the fresh auth cookie
+        window.location.href = '/dashboard';
         return;
       }
 
@@ -312,11 +331,10 @@ export default function OnboardingPage() {
     setResendStatus('idle');
     setResendErrorMsg('');
     try {
-      const supabase = getSupabase();
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: `${window.location.origin}/login` },
       });
       if (error) {
         const msg = error.message.toLowerCase();
@@ -346,7 +364,6 @@ export default function OnboardingPage() {
     }
     saveToStorage();
     try {
-      const supabase = getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
@@ -364,7 +381,6 @@ export default function OnboardingPage() {
 
   async function saveOnboardingRow(parentId: string) {
     try {
-      const supabase = getSupabase();
       const { error } = await supabase.from('family_plans').upsert({
         parent_id: parentId,
         onboarding_completed: true,

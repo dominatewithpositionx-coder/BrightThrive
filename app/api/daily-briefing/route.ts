@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { type WeatherData } from '@/lib/weather';
+import { requireAuth } from '@/lib/auth-guard';
 
 export const runtime = 'nodejs';
 
@@ -34,6 +35,9 @@ function fallbackBriefing(weather?: WeatherData | null): string {
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
+
   const { children, weather, completedToday, totalToday } = (await req.json()) as {
     children: ChildInput[];
     weather?: WeatherData | null;

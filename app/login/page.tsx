@@ -2,32 +2,29 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
+import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
+
+// Cookie-aware client so the middleware (which reads cookies) can see the session
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [existingEmail, setExistingEmail] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
 
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email) setExistingEmail(user.email);
-      setAuthChecked(true);
-    });
-  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +39,7 @@ export default function LoginPage() {
     } else {
       const { data: { session: preNavSession } } = await supabase.auth.getSession();
       console.log('[AUTH:3] pre-nav getSession — session exists:', !!preNavSession, '| access_token prefix:', preNavSession?.access_token?.slice(0, 20) ?? null);
+      // Hard redirect so the middleware reads the fresh auth cookie
       window.location.href = '/dashboard';
     }
   }
@@ -163,23 +161,6 @@ export default function LoginPage() {
             Get started free
           </Link>
         </p>
-
-        {authChecked && existingEmail && (
-          <p className="text-center text-xs text-gray-400 mt-4">
-            Signed in as <span className="font-medium text-gray-500">{existingEmail}</span>.{' '}
-            Not you?{' '}
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setExistingEmail(null);
-              }}
-              className="text-green-600 hover:underline font-medium"
-            >
-              Sign out
-            </button>
-            {' '}and use a different account.
-          </p>
-        )}
       </div>
     </div>
   );

@@ -3,8 +3,12 @@ import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { requireAuth } from '@/lib/auth-guard';
 
 export async function POST(req: Request) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ success: true, skipped: true });
@@ -15,7 +19,26 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   try {
-    const { childName, rewardTitle, cost, pointsRemaining, parentEmail, parentId } = await req.json();
+    const { childName, rewardTitle, cost, pointsRemaining, parentEmail, parentId, childId } = await req.json();
+
+    // Ownership check: verify the authenticated user is the parent of the child
+    if (childId) {
+      const authHeader = req.headers.get('Authorization')!;
+      const token = authHeader.slice(7);
+      const authClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: { user } } = await authClient.auth.getUser(token);
+      const { data: child } = await supabase
+        .from('children')
+        .select('parent_id')
+        .eq('id', childId)
+        .single();
+      if (!child || child.parent_id !== user?.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     if (!childName || !rewardTitle || !cost || !parentEmail) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
