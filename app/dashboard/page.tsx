@@ -157,16 +157,17 @@ export default function DashboardPage() {
   }
 
   async function init() {
-    console.log('[AUTH:4] dashboard init — pathname:', typeof window !== 'undefined' ? window.location.pathname : 'ssr');
-    const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-    console.log('[AUTH:5] dashboard getSession — session exists:', !!session, '| error:', sessionErr?.message ?? null, '| user.id:', session?.user?.id ?? null);
-    const { data: { user: verifiedUser }, error: getUserErr } = await supabase.auth.getUser();
-    console.log('[AUTH:6] dashboard getUser  — user exists:', !!verifiedUser, '| error:', getUserErr?.message ?? null);
-    if (!session) {
-      console.log('[AUTH:7] REDIRECT REASON: no session from getSession()');
-      router.push('/login'); return;
+    // Middleware already gates /dashboard — if we're here, the server confirmed auth.
+    // We use getUser() (server round-trip) as the authoritative check; getSession() alone
+    // reads a potentially stale local cookie and can return null immediately after login
+    // while the cookie is still propagating, causing the "flash back to /login" bug.
+    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+    if (!verifiedUser) {
+      // Only redirect if the server truly says there's no authenticated user.
+      window.location.href = '/login';
+      return;
     }
-    const user = session.user;
+    const user = verifiedUser;
     setUser(user);
 
     await saveOnboardingFromSession(user.id);

@@ -5,14 +5,8 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
-
-// Cookie-aware client so the middleware (which reads cookies) can see the session
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+import { loginAction, resetPasswordAction } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,18 +24,17 @@ export default function LoginPage() {
     e.preventDefault();
     setMessage('');
     setLoading(true);
-    console.log('[AUTH:1] before signInWithPassword');
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    console.log('[AUTH:2] after signInWithPassword — error:', error?.message ?? null, '| user.id:', data?.user?.id ?? null, '| session exists:', !!data?.session);
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-    } else {
-      const { data: { session: preNavSession } } = await supabase.auth.getSession();
-      console.log('[AUTH:3] pre-nav getSession — session exists:', !!preNavSession, '| access_token prefix:', preNavSession?.access_token?.slice(0, 20) ?? null);
-      // Hard redirect so the middleware reads the fresh auth cookie
-      window.location.href = '/dashboard';
+
+    // loginAction runs server-side: sets cookies in the response, then
+    // server-redirects to /dashboard. No cookie-write race on the client.
+    const result = await loginAction(email, password);
+
+    // If we reach here, loginAction returned an error (redirect throws, so it
+    // never returns on success).
+    if (result?.error) {
+      setMessage(result.error);
     }
+    setLoading(false);
   }
 
   async function handleResetPassword(e: React.FormEvent) {
@@ -49,12 +42,11 @@ export default function LoginPage() {
     setResetError('');
     setResetMessage('');
     setResetLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: 'https://brytthrive.com/reset-password',
-    });
+
+    const result = await resetPasswordAction(resetEmail);
     setResetLoading(false);
-    if (error) {
-      setResetError(error.message);
+    if (result?.error) {
+      setResetError(result.error);
     } else {
       setResetMessage('Check your email for a reset link.');
     }
@@ -146,11 +138,6 @@ export default function LoginPage() {
               {resetError && <p className="mt-2 text-xs text-red-600">{resetError}</p>}
             </div>
           )}
-
-          {/* Google OAuth is hidden until the Google provider is enabled in Supabase.
-              To enable: Supabase Dashboard → Authentication → Providers → Google
-              → toggle on → paste your Google OAuth Client ID and Client Secret
-              → add https://[project].supabase.co/auth/v1/callback as an Authorized Redirect URI in Google Cloud Console. */}
 
           {message && <p className="mt-4 text-sm text-red-600 text-center">{message}</p>}
         </div>
