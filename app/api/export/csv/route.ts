@@ -8,8 +8,11 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
+import { requireAuth } from '@/lib/auth-guard';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireAuth(request);
+  if (authError) return authError;
   try {
     // ✅ Make sure environment variables exist
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
