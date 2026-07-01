@@ -157,17 +157,15 @@ export default function DashboardPage() {
   }
 
   async function init() {
-    // Middleware already gates /dashboard — if we're here, the server confirmed auth.
-    // We use getUser() (server round-trip) as the authoritative check; getSession() alone
-    // reads a potentially stale local cookie and can return null immediately after login
-    // while the cookie is still propagating, causing the "flash back to /login" bug.
-    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-    if (!verifiedUser) {
-      // Only redirect if the server truly says there's no authenticated user.
+    // getSession() reads the auth cookie directly — no Supabase network round-trip.
+    // Middleware already blocks unauthenticated requests server-side, so this is a
+    // lightweight secondary guard for session-expiry while the user is active.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       window.location.href = '/login';
       return;
     }
-    const user = verifiedUser;
+    const user = session.user;
     setUser(user);
 
     await saveOnboardingFromSession(user.id);

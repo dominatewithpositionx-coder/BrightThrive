@@ -5,8 +5,15 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
-import { loginAction, resetPasswordAction } from '@/app/actions/auth';
+import { resetPasswordAction } from '@/app/actions/auth';
+
+// Cookie-aware client — writes session to cookies so middleware can read them.
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -25,16 +32,17 @@ export default function LoginPage() {
     setMessage('');
     setLoading(true);
 
-    // loginAction runs server-side: sets cookies in the response, then
-    // server-redirects to /dashboard. No cookie-write race on the client.
-    const result = await loginAction(email, password);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    // If we reach here, loginAction returned an error (redirect throws, so it
-    // never returns on success).
-    if (result?.error) {
-      setMessage(result.error);
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+    } else {
+      // Hard browser reload — guarantees the auth cookie is fully flushed to
+      // document.cookie before the /dashboard request fires, so middleware sees
+      // a valid session on the very first hit.
+      window.location.href = '/dashboard';
     }
-    setLoading(false);
   }
 
   async function handleResetPassword(e: React.FormEvent) {
