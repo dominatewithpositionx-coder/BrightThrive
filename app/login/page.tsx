@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [existingEmail, setExistingEmail] = useState<string | null>(null);
+
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
+
   const router = useRouter();
 
   useEffect(() => {
@@ -33,6 +40,22 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       router.push('/dashboard');
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError('');
+    setResetMessage('');
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: 'https://brytthrive.com/reset-password',
+    });
+    setResetLoading(false);
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetMessage('Check your email for a reset link.');
     }
   }
 
@@ -64,14 +87,25 @@ export default function LoginPage() {
               className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400"
               required
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400"
-              required
-            />
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400"
+                required
+              />
+              <div className="text-right mt-1">
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(!showReset); setResetMessage(''); setResetError(''); }}
+                  className="text-xs text-green-600 hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            </div>
 
             <button
               type="submit"
@@ -82,6 +116,35 @@ export default function LoginPage() {
               {loading ? 'Logging in…' : 'Log In'}
             </button>
           </form>
+
+          {showReset && (
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <p className="text-sm font-medium text-gray-700 mb-3">Reset your password</p>
+              {resetMessage ? (
+                <p className="text-sm text-green-600">{resetMessage}</p>
+              ) : (
+                <form onSubmit={handleResetPassword} className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Your email address"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    className="border border-gray-200 rounded-xl px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                    style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+                  >
+                    {resetLoading ? '…' : 'Send'}
+                  </button>
+                </form>
+              )}
+              {resetError && <p className="mt-2 text-xs text-red-600">{resetError}</p>}
+            </div>
+          )}
 
           {/* Google OAuth is hidden until the Google provider is enabled in Supabase.
               To enable: Supabase Dashboard → Authentication → Providers → Google
