@@ -99,7 +99,7 @@ export default function LoginPage() {
               <div className="text-right mt-1">
                 <button
                   type="button"
-                  onClick={() => { setShowReset(!showReset); setResetMessage(''); setResetError(''); }}
+                  onClick={() => { setShowReset(!showReset); setResetEmail(email); setResetMessage(''); setResetError(''); }}
                   className="text-xs text-green-600 hover:underline"
                 >
                   Forgot your password?

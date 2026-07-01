@@ -3,25 +3,41 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import { BRAND } from '@/lib/brand';
 
+type State = 'loading' | 'ready' | 'invalid' | 'success';
+
 export default function ResetPasswordPage() {
+  const [pageState, setPageState] = useState<State>('loading');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [ready, setReady] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Supabase exchanges the hash token and fires SIGNED_IN on PASSWORD_RECOVERY
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        setReady(true);
-      }
-    });
-    return () => subscription.unsubscribe();
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const type = params.get('type');
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (type !== 'recovery' || !accessToken || !refreshToken) {
+      setPageState('invalid');
+      return;
+    }
+
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ error: sessionError }) => {
+        if (sessionError) {
+          setPageState('invalid');
+        } else {
+          setPageState('ready');
+        }
+      });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,7 +60,8 @@ export default function ResetPasswordPage() {
     if (updateError) {
       setError(updateError.message);
     } else {
-      router.push('/dashboard');
+      setPageState('success');
+      setTimeout(() => router.push('/dashboard'), 2000);
     }
   }
 
@@ -60,46 +77,71 @@ export default function ResetPasswordPage() {
             priority
             className="w-[140px] sm:w-[180px] h-auto object-contain mb-2"
           />
+          <p className="text-sm text-gray-500">Earn your play. Enjoy your day.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">Set new password</h2>
-          <p className="text-sm text-gray-500 text-center mb-6">Choose a new password for your account.</p>
-
-          {!ready ? (
+          {pageState === 'loading' && (
             <p className="text-sm text-gray-500 text-center">Verifying reset link…</p>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="password"
-                placeholder="New password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-60"
-              />
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                disabled={loading}
-                className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-60"
-              />
+          )}
 
-              {error && <p className="text-sm text-red-600">{error}</p>}
+          {pageState === 'invalid' && (
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-bold text-gray-900">Link expired</h2>
+              <p className="text-sm text-gray-500">
+                Invalid or expired reset link. Request a new one.
+              </p>
+              <Link href="/login" className="text-green-600 font-medium hover:underline text-sm">
+                Back to login
+              </Link>
+            </div>
+          )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full text-white py-3 rounded-xl font-semibold text-base min-h-[44px] transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
-              >
-                {loading ? 'Updating…' : 'Update password'}
-              </button>
-            </form>
+          {pageState === 'success' && (
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-bold text-gray-900">Password updated!</h2>
+              <p className="text-sm text-gray-500">Redirecting you to the dashboard…</p>
+            </div>
+          )}
+
+          {pageState === 'ready' && (
+            <>
+              <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">Set new password</h2>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Choose a new password for your account.
+              </p>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="password"
+                  placeholder="New password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-60"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="border border-gray-200 rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-60"
+                />
+
+                {error && <p className="text-sm text-red-600">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-white py-3 rounded-xl font-semibold text-base min-h-[44px] transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: 'linear-gradient(90deg, #22C55E 0%, #14B8A6 100%)' }}
+                >
+                  {loading ? 'Updating…' : 'Update password'}
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>
