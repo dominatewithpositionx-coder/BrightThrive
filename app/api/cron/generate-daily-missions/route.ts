@@ -283,7 +283,6 @@ export async function GET(req: Request) {
           season,
         });
 
-      console.log('[cron/generate-daily-missions]', { childId: row.id, count, skipped: false, error: null });
       generated++;
     } catch (err) {
       errors++;

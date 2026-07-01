@@ -229,7 +229,6 @@ export default function ChildrenPage() {
     }).eq('id', child.id);
     if (error) {
       // location columns may not exist in production DB yet
-      console.warn('[children] saveLocation failed:', error.message);
       if (error.message?.includes('location_') || error.message?.includes('schema cache')) {
         toast.error('Location save requires a DB migration — run 20260015_child_location.sql in Supabase.');
         return;

@@ -673,7 +673,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
 
   const done    = missions.filter((m) => m.is_completed);
   const pending = missions.filter((m) => !m.is_completed);
-  console.log(`[ChildView] render: total=${missions.length} active=${pending.length} completed=${done.length} round=${missionRound}`);
   // Only celebrate when a meaningful pack was actually completed (≥3 missions done, none left).
   // A single old completed mission from a previous session must never trigger this screen.
   const allDone = done.length >= 3 && pending.length === 0 && !isDemoMode;
@@ -1059,14 +1058,12 @@ export default function ChildPage() {
     let childData = childRes.data;
     if (childRes.error) {
       // location_label / location_city columns may not exist yet — retry with base columns only.
-      console.warn('[child] children query failed, retrying without location columns:', childRes.error.message);
       const retry = await supabase
         .from('children')
         .select('id, name, age, parent_id')
         .eq('parent_id', parentId)
         .order('created_at', { ascending: true });
       if (retry.error) {
-        console.error('[child] children retry failed:', retry.error.message);
         setLoadState('query');
         setLoading(false);
         return;
@@ -1074,10 +1071,6 @@ export default function ChildPage() {
       childData = (retry.data || []).map(c => ({ ...c, location_label: null, location_name: null, location_city: null }));
     }
 
-    if (walletRes.error) console.error('[child] wallet query error:', walletRes.error.message);
-    if (rewardRes.error) console.error('[child] rewards query error:', rewardRes.error.message);
-    if (planRes.error)   console.error('[child] family_plans query error:', planRes.error.message);
-    if (streakRes.error) console.error('[child] streaks query error:', streakRes.error.message);
 
     const kids = (childData || []);
     if (kids.length === 0) {
@@ -1101,7 +1094,6 @@ export default function ChildPage() {
 
     if (missionRes.error) {
       // mission_date column may not exist on older production DBs — fall back to updated_at filter.
-      console.warn('[child] missions query with mission_date failed, retrying with updated_at:', missionRes.error.message);
       const fallback = await supabase
         .from('missions')
         .select('id, child_id, title, category, screen_time_reward, is_completed')
@@ -1111,7 +1103,6 @@ export default function ChildPage() {
 
       if (fallback.error) {
         // Both date strategies failed — show empty rather than risk showing stale data.
-        console.error('[child] missions fallback also failed:', fallback.error.message);
         missionData = [];
       } else {
         missionData = (fallback.data ?? []).map(m => ({ ...m, generated_by: undefined }));
@@ -1128,7 +1119,6 @@ export default function ChildPage() {
     const fetchedMissions = missionData || [];
     const activeFetched = fetchedMissions.filter(m => !m.is_completed);
     const completedFetched = fetchedMissions.filter(m => m.is_completed);
-    console.log(`[child/fetchData] fetched=${fetchedMissions.length} active=${activeFetched.length} completed=${completedFetched.length}`);
 
     setChildren(enrichedKids);
     setMissions(fetchedMissions);
@@ -1160,7 +1150,6 @@ export default function ChildPage() {
     autoGenDoneRef.current = true;
     setAutoGenerating(true);
     setAutoGenFailed(false);
-    console.log(`[child/autoGen] triggering auto-gen for ${children.length} child(ren). Total missions=${missions.length}, completed=${missions.filter(m => m.is_completed).length}, incomplete=0`);
 
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1181,11 +1170,8 @@ export default function ChildPage() {
               mood: selectedMood ?? null,
             }),
           });
-          const genData = await genRes.json();
-          console.log(`[child/autoGen] child=${child.name} status=${genRes.status} generated=${genData.generated} pack=${genData.pack ?? 'none'} error=${genData.error ?? 'none'}`);
           if (genRes.ok) anySuccess = true;
-        } catch (e) {
-          console.error('[child/autoGen] fetch error:', e);
+        } catch {
         }
       }
       await fetchData();
@@ -1221,9 +1207,7 @@ export default function ChildPage() {
         const res = await fetch(`/api/weather?location=${encodeURIComponent(city)}`);
         const json = await res.json();
         if (applyJson(json)) return;
-        console.warn('[child] stored city weather failed:', json?.error);
-      } catch (err) {
-        console.warn('[child] stored city fetch error, trying geolocation:', err);
+      } catch {
       }
     }
 
@@ -1235,15 +1219,11 @@ export default function ChildPage() {
         try {
           const res = await fetch(`/api/weather?lat=${latitude}&lon=${longitude}`);
           const json = await res.json();
-          if (!applyJson(json)) {
-            console.warn('[child] geolocation weather fetch failed:', json);
-          }
-        } catch (err) {
-          console.warn('[child] geolocation weather fetch error:', err);
+          applyJson(json);
+        } catch {
         }
       },
-      (err) => {
-        console.warn('[child] geolocation denied or unavailable:', err.message);
+      () => {
       },
       { timeout: 8000 }
     );

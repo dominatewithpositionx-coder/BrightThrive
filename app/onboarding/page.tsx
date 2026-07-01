@@ -258,13 +258,10 @@ export default function OnboardingPage() {
     // Check env config before making any network call
     const config = getSupabaseConfigStatus();
     if (!config.ok) {
-      console.error('[Onboarding] Supabase config invalid:', config.reason);
       setAuthError('There may be a configuration issue with this app. Please try again later or contact support.');
       setAuthLoading(false);
       return;
     }
-
-    console.log('[Onboarding] Starting email signup for:', email);
 
     try {
       const supabase = getSupabase();
@@ -277,13 +274,10 @@ export default function OnboardingPage() {
       });
 
       if (error) {
-        console.error('[Onboarding] signUp error:', error.status, error.message);
         setAuthError(error.message);
         setAuthLoading(false);
         return;
       }
-
-      console.log('[Onboarding] signUp success. session:', !!data.session, 'user:', data.user?.id);
 
       // Session present = email confirmation disabled → go straight to dashboard
       if (data.session) {
@@ -317,9 +311,6 @@ export default function OnboardingPage() {
     setResendLoading(true);
     setResendStatus('idle');
     setResendErrorMsg('');
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Onboarding] Resending confirmation to:', email);
-    }
     try {
       const supabase = getSupabase();
       const { error } = await supabase.auth.resend({
@@ -328,9 +319,6 @@ export default function OnboardingPage() {
         options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
       if (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[Onboarding] Resend error:', error.status, error.message);
-        }
         const msg = error.message.toLowerCase();
         if (msg.includes('already confirmed') || msg.includes('already registered') || msg.includes('email confirmed')) {
           setResendStatus('already-confirmed');
@@ -341,15 +329,9 @@ export default function OnboardingPage() {
           setResendErrorMsg(error.message);
         }
       } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Onboarding] Resend success (no error returned)');
-        }
         setResendStatus('sent');
       }
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[Onboarding] Resend threw:', err);
-      }
       setResendStatus('error');
       setResendErrorMsg(err instanceof Error ? err.message : 'Unknown error');
     }
@@ -359,11 +341,9 @@ export default function OnboardingPage() {
   async function handleGoogle() {
     const config = getSupabaseConfigStatus();
     if (!config.ok) {
-      console.error('[Onboarding] Supabase config invalid for Google OAuth:', config.reason);
       setAuthError('There may be a configuration issue. Please try signing up with email instead.');
       return;
     }
-    console.log('[Onboarding] Starting Google OAuth');
     saveToStorage();
     try {
       const supabase = getSupabase();
@@ -372,7 +352,6 @@ export default function OnboardingPage() {
         options: { redirectTo: `${window.location.origin}/dashboard?onboarding=1` },
       });
       if (error) {
-        console.error('[Onboarding] Google OAuth error:', error.message);
         setAuthError(error.message.includes('not enabled')
           ? 'Google sign-in is not yet enabled. Please use email and password below.'
           : friendlyError(error));
@@ -384,7 +363,6 @@ export default function OnboardingPage() {
   }
 
   async function saveOnboardingRow(parentId: string) {
-    console.log('[Onboarding] Saving onboarding row for parent:', parentId);
     try {
       const supabase = getSupabase();
       const { error } = await supabase.from('family_plans').upsert({
@@ -395,7 +373,6 @@ export default function OnboardingPage() {
       }, { onConflict: 'parent_id' });
       if (error) console.error('[Onboarding] saveOnboardingRow error:', error.message);
       else {
-        console.log('[Onboarding] Onboarding row saved');
         if (typeof window !== 'undefined') localStorage.removeItem('bt_onboarding_backup');
       }
     } catch (err) {

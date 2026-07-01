@@ -44,8 +44,6 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    console.log('✅ Supabase insert success:', data);
-
     return NextResponse.json({ success: true, data });
   } catch (err: any) {
     console.error('❌ Waitlist API Error:', err);

@@ -114,7 +114,6 @@ export default function TasksPage() {
       console.error('[dashboard/tasks] add_coins error:', coinError.message, coinError.code, coinError.details);
       toast.error('Error updating points.');
     } else {
-      console.log(`[dashboard/tasks] add_coins ok: child=${mission.child_id} amount=${pointsChange}`);
       toast.success(mission.is_completed ? 'Task undone. Points removed.' : 'Task completed! +10 pts logged.');
     }
 

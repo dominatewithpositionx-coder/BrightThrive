@@ -11,7 +11,6 @@ export async function POST(req: Request) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn('[notify-reward] RESEND_API_KEY not set — skipping reward notification email');
     return NextResponse.json({ success: true, skipped: true });
   }
   const resend = new Resend(apiKey);

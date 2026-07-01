@@ -30,9 +30,6 @@ const POSTHOG_KEY = typeof window !== 'undefined'
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
 
 function emit(event: EventName, props?: EventProps) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[analytics] ${event}`, props ?? {});
-  }
   if (!POSTHOG_KEY) return;
   try {
     fetch(`${POSTHOG_HOST}/capture/`, {

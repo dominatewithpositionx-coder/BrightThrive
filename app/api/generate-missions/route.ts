@@ -9,9 +9,6 @@ const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 60_000;
 
 export async function POST(req: NextRequest) {
-  // Env-var health check — logged on every request so Vercel logs show the config state
-  console.log('[generate-missions] env check — SUPABASE_URL:', !!process.env.NEXT_PUBLIC_SUPABASE_URL, '| ANON_KEY:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, '| SERVICE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY, '| ANTHROPIC_KEY:', !!process.env.ANTHROPIC_API_KEY);
-
   const {
     childId, childAge, parentId, location, locationLabel, locationCity,
     mood, weatherSummary, count, missionRound,
@@ -146,7 +143,6 @@ export async function POST(req: NextRequest) {
     .eq('mission_date', missionDate);
 
   if (delWithDate.error) {
-    console.warn('[generate-missions] delete with mission_date failed, retrying without:', delWithDate.error.message);
     const delFallback = await supabase
       .from('missions')
       .delete()
@@ -170,7 +166,6 @@ export async function POST(req: NextRequest) {
   let { data, error } = await supabase.from('missions').insert(rowsWithDate).select();
 
   if (error) {
-    console.warn('[generate-missions] insert with mission_date failed, retrying without:', error.message);
     const rowsNoDate = pack.missions.map((m) => ({
       child_id: childId,
       title: m.title,
