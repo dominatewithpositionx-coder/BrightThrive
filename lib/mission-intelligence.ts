@@ -294,22 +294,14 @@ export async function buildMissionContext(params: {
     if (!historyRes.error && historyRes.data) {
       recentMissionHistory = historyRes.data as { title: string; category: string | null; is_completed: boolean }[];
       completedTodayTitles = recentMissionHistory.filter(m => m.is_completed).map(m => m.title);
-    } else if (historyRes.error) {
-      console.warn('[mission-intelligence] mission history fetch failed:', historyRes.error.message);
     }
 
     if (!streakRes.error && streakRes.data) {
       currentStreak = (streakRes.data as { current_streak: number }).current_streak ?? 0;
-    } else if (streakRes.error) {
-      console.warn('[mission-intelligence] streak fetch failed:', streakRes.error.message);
     }
 
     familyPersonalization = (planRes.data?.personalization_data as Record<string, unknown>) ?? {};
-    if (planRes.error) {
-      console.warn('[mission-intelligence] family plan fetch failed:', planRes.error.message);
-    }
-  } catch (err) {
-    console.warn('[mission-intelligence] context fetch error (non-fatal):', err);
+  } catch {
   }
 
   // ── Category diversity ────────────────────────────────────────────────────
@@ -554,17 +546,9 @@ export async function generateMissionPack(ctx: MissionContext): Promise<MissionP
       packName = typeof parsed.pack === 'string' ? parsed.pack : '';
       missions = parsed.missions as MissionDraft[];
 
-      if (process.env.NODE_ENV !== 'production' || process.env.LOG_MISSION_REASONING === '1') {
-        console.log(`[mission-intelligence] Pack: "${packName}" | Round: ${ctx.currentRound} | Difficulty: ${ctx.difficultyLevel} | Streak: ${ctx.currentStreak}`);
-        for (const m of missions as (MissionDraft & { reasoning?: string })[]) {
-          if (m.reasoning) console.log(`  [${m.category}] ${m.title} — ${m.reasoning}`);
-        }
-      }
     } else if (Array.isArray(parsed) && parsed.length > 0) {
       // Fallback: Claude returned old array format
       missions = parsed as MissionDraft[];
-    } else {
-      console.warn('[mission-intelligence] Claude returned unexpected structure, falling back');
     }
   } catch (err) {
     console.error('[mission-intelligence] Claude call failed, using fallback:', err);
@@ -573,7 +557,6 @@ export async function generateMissionPack(ctx: MissionContext): Promise<MissionP
   if (missions.length === 0) {
     const fallbacks = FALLBACK[ctx.ageBand] ?? FALLBACK['default'];
     missions = fallbacks.slice(0, ctx.requestedCount);
-    console.warn(`[mission-intelligence] Using static fallback for age band: ${ctx.ageBand}`);
   }
 
   return {

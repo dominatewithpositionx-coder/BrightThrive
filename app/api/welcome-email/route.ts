@@ -141,8 +141,7 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    // Resend not configured — log and return success so signup is never blocked
-    console.warn('[welcome-email] RESEND_API_KEY not set — skipping welcome email');
+    // Resend not configured — return success so signup is never blocked
     return NextResponse.json({ success: true, skipped: true });
   }
 

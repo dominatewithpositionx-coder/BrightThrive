@@ -171,10 +171,6 @@ export default function DashboardPage() {
       supabase.from('family_plans').select('personalization_data').eq('parent_id', user.id).maybeSingle(),
     ]);
 
-    if (childRes.error) console.error('[dashboard] children query error:', childRes.error.message);
-    if (walletRes.error) console.error('[dashboard] wallet query error:', walletRes.error.message);
-    if (streakRes.error) console.error('[dashboard] streaks query error:', streakRes.error.message);
-    if (planRes.error) console.error('[dashboard] family_plans query error:', planRes.error.message);
 
     const { data: childData } = childRes;
     const { data: walletData } = walletRes;
@@ -195,13 +191,11 @@ export default function DashboardPage() {
         .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
 
       if (missionRes.error) {
-        console.error('[dashboard] missions query error (retrying without generated_by):', missionRes.error.message);
         const retry = await supabase
           .from('missions')
           .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
           .in('child_id', childIds)
           .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
-        if (retry.error) console.error('[dashboard] missions retry error:', retry.error.message);
         missionData = retry.data;
       } else {
         missionData = missionRes.data;
@@ -230,9 +224,7 @@ export default function DashboardPage() {
             setDashWeather(json as WeatherData);
             return;
           }
-          console.warn('[dashboard] stored location weather failed:', json?.error);
-        } catch (err) {
-          console.warn('[dashboard] stored location fetch error, trying geolocation:', err);
+        } catch {
         }
       }
 
@@ -246,15 +238,11 @@ export default function DashboardPage() {
               const json = await res.json();
               if (json && !json.error) {
                 setDashWeather(json as WeatherData);
-              } else {
-                console.warn('[dashboard] geolocation weather fetch failed:', json);
               }
-            } catch (err) {
-              console.warn('[dashboard] geolocation weather fetch error:', err);
+            } catch {
             }
           },
-          (err) => {
-            console.warn('[dashboard] geolocation denied or unavailable:', err.message);
+          () => {
           },
           { timeout: 8000 }
         );
@@ -306,7 +294,6 @@ export default function DashboardPage() {
       mission_date: todayStr(),
     }]);
     if (!error) { setAddTaskTitle(''); setShowAddTask(false); await init(); }
-    else console.error('[dashboard] add task error:', error.message);
     setAddingTask(false);
   }
 
@@ -322,7 +309,6 @@ export default function DashboardPage() {
       error = retry.error;
     }
     if (!error) { setAddRewardTitle(''); setAddRewardCost(''); setShowAddReward(false); await init(); }
-    else console.error('[dashboard] add reward error:', error.message);
     setAddingReward(false);
   }
 
@@ -334,7 +320,6 @@ export default function DashboardPage() {
     if (!u) { setAddingChild(false); return; }
     const { error } = await supabase.from('children').insert([{ parent_id: u.id, name: addChildName.trim(), age: addChildAge !== '' ? Number(addChildAge) : null }]);
     if (!error) { setAddChildName(''); setAddChildAge(''); setShowAddChild(false); await init(); }
-    else console.error('[dashboard] add child error:', error.message);
     setAddingChild(false);
   }
 
@@ -366,11 +351,8 @@ export default function DashboardPage() {
         body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
       });
       if (res.ok) return true;
-      const body = await res.json().catch(() => ({}));
-      console.error(`[dashboard] generateMissionsForChild: API ${res.status} for ${child.name}:`, body);
       return false;
-    } catch (err) {
-      console.error('[dashboard] generateMissionsForChild: network error for', child.name, err);
+    } catch {
       return false;
     } finally {
       setGeneratingChildIds(prev => { const s = new Set(prev); s.delete(childId); return s; });
@@ -385,7 +367,6 @@ export default function DashboardPage() {
     if (!isAutoGenRef.current) isAutoGenRef.current = false;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      console.error('[dashboard] generateMissionsForAll: no session — aborting');
       setGenerateError('Session expired. Please refresh the page and try again.');
       setGeneratingAll(false);
       return;
@@ -444,23 +425,23 @@ export default function DashboardPage() {
     // card never flashes back to "No missions yet today" between generation and re-fetch.
     setGeneratingChildIds(prev => new Set(prev).add(childId));
     try {
-      const res = await fetch('/api/generate-missions', {
+      await fetch('/api/generate-missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ childId: child.id, parentId: user?.id, childAge: child.age, weatherSummary }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        console.error(`[dashboard] generateMissionsForSingleChild: API ${res.status} for ${child.name}:`, body);
-      }
-    } catch (err) {
-      console.error('[dashboard] generateMissionsForSingleChild: network error for', child.name, err);
+    } catch {
     }
     await init();
     setGeneratingChildIds(prev => { const s = new Set(prev); s.delete(childId); return s; });
   }
 
-  const firstName = user?.email ?? 'there';
+  const firstName = user?.email
+    ?.split('@')[0]
+    ?.split(/[._-]/)[0]
+    ?.replace(/[^a-zA-Z]/g, '')
+    ?.replace(/^\w/, c => c.toUpperCase())
+    ?? 'there';
   const today = todayStr();
   const todayMissions = missions.filter((m) => m.mission_date === today);
 
@@ -893,7 +874,6 @@ export default function DashboardPage() {
                           const { data: { user: u } } = await supabase.auth.getUser();
                           if (!u) return;
                           const { error: pe } = await supabase.from('rewards').insert([{ parent_id: u.id, title: p.title, coin_cost: p.coin_cost }]);
-                          if (pe) console.error('[dashboard] preset reward error:', pe.message);
                           await init();
                         }}
                         className="flex items-center gap-1.5 bg-white border border-dashed border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-600 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50 transition-colors"
