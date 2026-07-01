@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin'; // ✅ use absolute import
+import { requireAuth } from '@/lib/auth-guard';
 
 // ✅ Disable static generation for this API route
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireAuth(request);
+  if (authError) return authError;
   try {
     const { data, error } = await supabaseAdmin
       .from('waitlist')
