@@ -30,10 +30,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
-  console.log('[AUTH:MW] user:', user?.id ?? null, '| will redirect:', !user && pathname.startsWith('/dashboard'));
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log('[AUTH:MW] session:', session?.user?.id ?? null, '| will redirect:', !session && pathname.startsWith('/dashboard'));
 
-  if (!user && pathname.startsWith('/dashboard')) {
+  if (!session && pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
