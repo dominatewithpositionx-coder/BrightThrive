@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic';
-import Auth from '../../components/Auth';
+import { redirect } from 'next/navigation';
 
+// Legacy /auth route — replaced by /onboarding and /login
 export default function AuthPage() {
-  return <Auth />;
+  redirect('/onboarding');
 }

@@ -570,20 +570,9 @@ export default function OnboardingPage() {
           Your personalized plan is saved and ready.
         </p>
 
-        <button
-          onClick={handleGoogle}
-          className="w-full border-2 py-3.5 rounded-full flex items-center justify-center gap-2 text-sm font-medium mb-5 hover:bg-gray-50 transition-colors"
-          style={{ borderColor: '#E2E8F0', color: '#0F172A' }}
-        >
-          <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
-          Continue with Google
-        </button>
-
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-          <span className="text-xs" style={{ color: '#94A3B8' }}>or</span>
-          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-        </div>
+        {/* Google OAuth hidden — enable in Supabase Dashboard → Auth → Providers → Google,
+            then add https://[project].supabase.co/auth/v1/callback to Google Cloud Console
+            and https://brytthrive.com/dashboard?onboarding=1 to Supabase redirect URLs. */}
 
         <form onSubmit={handleSignUp} className="space-y-3">
           <input
