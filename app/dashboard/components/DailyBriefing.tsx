@@ -52,15 +52,21 @@ export default function DailyBriefing({ children, weather, completedToday, total
   if (children.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-5 flex items-start gap-3 w-full">
-      <div className="p-2 bg-white/70 rounded-xl flex-shrink-0">
-        <Sparkles size={18} className="text-emerald-500" />
+    <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-5 flex items-start gap-4">
+      <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+        <Sparkles size={16} className="text-white" />
       </div>
-      {loading ? (
-        <div className="flex-1 h-5 bg-emerald-100 rounded-full animate-pulse mt-1" />
-      ) : (
-        <p className="text-sm font-medium text-gray-700 leading-relaxed mt-0.5">{briefing}</p>
-      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Today&apos;s Insight</p>
+        {loading ? (
+          <div className="space-y-2">
+            <div className="h-3.5 bg-gray-100 rounded-full animate-pulse w-full" />
+            <div className="h-3.5 bg-gray-100 rounded-full animate-pulse w-3/4" />
+          </div>
+        ) : (
+          <p className="text-sm font-medium text-gray-700 leading-relaxed">{briefing}</p>
+        )}
+      </div>
     </div>
   );
 }

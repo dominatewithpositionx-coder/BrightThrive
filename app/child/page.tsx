@@ -523,7 +523,7 @@ function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle:
           aria-label={`Complete "${mission.title}"`}
           className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all shadow-sm press-scale flex items-center justify-center gap-2"
         >
-          <span>✓</span> Complete Mission
+          ✅ I Did It!
         </button>
       </div>
     </motion.div>
@@ -897,9 +897,9 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         {/* No missions yet */}
         {!isDemoMode && missions.length === 0 && (
           <div className="bg-white border border-gray-100 rounded-3xl px-6 py-10 text-center shadow-sm">
-            <div className="text-4xl mb-3">🌟</div>
-            <p className="font-bold text-navy text-lg mb-1">No missions yet today</p>
-            <p className="text-gray-400 text-sm">Your missions are being prepared — check back in a moment!</p>
+            <div className="text-5xl mb-3">✨</div>
+            <p className="font-black text-navy text-lg mb-1">Ready for today&apos;s adventure?</p>
+            <p className="text-gray-400 text-sm leading-relaxed">Your missions are being prepared — they&apos;ll be here in just a moment!</p>
           </div>
         )}
 
@@ -911,20 +911,20 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             className="bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 rounded-3xl p-8 text-center shadow-lift"
           >
-            <div className="text-6xl mb-4 animate-float">🏆</div>
-            <p className="font-black text-white text-2xl mb-2 tracking-tight">Amazing Work!</p>
+            <div className="text-7xl mb-4 animate-float">🏆</div>
+            <p className="font-black text-white text-3xl mb-2 tracking-tight">You&apos;re a Champion!</p>
             <p className="text-white/90 text-sm leading-relaxed mb-4 font-medium">
-              You crushed every mission{missionRound > 0 ? ` in Round ${missionRound + 1}` : ' today'}!
+              Every single mission complete{missionRound > 0 ? ` in Round ${missionRound + 1}` : ' today'}! You should be so proud. 🌟
             </p>
             <div className="inline-flex items-center gap-2.5 bg-white/25 rounded-2xl px-5 py-3 text-white font-bold text-sm mb-5 backdrop-blur-sm">
-              <Trophy size={16} /> {done.length} mission{done.length !== 1 ? 's' : ''} · +{screenTimeEarned} iPad mins earned
+              <Trophy size={16} /> {done.length} mission{done.length !== 1 ? 's' : ''} · +{screenTimeEarned} mins earned
             </div>
             <button
               onClick={onGenerateMore}
               disabled={generatingMore}
               className="w-full min-h-[44px] bg-white text-teal-700 font-bold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
             >
-              {generatingMore ? '✨ Getting more missions…' : '🎯 Get More Missions'}
+              {generatingMore ? '✨ Creating more adventures…' : '🚀 More Adventures!'}
             </button>
           </motion.div>
         )}
@@ -936,7 +936,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
             disabled={generatingMore}
             className="w-full min-h-[44px] bg-white border border-gray-200 text-gray-600 font-semibold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
           >
-            {generatingMore ? '✨ Getting more missions…' : '🔄 Get More Missions'}
+            {generatingMore ? '✨ Creating more adventures…' : '✨ Get More Missions'}
           </button>
         )}
 
@@ -945,7 +945,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Wallet header */}
             <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-5 py-4">
-              <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-0.5">My Wallet</p>
+              <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-0.5">🎁 My Rewards</p>
               <div className="flex items-end gap-2">
                 <span className="text-4xl font-black text-white leading-none">{child.points}</span>
                 <span className="text-white/90 font-bold text-lg mb-0.5">🪙 BrytCoins</span>
@@ -987,7 +987,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                     {isApproved ? (
                       <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
                         <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
-                        <span className="text-xs font-semibold text-green-700 whitespace-nowrap">Approved! 🎉</span>
+                        <span className="text-xs font-semibold text-green-700 whitespace-nowrap">Mom or Dad Said Yes! 🎉</span>
                       </div>
                     ) : isPending ? (
                       <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5">
@@ -999,7 +999,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                         disabled={isRequesting}
                         className="min-h-[36px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full transition-all flex-shrink-0 disabled:opacity-60"
                       >
-                        {isRequesting ? '⏳' : 'Ask My Parent 💛'}
+                        {isRequesting ? '⏳' : '🎁 Choose This Reward'}
                       </button>
                     )}
                   </div>
@@ -1020,7 +1020,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                       <p className="text-xs text-gray-400 font-medium">{r.coin_cost} 🪙</p>
                       {isClosest && (
                         <p className="text-xs text-purple-500 font-semibold mt-0.5">
-                          Earn {coinsNeeded} more to unlock!
+                          Just {coinsNeeded} more coins to unlock! 🚀
                         </p>
                       )}
                     </div>
