@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
 
@@ -43,7 +43,10 @@ export default function PointsHistoryPage() {
   const [selectedChild, setSelectedChild] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  const supabase = getSupabase();
+  const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
   useEffect(() => {
     async function fetchData() {
@@ -149,47 +152,4 @@ export default function PointsHistoryPage() {
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
           <EmptyState
-            emoji="📅"
-            headline="No activity yet"
-            body="Complete missions to start earning coins."
-            cta={{ label: 'Start a mission', href: '/child' }}
-          />
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-50 overflow-hidden">
-          <AnimatePresence initial={false}>
-            {filtered.map((entry) => {
-              const childName = getChildName(entry.child_id);
-              const isRecent = recentIds.includes(entry.id);
-              return (
-                <motion.div
-                  key={entry.id}
-                  layout
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0, backgroundColor: isRecent ? (entry.amount > 0 ? '#f0fdf4' : '#fef2f2') : '#ffffff' }}
-                  transition={{ duration: 0.3 }}
-                  className="flex items-center gap-3 px-4 py-3.5"
-                >
-                  <div className={`w-9 h-9 rounded-full ${avatarColor(childName)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-                    {childName[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-navy truncate">{childName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{entry.description}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {entry.amount > 0 ? `+${entry.amount}` : entry.amount}🪙
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(entry.created_at)}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      )}
-
-    </div>
-  );
-}
+   

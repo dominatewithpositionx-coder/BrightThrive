@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { TrendingUp, CheckCircle, Gift, Star, Users, Flame } from 'lucide-react';
 
 type Child = { id: string; name: string; points: number };
@@ -86,7 +86,10 @@ export default function AnalyticsPage() {
   const [redemptionCount, setRedemptionCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const supabase = getSupabase();
+  const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
   useEffect(() => {
     async function fetchData() {

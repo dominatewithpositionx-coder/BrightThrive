@@ -2,10 +2,13 @@
 'use client';
 
 import type { User } from '@supabase/supabase-js';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { useCallback } from 'react';
 
-const supabase = getSupabase();
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 type HeaderProps = {
   user?: User | null;

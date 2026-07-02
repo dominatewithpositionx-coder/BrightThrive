@@ -1,11 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, ChevronRight, Users, ClipboardList, Gift, Sparkles } from 'lucide-react';
 
-const supabase = getSupabase();
+// Must use createBrowserClient (SSR-aware, reads cookies) — getSupabase() reads
+// localStorage which is empty because login writes the session to cookies.
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 function today() {
   return new Date().toISOString().split('T')[0];
