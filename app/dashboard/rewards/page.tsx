@@ -143,23 +143,43 @@ export default function RewardsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Session expired. Please log in again.'); return; }
     setSaving(true);
-    let { error } = await supabase.from('rewards').insert([{
+
+    const payload1 = {
       parent_id: user.id,
       title: title.trim(),
       coin_cost: Number(cost),
       reward_type: 'standard',
       is_active: true,
       sort_order: 0,
-    }]);
+    };
+    console.log('[addReward] attempt 1 payload:', JSON.stringify(payload1));
+    let { error } = await supabase.from('rewards').insert([payload1]);
     if (error) {
-      // reward_type / is_active / sort_order may not exist in production schema — retry minimal
-      const retry = await supabase.from('rewards').insert([{
-        parent_id: user.id,
-        title: title.trim(),
-        coin_cost: Number(cost),
-      }]);
+      console.error('[addReward] attempt 1 FAILED:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        table: 'rewards',
+        payload: payload1,
+      });
+
+      const payload2 = { parent_id: user.id, title: title.trim(), coin_cost: Number(cost) };
+      console.log('[addReward] attempt 2 payload:', JSON.stringify(payload2));
+      const retry = await supabase.from('rewards').insert([payload2]);
+      if (retry.error) {
+        console.error('[addReward] attempt 2 FAILED:', {
+          message: retry.error.message,
+          code: retry.error.code,
+          details: retry.error.details,
+          hint: retry.error.hint,
+          table: 'rewards',
+          payload: payload2,
+        });
+      }
       error = retry.error;
     }
+
     if (error) { toast.error('Could not add reward. Please try again.'); }
     else {
       toast.success('Reward added!');
