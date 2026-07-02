@@ -932,6 +932,64 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </motion.div>
         )}
 
+        {/* ── Reward prompt — shown immediately when all missions complete ── */}
+        {allDone && sortedRewards.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-3xl p-5 space-y-3"
+          >
+            <div className="text-center">
+              <p className="text-xl font-black text-gray-900">🎁 Choose Your Reward!</p>
+              <p className="text-xs text-gray-500 mt-1">You earned it — ask a parent to unlock it</p>
+            </div>
+
+            {affordableRewards.length > 0 ? (
+              <div className="space-y-2">
+                {affordableRewards.map((r) => {
+                  const isApproved = approvedRedemptions.has(r.id);
+                  const isPending  = pendingRedemptions.has(r.id);
+                  const isRequesting = requestingRewardId === r.id;
+                  return (
+                    <div key={r.id} className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-xl flex-shrink-0">🎁</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-navy text-sm truncate">{r.title}</p>
+                        <p className="text-xs text-amber-500 font-semibold">{r.coin_cost} 🪙</p>
+                      </div>
+                      {isApproved ? (
+                        <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+                          <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-green-700 whitespace-nowrap">Mom or Dad Said Yes! 🎉</span>
+                        </div>
+                      ) : isPending ? (
+                        <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5">
+                          <span className="text-xs font-semibold text-purple-700 whitespace-nowrap">Waiting for Mom or Dad ❤️</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => askParent(r)}
+                          disabled={isRequesting}
+                          className="min-h-[36px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs px-3 py-1.5 rounded-full transition-all flex-shrink-0 disabled:opacity-60 whitespace-nowrap"
+                        >
+                          {isRequesting ? '⏳' : 'Ask My Parent 💛'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : nextReward ? (
+              <div className="bg-white rounded-2xl px-4 py-3 text-center shadow-sm">
+                <p className="text-sm text-gray-600">
+                  Earn <strong className="text-amber-600">{nextReward.coin_cost - child.points} more coins</strong> to unlock <strong>{nextReward.title}</strong> 🚀
+                </p>
+              </div>
+            ) : null}
+          </motion.div>
+        )}
+
         {/* Get more missions (when not all done) */}
         {!allDone && !isDemoMode && (
           <button
