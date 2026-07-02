@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import Logo from '@/components/brightthrive/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown, Trophy } from 'lucide-react';
@@ -1024,7 +1024,10 @@ export default function ChildPage() {
   );
   const installPrompt               = useInstallPrompt();
 
-  const supabase = getSupabase();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   function todayStr() {
     return new Date().toISOString().split('T')[0];
