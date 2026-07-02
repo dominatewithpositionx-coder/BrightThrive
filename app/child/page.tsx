@@ -657,7 +657,7 @@ function MissionRow({ mission, onToggle, isLast }: { mission: Mission; onToggle:
   );
 }
 
-function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen }: {
+function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen, supabase }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number; mood: MoodKey | null;
   onBack: () => void; onMissionToggle: (mission: Mission) => void;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
@@ -665,6 +665,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   missionError: string | null; missionSuccess: string | null;
   weather: WeatherData | null; isDemoMode?: boolean;
   isAutoGenerating?: boolean; autoGenFailed?: boolean; onRetryGen?: () => void;
+  supabase: ReturnType<typeof createBrowserClient>;
 }) {
   const theme   = getDayTheme();
   const level   = getExplorerLevel(child.points);
@@ -689,10 +690,48 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const [showCompleted, setShowCompleted] = useState(false);
   const [showRewards, setShowRewards]     = useState(false);
   const [redeemedIds, setRedeemedIds]     = useState<Set<string>>(new Set());
+  const [pendingRedemptions, setPendingRedemptions] = useState<Set<string>>(new Set());
+  const [approvedRedemptions, setApprovedRedemptions] = useState<Set<string>>(new Set());
+  const [requestingRewardId, setRequestingRewardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('reward_redemptions')
+      .select('reward_id, status')
+      .eq('child_id', child.id)
+      .in('status', ['pending', 'approved'])
+      .then(({ data }: { data: Array<{ reward_id: string; status: string }> | null }) => {
+        if (!data) return;
+        const pendingSet = new Set<string>(data.filter(r => r.status === 'pending').map(r => r.reward_id));
+        const approvedSet = new Set<string>(data.filter(r => r.status === 'approved').map(r => r.reward_id));
+        setPendingRedemptions(pendingSet);
+        setApprovedRedemptions(approvedSet);
+      });
+  }, [child.id]);
 
   const sortedRewards      = [...rewards].sort((a, b) => a.coin_cost - b.coin_cost);
   const affordableRewards  = sortedRewards.filter((r) => r.coin_cost <= child.points);
   const nextReward         = sortedRewards.find((r) => r.coin_cost > child.points) ?? null;
+
+  async function askParent(reward: Reward) {
+    if (requestingRewardId) return;
+    setRequestingRewardId(reward.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await supabase.from('reward_redemptions').insert({
+        child_id: child.id,
+        reward_id: reward.id,
+        parent_id: session.user.id,
+        reward_title: reward.title,
+        reward_type: 'reward',
+        coin_cost: reward.coin_cost,
+        status: 'pending',
+      });
+      setPendingRedemptions(prev => new Set(prev).add(reward.id));
+    } catch { }
+    setRequestingRewardId(null);
+  }
 
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const timeLabel = (() => {
@@ -930,7 +969,9 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
             <div className="divide-y divide-gray-50">
               {/* Unlocked first */}
               {affordableRewards.map((r) => {
-                const redeemed = redeemedIds.has(r.id);
+                const isApproved = approvedRedemptions.has(r.id);
+                const isPending = pendingRedemptions.has(r.id);
+                const isRequesting = requestingRewardId === r.id;
                 return (
                   <div key={r.id} className="px-5 py-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-xl flex-shrink-0">
@@ -940,17 +981,22 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                       <p className="font-bold text-navy text-sm truncate">{r.title}</p>
                       <p className="text-xs text-amber-500 font-semibold">{r.coin_cost} 🪙</p>
                     </div>
-                    {redeemed ? (
-                      <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-full px-3 py-1.5">
-                        <CheckCircle size={14} className="text-teal-500 flex-shrink-0" />
-                        <span className="text-xs font-semibold text-teal-700 whitespace-nowrap">Ask a parent! 🎉</span>
+                    {isApproved ? (
+                      <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+                        <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-green-700 whitespace-nowrap">Approved! 🎉</span>
+                      </div>
+                    ) : isPending ? (
+                      <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5">
+                        <span className="text-xs font-semibold text-purple-700 whitespace-nowrap">Waiting for Mom or Dad ❤️</span>
                       </div>
                     ) : (
                       <button
-                        onClick={() => setRedeemedIds((prev) => new Set(prev).add(r.id))}
-                        className="min-h-[36px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full transition-all flex-shrink-0"
+                        onClick={() => askParent(r)}
+                        disabled={isRequesting}
+                        className="min-h-[36px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full transition-all flex-shrink-0 disabled:opacity-60"
                       >
-                        Redeem ✨
+                        {isRequesting ? '⏳' : 'Ask My Parent 💛'}
                       </button>
                     )}
                   </div>
@@ -1460,6 +1506,7 @@ export default function ChildPage() {
             isAutoGenerating={autoGenerating}
             autoGenFailed={autoGenFailed}
             onRetryGen={handleRetryAutoGen}
+            supabase={supabase}
           />
         </>
       )}
