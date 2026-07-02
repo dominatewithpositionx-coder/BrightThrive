@@ -5,15 +5,11 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { Gift, ChevronRight, Plus, Tablet, BookHeart, TrendingUp, X } from 'lucide-react';
+import { ChevronRight, Plus, X, CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
-import WeatherCard from './components/WeatherCard';
-import WeatherWidget from '@/components/WeatherWidget';
 import { type WeatherData } from '@/lib/weather';
 import DailyBriefing from './components/DailyBriefing';
-import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
-import { streakBadge } from '@/lib/streaks';
 import { getExplorerLevel } from '@/lib/levels';
 
 // Cookie-aware client — reads the same session the middleware uses
@@ -106,7 +102,9 @@ export default function DashboardPage() {
   const [addRewardTitle, setAddRewardTitle] = useState('');
   const [addRewardCost, setAddRewardCost] = useState<number | ''>('');
   const [addingReward, setAddingReward]   = useState(false);
-  const [showAddChild, setShowAddChild]   = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<Array<{ id: string; child_id: string; reward_id: string; child_name?: string; reward_title?: string; coin_cost?: number }>>([]);
+  const [approvingId, setApprovingId]   = useState<string | null>(null);
+  const [showAddChild, setShowAddChild] = useState(false);
   const [addChildName, setAddChildName]   = useState('');
   const [addChildAge, setAddChildAge]     = useState<number | ''>('');
   const [addingChild, setAddingChild]     = useState(false);
@@ -225,6 +223,26 @@ export default function DashboardPage() {
     const { data: rewardData } = await supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false });
     setRewards(rewardData || []);
 
+    // Pending reward approvals — gracefully no-op if table doesn't exist yet
+    try {
+      const { data: approvalData } = await supabase
+        .from('reward_redemptions')
+        .select('id, child_id, reward_id, status')
+        .eq('status', 'pending');
+      if (approvalData && approvalData.length > 0) {
+        const rewardMap = Object.fromEntries((rewardData || []).map(r => [r.id, r]));
+        const childMap = Object.fromEntries((childData || []).map(c => [c.id, c.name]));
+        setPendingApprovals(approvalData.map(a => ({
+          ...a,
+          child_name: childMap[a.child_id] ?? 'Unknown',
+          reward_title: rewardMap[a.reward_id]?.title ?? 'Unknown reward',
+          coin_cost: rewardMap[a.reward_id]?.coin_cost ?? 0,
+        })));
+      } else {
+        setPendingApprovals([]);
+      }
+    } catch { setPendingApprovals([]); }
+
     async function loadWeather() {
       // Attempt 1: stored city name
       if (loc) {
@@ -332,6 +350,18 @@ export default function DashboardPage() {
     const { error } = await supabase.from('children').insert([{ parent_id: u.id, name: addChildName.trim(), age: addChildAge !== '' ? Number(addChildAge) : null }]);
     if (!error) { setAddChildName(''); setAddChildAge(''); setShowAddChild(false); await init(); }
     setAddingChild(false);
+  }
+
+  async function handleApproval(id: string, approve: boolean) {
+    setApprovingId(id);
+    try {
+      await supabase
+        .from('reward_redemptions')
+        .update({ status: approve ? 'approved' : 'declined', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      setPendingApprovals(prev => prev.filter(a => a.id !== id));
+    } catch { /* non-critical */ }
+    setApprovingId(null);
   }
 
   async function saveWin() {
@@ -495,19 +525,15 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 max-w-4xl space-y-6">
+      <div className="p-6 sm:p-8 max-w-3xl mx-auto space-y-6">
         <div className="space-y-2">
-          <div className="h-8 skeleton rounded-xl w-48" />
-          <div className="h-4 skeleton rounded-lg w-72" />
+          <div className="h-9 skeleton rounded-xl w-52" />
+          <div className="h-4 skeleton rounded-lg w-64" />
         </div>
         <div className="h-16 skeleton rounded-2xl" />
-        <div className="h-36 skeleton rounded-2xl" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 skeleton rounded-2xl" />)}
-        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="h-48 skeleton rounded-2xl" />
-          <div className="h-48 skeleton rounded-2xl" />
+          <div className="h-52 skeleton rounded-2xl" />
+          <div className="h-52 skeleton rounded-2xl" />
         </div>
       </div>
     );
@@ -517,22 +543,19 @@ export default function DashboardPage() {
     <>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
 
-      <div className="p-4 sm:p-6 max-w-4xl space-y-8">
+      <div className="p-6 sm:p-8 max-w-3xl mx-auto space-y-10">
 
-        {/* Greeting + Day Theme */}
-        <div className="space-y-3">
-          <div>
-            <h1 className="text-2xl font-bold text-navy">
-              {getGreeting()}, {firstName}!
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">{getStoryline()}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
+        {/* ── Greeting ── */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {getGreeting()}, {firstName}! 👋
+          </h1>
+          <p className="text-base text-gray-500 mt-1">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
 
-        {/* 1. Daily briefing */}
+        {/* ── AI Insight ── */}
         {children.length > 0 && (
           <DailyBriefing
             children={children.map((c) => ({ name: c.name, age: c.age ?? 8 }))}
@@ -541,488 +564,196 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* 2. Weather card */}
-        {children.length > 0 && (
-          <WeatherCard location={familyLocation ?? ''} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />
-        )}
-
-        {/* ── No children state ── */}
-        {children.length === 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-            <EmptyState {...EMPTY_STATES.noChildren} />
-          </div>
-        )}
-
-        {/* 3. Today's mission summary */}
-        {children.length > 0 && (
+        {/* ── Pending Approvals ── */}
+        {pendingApprovals.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today&apos;s Missions</h2>
-              {!hasTodayMissions && (
-                <button
-                  onClick={generateMissionsForAll}
-                  disabled={generatingAll}
-                  className="min-h-[44px] px-4 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-60"
-                >
-                  {generatingAll ? '✨ Creating…' : generatedCount !== null && generatedCount > 0 ? '✓ Missions created' : '✨ Create Missions Now'}
-                </button>
-              )}
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Pending Approvals
+            </h2>
+            <div className="space-y-3">
+              {pendingApprovals.map((approval) => (
+                <div key={approval.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-bold text-gray-900">{approval.child_name}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Requests: <span className="font-medium text-gray-700">{approval.reward_title}</span>
+                    </p>
+                    <p className="text-sm font-semibold text-amber-600 mt-0.5">{approval.coin_cost} 🪙 BrytCoins</p>
+                  </div>
+                  <div className="flex gap-3 flex-shrink-0">
+                    <button
+                      onClick={() => handleApproval(approval.id, true)}
+                      disabled={approvingId === approval.id}
+                      className="flex items-center gap-1.5 min-h-[44px] px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                    >
+                      <CheckCircle2 size={16} /> Approve
+                    </button>
+                    <button
+                      onClick={() => handleApproval(approval.id, false)}
+                      disabled={approvingId === approval.id}
+                      className="flex items-center gap-1.5 min-h-[44px] px-5 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                    >
+                      <XCircle size={16} /> Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-            {autoGenerated && (
-              <p className="text-xs font-medium text-emerald-600 mb-1">✨ BrytThrive created today&apos;s missions</p>
-            )}
-            {weatherAware && (
-              <p className="text-xs font-medium text-sky-600 mb-3">🌤 Weather-aware missions included</p>
-            )}
-            {!autoGenerated && !weatherAware && <div className="mb-3" />}
-            {hasTodayMissions ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <SummaryStat label="Missions" value={totalToday} accent="text-navy" bg="bg-gray-50" />
-                <SummaryStat label="Completed" value={totalTasksDone} accent="text-teal-600" bg={totalTasksDone > 0 ? 'bg-teal-50' : 'bg-gray-50'} />
-                <SummaryStat label="Coins earned" value={coinsEarnedToday} accent="text-amber-500" bg={coinsEarnedToday > 0 ? 'bg-amber-50' : 'bg-gray-50'} />
-                <SummaryStat label="Screen mins earned" value={screenTimeEarnedToday} accent="text-blue-500" bg={screenTimeEarnedToday > 0 ? 'bg-blue-50' : 'bg-gray-50'} />
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 italic">No missions yet — BrytThrive will create them automatically each morning, or tap ✨ above.</p>
-            )}
           </section>
         )}
 
-        {/* 4. Today's Progress — per-child cards */}
-        {children.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today&apos;s Progress</h2>
-                  {dashWeather && (
-                    <WeatherWidget tempC={dashWeather.tempC} condition={dashWeather.condition} emoji={dashWeather.emoji} size="sm" />
-                  )}
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">Live snapshot of each child&apos;s missions</p>
-              </div>
-              <button onClick={() => setShowAddChild(true)} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
-                <Plus size={14} /> Add child
+        {/* ── Family Snapshot ── */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Family Snapshot</h2>
+            {!hasTodayMissions && children.length > 0 && (
+              <button
+                onClick={generateMissionsForAll}
+                disabled={generatingAll}
+                className="min-h-[44px] px-4 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-60"
+              >
+                {generatingAll ? '✨ Creating…' : '✨ Create Missions'}
+              </button>
+            )}
+          </div>
+
+          {children.length === 0 ? (
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-10 text-center space-y-4">
+              <p className="text-4xl">👨‍👩‍👧</p>
+              <p className="text-lg font-bold text-gray-900">Add your first child to get started</p>
+              <p className="text-sm text-gray-500">BrytThrive will create personalised daily missions for them.</p>
+              <button
+                onClick={() => setShowAddChild(true)}
+                className="inline-flex items-center gap-2 min-h-[44px] px-6 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all"
+              >
+                <Plus size={16} /> Add a child
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {children.map((child) => {
                 const avatar = getAvatar(child.name);
                 const childMissions = missions.filter((m) => m.child_id === child.id && (m.mission_date === today || !m.mission_date));
                 const done = childMissions.filter((m) => m.is_completed).length;
                 const total = childMissions.length;
                 const completionPct = total > 0 ? Math.round((done / total) * 100) : 0;
-                const childCoins = child.points;
-                const childScreenTime = childMissions.filter(m => m.is_completed).reduce((s, m) => s + (m.screen_time_reward ?? 5), 0);
-                const badge = streakBadge(child.streak);
-                const previewMissions = childMissions.slice(0, 3);
+                const coinsToday = childMissions.filter(m => m.is_completed).length * 10;
                 const explorerLevel = getExplorerLevel(child.points);
+                const isGenerating = generatingChildIds.has(child.id);
+                const childApproval = pendingApprovals.find(a => a.child_id === child.id);
 
-                // Status label
-                const statusLabel = total === 0
-                  ? { label: 'Not started', bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-300' }
+                const statusColor = total === 0
+                  ? 'bg-gray-100 text-gray-500'
                   : done === total
-                  ? { label: 'Mission pack complete', bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500' }
-                  : { label: 'In progress', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' };
-
-                const isGeneratingThisChild = generatingChildIds.has(child.id);
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'bg-amber-50 text-amber-700';
+                const statusText = total === 0 ? 'No missions yet' : done === total ? '🎉 All done!' : `${done} of ${total} done`;
 
                 return (
-                  <div key={child.id} className={`bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow card-lift ${isGeneratingThisChild ? 'opacity-80' : ''}`}>
-                    {/* Accent strip — pulses while this child's missions are being created */}
-                    <div className={`h-1.5 w-full ${avatar.bg} ${isGeneratingThisChild ? 'animate-pulse' : ''}`} />
-                    <div className="p-5">
-                      {/* Child header */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-12 h-12 rounded-2xl ${avatar.bg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm`}>
+                  <div key={child.id} className={`bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden transition-shadow hover:shadow-md ${isGenerating ? 'opacity-80' : ''}`}>
+                    <div className={`h-1.5 w-full ${avatar.bg} ${isGenerating ? 'animate-pulse' : ''}`} />
+                    <div className="p-6 space-y-4">
+                      {/* Header */}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-14 h-14 rounded-2xl ${avatar.bg} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`}>
                           {child.name[0].toUpperCase()}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-navy truncate">{child.name}</p>
-                          <span className="text-xs font-medium text-gray-500">
-                            {explorerLevel.emoji} {explorerLevel.name}
-                          </span>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold text-gray-900 truncate">{child.name}</p>
+                          <p className="text-xs text-gray-500">{explorerLevel.emoji} {explorerLevel.name}</p>
                         </div>
                         {child.streak > 0 && (
-                          <div className="flex items-center gap-1 bg-orange-50 rounded-full px-2.5 py-1 flex-shrink-0">
-                            <span className="text-xs font-bold text-orange-500">{child.streak}🔥</span>
-                          </div>
+                          <span className="ml-auto text-sm font-bold text-orange-500 flex-shrink-0">{child.streak}🔥</span>
                         )}
                       </div>
 
-                      {/* Status badge */}
-                      <div className={`inline-flex items-center gap-1.5 ${statusLabel.bg} rounded-full px-3 py-1 mb-3`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusLabel.dot}`} />
-                        <span className={`text-xs font-semibold ${statusLabel.text}`}>{statusLabel.label}</span>
+                      {/* Status */}
+                      <div className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${statusColor}`}>
+                        {statusText}
                       </div>
 
-                      {/* Stats row */}
-                      <div className="grid grid-cols-4 gap-1.5 mb-3">
-                        <div className="bg-gray-50 rounded-xl px-1 py-2 text-center">
-                          <p className="text-sm font-bold text-navy">{done}/{total}</p>
-                          <p className="text-[10px] text-gray-400 font-medium leading-tight">Done</p>
-                        </div>
-                        <div className="bg-amber-50 rounded-xl px-1 py-2 text-center">
-                          <p className="text-sm font-bold text-amber-600">{childCoins}</p>
-                          <p className="text-[10px] text-amber-500 font-medium leading-tight">🪙 Coins</p>
-                        </div>
-                        <div className={`rounded-xl px-1 py-2 text-center ${childScreenTime > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                          <p className={`text-sm font-bold ${childScreenTime > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{childScreenTime}</p>
-                          <p className={`text-[10px] font-medium leading-tight ${childScreenTime > 0 ? 'text-blue-500' : 'text-gray-400'}`}>📱 mins</p>
-                        </div>
-                        <div className="bg-orange-50 rounded-xl px-1 py-2 text-center">
-                          <p className="text-sm font-bold text-orange-500">{child.streak}</p>
-                          <p className="text-[10px] text-orange-400 font-medium leading-tight">🔥 days</p>
-                        </div>
-                      </div>
-
-                      {childMissions.length > 0 ? (
-                        <>
-                          {/* Progress bar */}
-                          <div className="mb-3">
-                            <div className="flex justify-between text-xs text-gray-400 mb-1">
-                              <span>{completionPct}% complete</span>
-                              <span>{done} of {total} missions</span>
-                            </div>
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-500"
-                                style={{ width: `${completionPct}%` }}
-                              />
-                            </div>
+                      {/* Progress bar */}
+                      {total > 0 && (
+                        <div>
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-500"
+                              style={{ width: `${completionPct}%` }}
+                            />
                           </div>
-                          {/* Mission preview */}
-                          <ul className="space-y-1.5 mb-3">
-                            {previewMissions.map((m) => (
-                              <li key={m.id} className="flex items-center gap-2 text-sm">
-                                <span className="text-sm flex-shrink-0">{CAT_EMOJI[m.category ?? 'general'] ?? '⭐'}</span>
-                                <span className={`truncate ${m.is_completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{m.title}</span>
-                                {m.is_completed && <span className="ml-auto text-teal-400 text-xs flex-shrink-0">✓</span>}
-                              </li>
-                            ))}
-                            {total > 3 && (
-                              <li className="text-xs text-gray-400 pl-6">+{total - 3} more missions</li>
-                            )}
-                          </ul>
-                          {done === total && total > 0 && (
-                            <div className="mb-3 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2 text-xs text-teal-700 font-semibold text-center">
-                              🎉 All done! {childScreenTime} mins screen time ready — approve it!
-                            </div>
-                          )}
-                          <Link href="/child" target="_blank" rel="noopener noreferrer"
-                            className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
-                            Open Kid View <ChevronRight size={12} />
-                          </Link>
-                        </>
-                      ) : (
-                        <div className="text-center py-3">
-                          {generatingChildIds.has(child.id) ? (
-                            <p className="text-xs text-teal-600 font-semibold animate-pulse">✨ Creating missions…</p>
-                          ) : (
-                            <>
-                              <p className="text-2xl mb-1">🗺️</p>
-                              <p className="text-xs text-gray-500 font-semibold mb-2">No missions yet today</p>
-                              <button
-                                onClick={() => generateMissionsForSingleChild(child.id)}
-                                disabled={generatingChildIds.has(child.id) || generatingAll}
-                                className="text-xs font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                ✨ Create Missions Now
-                              </button>
-                            </>
-                          )}
+                          <p className="text-xs text-gray-400 mt-1">{completionPct}% complete</p>
                         </div>
                       )}
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 rounded-xl p-3 text-center">
+                          <p className="text-xl font-bold text-gray-900">{child.points}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">🪙 Total coins</p>
+                        </div>
+                        <div className={`rounded-xl p-3 text-center ${coinsToday > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                          <p className={`text-xl font-bold ${coinsToday > 0 ? 'text-amber-600' : 'text-gray-400'}`}>+{coinsToday}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">🌟 Earned today</p>
+                        </div>
+                      </div>
+
+                      {/* Reward request */}
+                      {childApproval && (
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                          <p className="text-xs font-semibold text-amber-700 mb-0.5">Reward request</p>
+                          <p className="text-sm text-amber-800">{childApproval.reward_title} · {childApproval.coin_cost}🪙</p>
+                        </div>
+                      )}
+
+                      {/* Generate / no missions */}
+                      {total === 0 && (
+                        isGenerating ? (
+                          <p className="text-sm text-teal-600 font-medium animate-pulse text-center">✨ Creating missions…</p>
+                        ) : (
+                          <button
+                            onClick={() => generateMissionsForSingleChild(child.id)}
+                            disabled={generatingAll}
+                            className="w-full min-h-[44px] text-sm font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors disabled:opacity-50"
+                          >
+                            ✨ Create today&apos;s missions
+                          </button>
+                        )
+                      )}
+
+                      <Link href="/child" target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
+                        Open Kid View <ChevronRight size={12} />
+                      </Link>
                     </div>
                   </div>
                 );
               })}
             </div>
-          {/* Add child form — triggered from header button */}
+          )}
+
+          {/* Add child form */}
           {showAddChild && (
-            <form onSubmit={handleAddChild} className="mt-4 bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-navy">Add a child</p>
-                <button type="button" onClick={() => setShowAddChild(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            <form onSubmit={handleAddChild} className="mt-5 bg-white border border-gray-100 rounded-2xl shadow-sm p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-base font-bold text-gray-900">Add a child</p>
+                <button type="button" onClick={() => setShowAddChild(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
               </div>
-              <input type="text" value={addChildName} onChange={(e) => setAddChildName(e.target.value)} placeholder="Child's name" required className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400" />
-              <input type="number" value={addChildAge} onChange={(e) => setAddChildAge(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Age (optional)" min={2} max={18} className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400" />
-              <button type="submit" disabled={addingChild || !addChildName.trim()} className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50">
+              <input type="text" value={addChildName} onChange={(e) => setAddChildName(e.target.value)} placeholder="Child's name" required className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="number" value={addChildAge} onChange={(e) => setAddChildAge(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Age (optional)" min={2} max={18} className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <button type="submit" disabled={addingChild || !addChildName.trim()} className="w-full min-h-[44px] bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50">
                 {addingChild ? 'Adding…' : 'Add child'}
               </button>
             </form>
           )}
-          </section>
-        )}
 
-        {/* Preview Kid Mode — below child cards, not above them */}
-        {children.length > 0 && (
-          <section className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-bold text-base mb-0.5">Preview Your Child&apos;s BrytThrive Experience</h2>
-              <p className="text-white/80 text-sm">See how your child checks in, completes missions, and earns iPad screen time.</p>
-            </div>
-            <Link href="/child?demo=1" target="_blank" rel="noopener noreferrer" className="flex-shrink-0 bg-white text-teal-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-teal-50 transition-colors whitespace-nowrap min-h-[44px] flex items-center">
-              Preview Kid Mode →
-            </Link>
-          </section>
-        )}
-
-        {/* Weekly snapshot */}
-        {children.length > 0 && weeklyDone > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={16} className="text-teal-600" />
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">This Week</h2>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-teal-50 rounded-2xl p-4 text-center">
-                <p className="text-2xl font-bold text-teal-600">{weeklyDone}</p>
-                <p className="text-xs text-teal-600 font-medium mt-0.5">Missions done</p>
-              </div>
-              <div className="bg-amber-50 rounded-2xl p-4 text-center">
-                <p className="text-2xl font-bold text-amber-600">{weeklyCoins}</p>
-                <p className="text-xs text-amber-600 font-medium mt-0.5">Coins earned 🪙</p>
-              </div>
-              <div className="bg-purple-50 rounded-2xl p-4 text-center">
-                <p className="text-2xl font-bold text-purple-600">{weeklyDays}</p>
-                <p className="text-xs text-purple-600 font-medium mt-0.5">Active days 📅</p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 5. Quick Actions — inline task add */}
-        {children.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
-            {generateError && <p className="text-xs text-red-600 mb-2 font-medium">{generateError}</p>}
-            <div className="flex flex-wrap gap-3 mb-3">
-              <button
-                onClick={() => setShowAddTask((v) => !v)}
-                className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                <Plus size={16} /> Add a task
-              </button>
-              <Link
-                href="/child"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-h-[44px] flex items-center gap-2 bg-white border border-gray-200 text-navy text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                <Tablet size={16} /> Open Kid View
-              </Link>
-            </div>
-            {showAddTask && (
-              <form onSubmit={handleAddTask} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-navy">Add a task for today</p>
-                  <button type="button" onClick={() => setShowAddTask(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
-                </div>
-                <select
-                  value={addTaskChild}
-                  onChange={(e) => setAddTaskChild(e.target.value)}
-                  required
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                >
-                  <option value="">Select a child…</option>
-                  {children.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <input
-                  type="text"
-                  value={addTaskTitle}
-                  onChange={(e) => setAddTaskTitle(e.target.value)}
-                  placeholder="e.g. Read for 20 minutes"
-                  required
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
-                <button
-                  type="submit"
-                  disabled={addingTask || !addTaskChild || !addTaskTitle.trim()}
-                  className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {addingTask ? 'Adding…' : 'Add task'}
-                </button>
-              </form>
-            )}
-          </section>
-        )}
-
-        {/* 5b. Rewards — inline */}
-        {children.length > 0 && (() => {
-          const firstChild = children[0];
-          const band = ageBand(firstChild.age);
-          const presets = REWARD_PRESETS[band] ?? REWARD_PRESETS['8-10'];
-          const existingTitles = new Set(rewards.map((r) => r.title.toLowerCase()));
-          const suggestedPresets = presets.filter((p) => !existingTitles.has(p.title.toLowerCase())).slice(0, 3);
-          return (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rewards</h2>
-                <button onClick={() => setShowAddReward((v) => !v)} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
-                  <Plus size={14} /> Add reward
-                </button>
-              </div>
-
-              {/* Existing rewards */}
-              {rewards.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {rewards.slice(0, 5).map((r) => (
-                    <div key={r.id} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full px-3 py-1.5 text-sm font-medium text-amber-700">
-                      <Gift size={13} /> {r.title} · {r.coin_cost}🪙
-                    </div>
-                  ))}
-                  {rewards.length > 5 && <span className="text-xs text-gray-400 self-center">+{rewards.length - 5} more</span>}
-                </div>
-              )}
-
-              {/* Suggested presets */}
-              {suggestedPresets.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-gray-400 mb-2">Suggested for age {band}:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedPresets.map((p) => (
-                      <button
-                        key={p.title}
-                        onClick={async () => {
-                          const { data: { user: u } } = await supabase.auth.getUser();
-                          if (!u) return;
-                          const { error: pe } = await supabase.from('rewards').insert([{ parent_id: u.id, title: p.title, coin_cost: p.coin_cost }]);
-                          await init();
-                        }}
-                        className="flex items-center gap-1.5 bg-white border border-dashed border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-600 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      >
-                        {p.emoji} {p.title} · {p.coin_cost}🪙
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Inline add form */}
-              {showAddReward && (
-                <form onSubmit={handleAddReward} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-semibold text-navy">Add a reward</p>
-                    <button type="button" onClick={() => setShowAddReward(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
-                  </div>
-                  <input
-                    type="text"
-                    value={addRewardTitle}
-                    onChange={(e) => setAddRewardTitle(e.target.value)}
-                    placeholder="Reward name"
-                    required
-                    className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                  />
-                  <input
-                    type="number"
-                    value={addRewardCost}
-                    onChange={(e) => setAddRewardCost(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="BrytCoins cost (e.g. 50)"
-                    required
-                    min={1}
-                    className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                  />
-                  <button
-                    type="submit"
-                    disabled={addingReward || !addRewardTitle.trim() || !addRewardCost}
-                    className="w-full min-h-[44px] bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {addingReward ? 'Saving…' : 'Save reward'}
-                  </button>
-                </form>
-              )}
-            </section>
-          );
-        })()}
-
-        {/* 6. Win Journal — compact, expands on click */}
-        <section>
-          {winSaved && todayWin ? (
-            <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 rounded-2xl px-4 py-3">
-              <BookHeart size={14} className="text-teal-600 flex-shrink-0" />
-              <p className="text-sm text-teal-800 flex-1 truncate">&ldquo;{todayWin}&rdquo;</p>
-              <button onClick={() => { setWinSaved(false); setWinText(todayWin); }} className="text-xs text-teal-600 hover:text-teal-700 font-medium flex-shrink-0">Edit</button>
-            </div>
-          ) : showWinJournal ? (
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <BookHeart size={14} className="text-teal-600" />
-                  <p className="text-sm font-semibold text-navy">Today&apos;s Family Win</p>
-                </div>
-                <button onClick={() => setShowWinJournal(false)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
-              </div>
-              <textarea
-                value={winText}
-                onChange={(e) => setWinText(e.target.value.slice(0, 280))}
-                placeholder="e.g. August finished all missions without being reminded!"
-                rows={2}
-                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
-                autoFocus
-              />
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-400">{winText.length}/280</span>
-                <button onClick={saveWin} disabled={!winText.trim() || winSaving} className="min-h-[36px] px-5 py-1.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50">
-                  {winSaving ? 'Saving…' : 'Save win'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setShowWinJournal(true)} className="flex items-center gap-2 text-sm text-gray-400 hover:text-teal-600 transition-colors">
-              <BookHeart size={14} /> ✍️ Record today&apos;s family win
+          {children.length > 0 && (
+            <button onClick={() => setShowAddChild(true)} className="mt-4 text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1">
+              <Plus size={14} /> Add another child
             </button>
           )}
         </section>
 
-        {/* 7. Recent activity */}
-        {children.length > 0 && (
-          <section>
-            <SectionHeader title="Recent Activity" href="/dashboard/history" linkLabel="View coin history" />
-            {recentCompleted.length === 0 ? (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-                <EmptyState {...EMPTY_STATES.noHistory} />
-              </div>
-            ) : (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-50">
-                {recentCompleted.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between px-4 py-3.5">
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span>{CAT_EMOJI[m.category ?? 'general'] ?? '⭐'}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-navy truncate">{m.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{childName(m.child_id)}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold flex-shrink-0 ml-4 text-teal-600">+10🪙</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
       </div>
     </>
-  );
-}
-
-function SectionHeader({ title, href, linkLabel }: { title: string; href: string; linkLabel: string }) {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</h2>
-      <Link href={href} className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-0.5">
-        {linkLabel} <ChevronRight size={14} />
-      </Link>
-    </div>
-  );
-}
-
-function SummaryStat({ label, value, accent, bg }: { label: string; value: number; accent: string; bg: string }) {
-  return (
-    <div className={`${bg} rounded-2xl py-4 text-center`}>
-      <p className={`text-2xl font-bold ${accent}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5 font-medium">{label}</p>
-    </div>
   );
 }
