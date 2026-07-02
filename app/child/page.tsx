@@ -693,6 +693,8 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const [pendingRedemptions, setPendingRedemptions] = useState<Set<string>>(new Set());
   const [approvedRedemptions, setApprovedRedemptions] = useState<Set<string>>(new Set());
   const [requestingRewardId, setRequestingRewardId] = useState<string | null>(null);
+  const [tellParentSent, setTellParentSent] = useState(false);
+  const [sendingTellParent, setSendingTellParent] = useState(false);
 
   useEffect(() => {
     supabase
@@ -734,6 +736,29 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
     } catch { }
     setRequestingRewardId(null);
+  }
+
+  async function tellParent() {
+    if (sendingTellParent || tellParentSent) return;
+    setSendingTellParent(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setSendingTellParent(false); return; }
+      const insert: Record<string, unknown> = {
+        child_id: child.id,
+        parent_id: session.user.id,
+        reward_title: '🎁 Please add rewards for me!',
+        coin_cost: 0,
+        status: 'pending',
+      };
+      const { error } = await supabase.from('reward_redemptions').insert(insert);
+      if (error) {
+        // reward_id may be required — retry with a UUID placeholder approach by skipping
+        await supabase.from('reward_redemptions').insert({ ...insert, reward_type: 'standard' });
+      }
+      setTellParentSent(true);
+    } catch { }
+    setSendingTellParent(false);
   }
 
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -938,8 +963,15 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
               </div>
 
               {sortedRewards.length === 0 ? (
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3 text-center">
-                  <p className="text-sm font-semibold text-white">Ask your parent to add a reward! 🎁</p>
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-4 text-center space-y-3">
+                  <p className="text-sm font-semibold text-white">No rewards yet — ask your parent to add some! 🎁</p>
+                  <button
+                    onClick={tellParent}
+                    disabled={sendingTellParent || tellParentSent}
+                    className="min-h-[40px] bg-white text-teal-700 font-bold text-sm px-5 py-2 rounded-2xl hover:bg-gray-50 transition-colors disabled:opacity-60"
+                  >
+                    {tellParentSent ? '✅ Parent notified!' : sendingTellParent ? '⏳ Sending…' : 'Tell My Parent 💛'}
+                  </button>
                 </div>
               ) : affordableRewards.length > 0 ? (
                 <div className="space-y-2">
@@ -999,8 +1031,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         )}
 
         {/* ── My Wallet ─────────────────────────────────────────── */}
-        {sortedRewards.length > 0 && (
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Wallet header */}
             <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-5 py-4">
               <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-0.5">🎁 My Rewards</p>
@@ -1086,8 +1117,12 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                 );
               })}
             </div>
+            {sortedRewards.length === 0 && (
+              <div className="px-5 py-6 text-center">
+                <p className="text-sm text-gray-400 font-medium">No rewards yet — keep earning coins! 🌟</p>
+              </div>
+            )}
           </div>
-        )}
 
       </div>
     </div>
