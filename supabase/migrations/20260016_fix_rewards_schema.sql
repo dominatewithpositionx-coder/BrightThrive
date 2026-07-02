@@ -75,8 +75,9 @@ ALTER TABLE public.rewards ENABLE ROW LEVEL SECURITY;
 -- 20260001 with user_id, one from 20260003 with parent_id), we drop
 -- both variants and recreate cleanly.
 -- ─────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "Parents manage own rewards" ON public.rewards;
-DROP POLICY IF EXISTS "Anon can read rewards"      ON public.rewards;
+DROP POLICY IF EXISTS "Parents manage own rewards"           ON public.rewards;
+DROP POLICY IF EXISTS "Anon can read rewards"                ON public.rewards;
+DROP POLICY IF EXISTS "Authenticated users read own rewards" ON public.rewards;
 
 CREATE POLICY "Parents manage own rewards" ON public.rewards
   FOR ALL
@@ -103,12 +104,23 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 --    but add them safely in case they are missing.
 -- ─────────────────────────────────────────────────────────────────
 ALTER TABLE public.reward_redemptions
+  ADD COLUMN IF NOT EXISTS parent_id    uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS reward_title text,
   ADD COLUMN IF NOT EXISTS coin_cost    integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS reward_type  text    DEFAULT 'standard',
   ADD COLUMN IF NOT EXISTS status       text    NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS requested_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS fulfilled_at timestamptz;
+
+-- Backfill parent_id from user_id if user_id exists and parent_id is null
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'reward_redemptions' AND column_name = 'user_id'
+  ) THEN
+    UPDATE public.reward_redemptions SET parent_id = user_id WHERE parent_id IS NULL AND user_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- reward_id: keep nullable so "Tell My Parent" requests (no specific reward) can insert
 DO $$ BEGIN
