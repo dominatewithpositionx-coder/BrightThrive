@@ -12,7 +12,7 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
-type State = 'loading' | 'ready' | 'invalid' | 'success';
+type State = 'loading' | 'ready' | 'no-session' | 'success';
 
 export default function ResetPasswordPage() {
   const [pageState, setPageState] = useState<State>('loading');
@@ -22,26 +22,11 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(hash);
-    const type = params.get('type');
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (type !== 'recovery' || !accessToken || !refreshToken) {
-      setPageState('invalid');
-      return;
-    }
-
-    supabase.auth
-      .setSession({ access_token: accessToken, refresh_token: refreshToken })
-      .then(({ error: sessionError }) => {
-        if (sessionError) {
-          setPageState('invalid');
-        } else {
-          setPageState('ready');
-        }
-      });
+    // /auth/callback already exchanged the PKCE code and wrote the session cookie.
+    // Just check for an active session — no URL hash parsing needed.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setPageState(session ? 'ready' : 'no-session');
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -89,11 +74,11 @@ export default function ResetPasswordPage() {
             <p className="text-sm text-gray-500 text-center">Verifying reset link…</p>
           )}
 
-          {pageState === 'invalid' && (
+          {pageState === 'no-session' && (
             <div className="text-center space-y-4">
               <h2 className="text-xl font-bold text-gray-900">Link expired</h2>
               <p className="text-sm text-gray-500">
-                Invalid or expired reset link. Request a new one.
+                This reset link has expired. Request a new one from the login page.
               </p>
               <Link href="/login" className="text-green-600 font-medium hover:underline text-sm">
                 Back to login

@@ -76,7 +76,9 @@ export async function resetPasswordAction(email: string): Promise<{ error?: stri
   );
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://brytthrive.com/reset-password',
+    // Route through /auth/callback so the PKCE code is exchanged server-side,
+    // then the user lands on /reset-password with a valid session cookie.
+    redirectTo: 'https://brytthrive.com/auth/callback?next=/reset-password',
   });
 
   if (error) return { error: error.message };
