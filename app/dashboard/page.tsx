@@ -608,32 +608,63 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="space-y-3">
-              {pendingApprovals.map((approval) => (
-                <div
-                  key={approval.id}
-                  className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-5"
-                >
-                  <p className="text-sm text-gray-500 font-medium mb-0.5">{approval.child_name} is hoping for…</p>
-                  <p className="text-lg font-black text-gray-900 mb-1">{approval.reward_title}</p>
-                  <p className="text-sm font-bold text-amber-600 mb-4">{approval.coin_cost} 🪙 BrytCoins</p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleApproval(approval.id, true)}
-                      disabled={approvingId === approval.id}
-                      className="flex-1 min-h-[44px] bg-teal-500 hover:bg-teal-600 active:scale-95 text-white font-bold rounded-2xl transition-all disabled:opacity-60 text-sm"
-                    >
-                      {approvingId === approval.id ? '…' : '❤️ Say Yes!'}
-                    </button>
-                    <button
-                      onClick={() => handleApproval(approval.id, false)}
-                      disabled={approvingId === approval.id}
-                      className="flex-1 min-h-[44px] bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold rounded-2xl transition-all text-sm disabled:opacity-60"
-                    >
-                      Not right now
-                    </button>
+              {pendingApprovals.map((approval) => {
+                const isAddRewardsRequest = (approval.reward_title ?? '').startsWith('🎁 Please add rewards');
+                return (
+                  <div
+                    key={approval.id}
+                    className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-5"
+                  >
+                    {isAddRewardsRequest ? (
+                      <>
+                        <p className="text-lg font-black text-gray-900 mb-1">
+                          {approval.child_name} wants you to add rewards! 🎁
+                        </p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          They&apos;ve earned BrytCoins and have nothing to spend them on yet.
+                        </p>
+                        <div className="flex gap-3">
+                          <a
+                            href="/dashboard/rewards"
+                            className="flex-1 min-h-[44px] bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-2xl transition-all text-sm flex items-center justify-center"
+                          >
+                            🎁 Add Rewards Now
+                          </a>
+                          <button
+                            onClick={() => handleApproval(approval.id, false)}
+                            disabled={approvingId === approval.id}
+                            className="flex-1 min-h-[44px] bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold rounded-2xl transition-all text-sm disabled:opacity-60"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-500 font-medium mb-0.5">{approval.child_name} is hoping for…</p>
+                        <p className="text-lg font-black text-gray-900 mb-1">{approval.reward_title}</p>
+                        <p className="text-sm font-bold text-amber-600 mb-4">{approval.coin_cost} 🪙 BrytCoins</p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleApproval(approval.id, true)}
+                            disabled={approvingId === approval.id}
+                            className="flex-1 min-h-[44px] bg-teal-500 hover:bg-teal-600 active:scale-95 text-white font-bold rounded-2xl transition-all disabled:opacity-60 text-sm"
+                          >
+                            {approvingId === approval.id ? '…' : '❤️ Say Yes!'}
+                          </button>
+                          <button
+                            onClick={() => handleApproval(approval.id, false)}
+                            disabled={approvingId === approval.id}
+                            className="flex-1 min-h-[44px] bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold rounded-2xl transition-all text-sm disabled:opacity-60"
+                          >
+                            Not right now
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -752,6 +783,16 @@ export default function DashboardPage() {
                         )
                       )}
 
+                      {/* Rewards nudge on card */}
+                      {rewards.length === 0 && (
+                        <a
+                          href="/dashboard/rewards"
+                          className="flex items-center justify-center gap-1.5 min-h-[40px] bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs rounded-2xl transition-colors hover:bg-amber-100"
+                        >
+                          🎁 Add Rewards for {child.name}
+                        </a>
+                      )}
+
                       {/* Kid view */}
                       <Link
                         href="/child"
@@ -813,6 +854,47 @@ export default function DashboardPage() {
             </button>
           )}
         </section>
+
+        {/* ── No-rewards nudge ── */}
+        {children.length > 0 && rewards.length === 0 && (
+          <section className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-6 text-center space-y-4">
+            <div className="text-4xl">🎁</div>
+            <div>
+              <p className="text-base font-black text-gray-900">Your children are earning BrytCoins!</p>
+              <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                Add a few rewards so they have something exciting to work towards.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                { title: '30 min Roblox', coin_cost: 50 },
+                { title: '1 hour screen time', coin_cost: 70 },
+                { title: 'Choose dinner tonight', coin_cost: 60 },
+                { title: 'Friend playdate', coin_cost: 100 },
+              ].map((preset) => (
+                <button
+                  key={preset.title}
+                  onClick={async () => {
+                    const { data: { user: u } } = await supabase.auth.getUser();
+                    if (!u) return;
+                    let { error } = await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost, reward_type: 'standard', is_active: true, sort_order: 0 }]);
+                    if (error) await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost }]);
+                    await init();
+                  }}
+                  className="min-h-[40px] bg-white border border-amber-200 text-gray-700 font-semibold text-sm px-4 py-2 rounded-2xl hover:bg-amber-50 hover:border-amber-300 active:scale-95 transition-all"
+                >
+                  + {preset.title} · {preset.coin_cost}🪙
+                </button>
+              ))}
+            </div>
+            <a
+              href="/dashboard/rewards"
+              className="inline-flex items-center gap-2 min-h-[44px] bg-amber-400 hover:bg-amber-500 text-white font-bold text-sm px-6 py-3 rounded-2xl transition-colors"
+            >
+              🎁 Manage All Rewards
+            </a>
+          </section>
+        )}
 
       </div>
     </>
