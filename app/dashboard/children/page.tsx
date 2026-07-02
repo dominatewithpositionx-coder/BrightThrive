@@ -138,9 +138,9 @@ export default function ChildrenPage() {
   const [locationCity, setLocationCity] = useState('');
 
   const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   async function fetchData() {
     const [childRes, walletRes, ledgerRes] = await Promise.all([
@@ -391,4 +391,192 @@ export default function ChildrenPage() {
                 <div key={child.id} className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                   {/* Card header */}
                   <div className={`px-5 py-4 flex items-center gap-4 ${avatarColor} bg-opacity-10`}>
-                    <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-xl shrink-0`}
+                    <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-xl shrink-0`}>
+                      {child.name[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-navy text-lg truncate">{child.name}</p>
+                      {child.age && (
+                        <p className="text-sm text-gray-500">Age {child.age}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setDeleteTarget(child)}
+                      aria-label={`Remove ${child.name}'s profile`}
+                      className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="px-5 py-4 space-y-4">
+                    {/* Points */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Star size={15} className="text-yellow-500" />
+                        <span>Points</span>
+                      </div>
+                      <span className="text-lg font-bold text-green-600">{child.points ?? 0}</span>
+                    </div>
+
+                    {/* Streak */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Flame size={15} className={streak > 0 ? 'text-orange-500' : 'text-gray-300'} />
+                        <span>Streak</span>
+                      </div>
+                      <span className={`text-sm font-semibold ${streak > 0 ? 'text-orange-500' : 'text-gray-500'}`}>
+                        {streak > 0 ? `${streak} day${streak > 1 ? 's' : ''}` : 'No streak yet'}
+                      </span>
+                    </div>
+
+                    {/* Screen time — hidden if column not in production schema */}
+                    {screenTimeAvailable && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock size={15} className="text-blue-400" />
+                            <span>Daily Screen Time</span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">{screenGoal} min</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={screenGoal} aria-valuemin={0} aria-valuemax={120} aria-label={`Screen time goal: ${screenGoal} minutes`}>
+                          <div
+                            className="h-full bg-blue-400 rounded-full transition-all"
+                            style={{ width: `${screenPct}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => adjustScreenTime(child.id, screenGoal, -15)}
+                            aria-label={`Reduce ${child.name}'s screen time by 15 minutes`}
+                            className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                          >
+                            <Minus size={13} /> 15 min
+                          </button>
+                          <button
+                            onClick={() => adjustScreenTime(child.id, screenGoal, +15)}
+                            aria-label={`Add 15 minutes to ${child.name}'s screen time`}
+                            className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-lg py-1.5 text-sm text-green-700 hover:bg-green-100 transition-colors"
+                          >
+                            <Plus size={13} /> 15 min
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Location */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">📍 Location</span>
+                        {editingLocation !== child.id ? (
+                          <button
+                            onClick={() => { setEditingLocation(child.id); setLocationCity(child.location_city ?? ''); }}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
+                          >
+                            {child.location_name ? child.location_name : 'Set location'}
+                          </button>
+                        ) : (
+                          <button onClick={() => setEditingLocation(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        )}
+                      </div>
+                      {editingLocation === child.id && (
+                        <div className="mt-2 space-y-2">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {LOCATION_PRESETS.map(p => (
+                              <button
+                                key={p.label}
+                                onClick={() => saveLocation(child, p.label)}
+                                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors ${child.location_label === p.label ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                              >
+                                <span>{p.emoji}</span>{p.name}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              placeholder="City for weather (e.g. Toronto)"
+                              value={locationCity}
+                              onChange={(e) => setLocationCity(e.target.value)}
+                              className="border rounded-lg px-3 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            />
+                            <button
+                              onClick={() => saveLocation(child, child.location_label ?? 'home')}
+                              className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-teal-700 transition-colors whitespace-nowrap"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Kid View PIN */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <KeyRound size={15} className="text-gray-400" />
+                          <span>Kid View PIN</span>
+                        </div>
+                        {pins[child.id] ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Set ✓</span>
+                            <button
+                              onClick={() => clearPin(child.id, child.name)}
+                              aria-label={`Remove PIN for ${child.name}`}
+                              className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingPin(child.id); setPinInput(''); }}
+                            aria-label={`Set PIN for ${child.name}`}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
+                          >
+                            Set PIN
+                          </button>
+                        )}
+                      </div>
+                      {editingPin === child.id && (
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            type="number"
+                            maxLength={4}
+                            placeholder="4-digit PIN"
+                            value={pinInput}
+                            onChange={(e) => setPinInput(e.target.value.slice(0, 4))}
+                            className="border rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            onKeyDown={(e) => e.key === 'Enter' && savePin(child.id, child.name)}
+                            aria-label={`Enter 4-digit PIN for ${child.name}`}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => savePin(child.id, child.name)}
+                            aria-label="Save PIN"
+                            className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-teal-700 transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingPin(null)}
+                            aria-label="Cancel PIN entry"
+                            className="text-gray-500 px-2 text-sm hover:text-gray-700 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

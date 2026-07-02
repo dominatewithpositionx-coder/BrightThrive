@@ -26,9 +26,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
   const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -93,4 +93,14 @@ export default function Sidebar() {
             href={kidLink.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 font-medium text-sm transition-colors"
+          >
+            <kidLink.icon size={18} />
+            <span>{kidLink.name}</span>
+            <span className="ml-auto text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">New tab</span>
+          </Link>
+        </div>
+      </nav>
+    </aside>
+  );
+}

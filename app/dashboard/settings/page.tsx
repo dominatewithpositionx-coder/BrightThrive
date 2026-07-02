@@ -69,9 +69,9 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   useEffect(() => { fetchUser(); }, []);
 
@@ -242,4 +242,34 @@ export default function SettingsPage() {
           />
           <button
             type="submit"
-            disa
+            disabled={savingLocation || !locationChanged}
+            className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[72px]"
+          >
+            {savingLocation ? (
+              <span className="flex items-center justify-center gap-1">
+                <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Saving
+              </span>
+            ) : 'Save'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl border shadow-sm p-5">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Privacy</h2>
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-gray-100 rounded-lg mt-0.5">
+            <Shield size={16} className="text-gray-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">Your data stays private</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              BrytThrive never sells or shares your family's data. All data is stored securely in Canada.{' '}
+              <a href="/privacy" className="text-green-600 underline">Privacy Policy</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
