@@ -880,8 +880,11 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </div>
         )}
         {missionSuccess && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3 text-sm text-teal-700 text-center font-medium"
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl px-4 py-3.5 text-sm text-white text-center font-bold shadow-md"
           >
             {missionSuccess}
           </motion.div>
@@ -1375,9 +1378,11 @@ export default function ChildPage() {
     if (nowCompleted) {
       fireConfetti();
       trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
-      const screenMin = mission.screen_time_reward ?? 5;
-      setMissionSuccess(`✓ "${mission.title}" complete! +10 BrytCoins 🪙  +${screenMin} mins 📱`);
-      setTimeout(() => setMissionSuccess(null), 3000);
+      const CHEERS = ["You're amazing! 🌟", 'You crushed it! 🚀', 'Way to go! ⭐', 'Fantastic work! 🎉', "You're a star! 💫", 'Outstanding! 🏆'];
+      let h = 0; for (const c of mission.title) h += c.charCodeAt(0);
+      const cheer = CHEERS[h % CHEERS.length];
+      setMissionSuccess(`🎉 ${cheer} +10 BrytCoins earned! 🪙`);
+      setTimeout(() => setMissionSuccess(null), 3500);
     }
 
     // DB write — after optimistic update

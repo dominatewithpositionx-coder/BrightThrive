@@ -13,6 +13,27 @@ type Props = {
   totalToday: number;
 };
 
+// Shown when the API is unavailable — rotates daily so it never feels stale.
+const FALLBACK_INSIGHTS = [
+  "Every mission completed today is a memory in the making. Celebrate the little wins together tonight.",
+  "Children grow most when they feel seen. Ask them what their favourite mission was today.",
+  "Consistency beats perfection. Even one mission completed is a step in the right direction.",
+  "The best reward you can give is your attention. Take a moment to celebrate today's victories.",
+  "Small daily habits create extraordinary kids. What you're doing here really matters.",
+  "Growth happens one mission at a time. Keep going — it's working, even when it doesn't feel like it.",
+  "Every coin earned is a lesson in effort and reward. That's a gift that lasts a lifetime.",
+  "The dinner table is the best classroom. Ask your child what they're most proud of today.",
+  "Encouragement today becomes confidence tomorrow. You're building something beautiful.",
+  "The magic isn't in the missions — it's in the moments they create between you.",
+  "A child who feels celebrated will rise to meet every challenge. Keep celebrating.",
+  "Today's small wins are tomorrow's big character. You're doing great.",
+];
+
+function getDailyFallback(): string {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  return FALLBACK_INSIGHTS[dayOfYear % FALLBACK_INSIGHTS.length];
+}
+
 function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
@@ -40,9 +61,11 @@ export default function DailyBriefing({ children, weather, completedToday, total
         if (text) {
           setBriefing(text);
           try { localStorage.setItem(key, text); } catch {}
+        } else {
+          setBriefing(getDailyFallback());
         }
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setBriefing(getDailyFallback()); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // Generated once per day; cached input changes should not re-trigger.
