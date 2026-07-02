@@ -32,7 +32,11 @@ export default function LoginPage() {
     setMessage('');
     setLoading(true);
 
-    // Step 1: Sign in client-side to get tokens
+    // signInWithPassword writes the session to document.cookie (non-httpOnly).
+    // Both middleware (reads HTTP request headers) and the dashboard's
+    // createBrowserClient (reads document.cookie) can see these cookies.
+    // Do NOT call /api/auth/set-session — that overwrites the readable cookie
+    // with an httpOnly one, which breaks createBrowserClient.getSession().
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data.session) {
@@ -41,32 +45,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Step 2: POST tokens to server so it writes the session cookie into the
-    // HTTP response — guarantees middleware sees a valid session on the next request.
-    try {
-      const res = await fetch('/api/auth/set-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setMessage(body.error ?? 'Session setup failed. Please try again.');
-        setLoading(false);
-        return;
-      }
-    } catch {
-      setMessage('Network error during login. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    // Step 3: Hard reload — cookies set by server are already in the browser jar,
-    // so middleware sees the session on the very first hit.
+    // Hard reload so the browser sends the fresh cookie on the first request.
     window.location.href = '/dashboard';
   }
 
