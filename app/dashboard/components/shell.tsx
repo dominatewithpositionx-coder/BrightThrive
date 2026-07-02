@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
 import {
   Home, Users, BarChart3, Gift, Settings, ClipboardList,
@@ -116,20 +116,29 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [firstName, setFirstName] = useState('there');
 
   useEffect(() => {
-    const sb = getSupabase();
-    sb.auth.getUser().then(({ data }) => {
-      if (!data.user) {
+    // Must use createBrowserClient (SSR-aware, reads cookies) — NOT getSupabase()
+    // which is a vanilla createClient that reads localStorage. Login writes to
+    // cookies, so a localStorage-based client always sees no session and redirects.
+    const sb = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
         window.location.assign('/login');
         return;
       }
-      const email = data.user.email || '';
+      const email = session.user.email || '';
       setFirstName(email.split('@')[0] || 'there');
     });
   }, []);
 
   async function handleLogout() {
     try {
-      const sb = getSupabase();
+      const sb = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
       await sb.auth.signOut();
     } catch {}
     try { localStorage.clear(); } catch {}
