@@ -110,6 +110,11 @@ export default function DashboardPage() {
   const [addChildName, setAddChildName]   = useState('');
   const [addChildAge, setAddChildAge]     = useState<number | ''>('');
   const [addingChild, setAddingChild]     = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<Array<{
+    id: string; child_id: string; reward_id: string;
+    child_name?: string; reward_title?: string; coin_cost?: number;
+  }>>([]);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const router = useRouter();
   const autoGenDoneRef = useRef(false);
 
@@ -222,8 +227,23 @@ export default function DashboardPage() {
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
     if (loc) setFamilyLocation(loc);
 
-    const { data: rewardData } = await supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false });
+    const [{ data: rewardData }, { data: approvalData }] = await Promise.all([
+      supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false }),
+      supabase.from('reward_redemptions').select('id, child_id, reward_id, reward_title, coin_cost').eq('status', 'pending'),
+    ]);
     setRewards(rewardData || []);
+    if (approvalData && approvalData.length > 0) {
+      const childMap = Object.fromEntries((childData || []).map(c => [c.id, c.name]));
+      const rewardMap = Object.fromEntries((rewardData || []).map(r => [r.id, r]));
+      setPendingApprovals(approvalData.map(a => ({
+        ...a,
+        child_name: childMap[a.child_id] ?? 'Your child',
+        reward_title: a.reward_title ?? rewardMap[a.reward_id]?.title ?? 'Unknown reward',
+        coin_cost: a.coin_cost ?? rewardMap[a.reward_id]?.coin_cost ?? 0,
+      })));
+    } else {
+      setPendingApprovals([]);
+    }
 
     async function loadWeather() {
       // Attempt 1: stored city name
@@ -306,6 +326,32 @@ export default function DashboardPage() {
     }]);
     if (!error) { setAddTaskTitle(''); setShowAddTask(false); await init(); }
     setAddingTask(false);
+  }
+
+  async function handleApproval(id: string, approve: boolean) {
+    setApprovingId(id);
+    try {
+      const approval = pendingApprovals.find(a => a.id === id);
+      if (approve && approval) {
+        const { error: coinError } = await supabase.rpc('add_coins', {
+          p_child_id: approval.child_id,
+          p_amount: -(approval.coin_cost ?? 0),
+          p_type: 'redeemed',
+          p_description: `Redeemed: ${approval.reward_title}`,
+          p_reward_id: approval.reward_id,
+        });
+        if (coinError) {
+          console.error('[handleApproval] coin deduction failed:', coinError.message);
+          setApprovingId(null);
+          return;
+        }
+      }
+      await supabase.from('reward_redemptions')
+        .update({ status: approve ? 'approved' : 'declined' })
+        .eq('id', id);
+      setPendingApprovals(prev => prev.filter(a => a.id !== id));
+    } catch { }
+    setApprovingId(null);
   }
 
   async function handleAddReward(e: React.FormEvent) {
@@ -544,6 +590,40 @@ export default function DashboardPage() {
         {/* 2. Weather card */}
         {children.length > 0 && (
           <WeatherCard location={familyLocation ?? ''} weatherMissions={hasTodayMissions && weatherMissionsIncluded} />
+        )}
+
+        {/* Pending Approvals */}
+        {pendingApprovals.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Reward Requests</h2>
+            <div className="space-y-2">
+              {pendingApprovals.map(a => (
+                <div key={a.id} className="bg-white border border-amber-100 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm">
+                  <span className="text-2xl">🎁</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{a.reward_title}</p>
+                    <p className="text-xs text-gray-400">{a.child_name} · {a.coin_cost} 🪙</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleApproval(a.id, false)}
+                      disabled={approvingId === a.id}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={() => handleApproval(a.id, true)}
+                      disabled={approvingId === a.id}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                    >
+                      {approvingId === a.id ? '…' : 'Approve ✓'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* ── No children state ── */}
