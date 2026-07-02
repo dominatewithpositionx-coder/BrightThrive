@@ -287,7 +287,7 @@ export default function OnboardingPage() {
         password,
         options: {
           // After email confirmation, land on /login (cookie is set, auto-redirect kicks in)
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
