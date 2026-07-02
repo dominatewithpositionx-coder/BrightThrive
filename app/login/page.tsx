@@ -9,7 +9,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
 import { resetPasswordAction } from '@/app/actions/auth';
 
-// Cookie-aware client — writes session to cookies so middleware can read them.
+// Cookie-aware Supabase client for signInWithPassword
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -32,17 +32,42 @@ export default function LoginPage() {
     setMessage('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Step 1: Sign in client-side to get tokens
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      setMessage(error.message);
+    if (error || !data.session) {
+      setMessage(error?.message ?? 'Login failed. Please try again.');
       setLoading(false);
-    } else {
-      // Hard browser reload — guarantees the auth cookie is fully flushed to
-      // document.cookie before the /dashboard request fires, so middleware sees
-      // a valid session on the very first hit.
-      window.location.href = '/dashboard';
+      return;
     }
+
+    // Step 2: POST tokens to server so it writes the session cookie into the
+    // HTTP response — guarantees middleware sees a valid session on the next request.
+    try {
+      const res = await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(body.error ?? 'Session setup failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setMessage('Network error during login. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    // Step 3: Hard reload — cookies set by server are already in the browser jar,
+    // so middleware sees the session on the very first hit.
+    window.location.href = '/dashboard';
   }
 
   async function handleResetPassword(e: React.FormEvent) {
