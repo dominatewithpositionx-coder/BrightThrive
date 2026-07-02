@@ -7,18 +7,14 @@ import { usePathname } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { BRAND } from '@/lib/brand';
 import {
-  Home, Users, BarChart3, Gift, Settings, ClipboardList,
-  Gamepad2, History, Menu, X, LogOut, ChevronRight,
+  Home, Users, Settings,
+  Gamepad2, Menu, X, LogOut, ChevronRight,
 } from 'lucide-react';
 
 const NAV = [
-  { name: 'Overview',  href: '/dashboard',           icon: Home },
-  { name: 'Children',  href: '/dashboard/children',  icon: Users },
-  { name: 'Tasks',     href: '/dashboard/tasks',      icon: ClipboardList },
-  { name: 'Rewards',   href: '/dashboard/rewards',    icon: Gift },
-  { name: 'Analytics', href: '/dashboard/analytics',  icon: BarChart3 },
-  { name: 'History',   href: '/dashboard/history',    icon: History },
-  { name: 'Settings',  href: '/dashboard/settings',   icon: Settings },
+  { name: 'Home',      href: '/dashboard',          icon: Home },
+  { name: 'My Family', href: '/dashboard/children', icon: Users },
+  { name: 'Settings',  href: '/dashboard/settings', icon: Settings },
 ];
 
 function NavLinks({ onClick }: { onClick?: () => void }) {
