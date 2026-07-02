@@ -332,18 +332,23 @@ export default function DashboardPage() {
     setApprovingId(id);
     try {
       const approval = pendingApprovals.find(a => a.id === id);
-      await supabase.from('reward_redemptions')
-        .update({ status: approve ? 'approved' : 'declined' })
-        .eq('id', id);
       if (approve && approval) {
-        await supabase.rpc('add_coins', {
+        const { error: coinError } = await supabase.rpc('add_coins', {
           p_child_id: approval.child_id,
           p_amount: -(approval.coin_cost ?? 0),
           p_type: 'redeemed',
           p_description: `Redeemed: ${approval.reward_title}`,
           p_reward_id: approval.reward_id,
         });
+        if (coinError) {
+          console.error('[handleApproval] coin deduction failed:', coinError.message);
+          setApprovingId(null);
+          return;
+        }
       }
+      await supabase.from('reward_redemptions')
+        .update({ status: approve ? 'approved' : 'declined' })
+        .eq('id', id);
       setPendingApprovals(prev => prev.filter(a => a.id !== id));
     } catch { }
     setApprovingId(null);

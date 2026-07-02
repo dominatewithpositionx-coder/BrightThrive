@@ -718,13 +718,16 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
     setRequestingRewardId(reward.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setRequestingRewardId(null);
+        return;
+      }
       await supabase.from('reward_redemptions').insert({
         child_id: child.id,
         reward_id: reward.id,
         parent_id: session.user.id,
         reward_title: reward.title,
-        reward_type: 'reward',
+        reward_type: 'standard',
         coin_cost: reward.coin_cost,
         status: 'pending',
       });
