@@ -1530,19 +1530,25 @@ export default function ChildPage() {
       return;
     }
 
-    // Coins update — non-blocking; mission completion already saved
-    const { error: coinsError } = await supabase.rpc('add_coins', {
+    // Coins update — mission DB write already succeeded above
+    const coinsPayload = {
       p_child_id: selected.id,
       p_amount: pointsChange,
       p_type: pointsChange > 0 ? 'earned' : 'deducted',
       p_description: nowCompleted ? `Completed task: ${mission.title}` : `Undid task: ${mission.title}`,
       p_mission_id: mission.id,
-    });
+    };
+    console.log('[add_coins] payload:', JSON.stringify(coinsPayload));
+    const { error: coinsError } = await supabase.rpc('add_coins', coinsPayload);
     if (coinsError) {
-      console.error('[mission toggle] add_coins failed:', coinsError);
-      // Mission is saved; revert only coin balance in UI
+      console.error('[add_coins] FAILED — code:', coinsError.code,
+        'message:', coinsError.message, 'details:', coinsError.details, 'hint:', coinsError.hint);
+      // Revert the optimistic coin balance so UI matches actual DB state.
+      // Mission completion is NOT reverted — it was saved successfully.
       setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
       setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
+    } else {
+      console.log('[add_coins] SUCCESS — child:', selected.id, 'delta:', pointsChange, 'new balance:', newPoints);
     }
 
     // Streak reflects whether any mission is still completed today after this toggle.
