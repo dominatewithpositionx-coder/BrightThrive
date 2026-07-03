@@ -724,7 +724,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         setRequestingRewardId(null);
         return;
       }
-      await supabase.from('reward_redemptions').insert({
+      const { data: insertData, error: insertError } = await supabase.from('reward_redemptions').insert({
         child_id: child.id,
         reward_id: reward.id,
         parent_id: session.user.id,
@@ -732,9 +732,21 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         reward_type: 'standard',
         coin_cost: reward.coin_cost,
         status: 'pending',
-      });
+      }).select();
+      console.log('[reward insert data]', insertData);
+      console.log('[reward insert error]', insertError);
+      if (insertError) {
+        console.log('[reward insert error.code]', insertError.code);
+        console.log('[reward insert error.message]', insertError.message);
+        console.log('[reward insert error.details]', insertError.details);
+        console.log('[reward insert error.hint]', insertError.hint);
+        setRequestingRewardId(null);
+        return;
+      }
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
-    } catch { }
+    } catch (e) {
+      console.error('[reward insert exception]', e);
+    }
     setRequestingRewardId(null);
   }
 
