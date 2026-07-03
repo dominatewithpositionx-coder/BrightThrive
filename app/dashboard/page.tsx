@@ -107,9 +107,10 @@ export default function DashboardPage() {
   const [addChildAge, setAddChildAge]     = useState<number | ''>('');
   const [addingChild, setAddingChild]     = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<Array<{
-    id: string; child_id: string; reward_id: string;
+    id: string; child_id: string; reward_id?: string;
     child_name?: string; reward_title?: string; coin_cost?: number;
   }>>([]);
+  const [approvalQueryErr, setApprovalQueryErr] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const router = useRouter();
   const autoGenDoneRef = useRef(false);
@@ -223,22 +224,64 @@ export default function DashboardPage() {
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
     if (loc) setFamilyLocation(loc);
 
-    const [{ data: rewardData }, { data: approvalData }] = await Promise.all([
-      supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false }),
-      supabase.from('reward_redemptions').select('id, child_id, reward_id, reward_name, reward_title, coin_cost').eq('status', 'pending'),
-    ]);
+    const { data: rewardData } = await supabase
+      .from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false });
     setRewards(rewardData || []);
-    if (approvalData && approvalData.length > 0) {
-      const childMap = Object.fromEntries((childData || []).map(c => [c.id, c.name]));
-      const rewardMap = Object.fromEntries((rewardData || []).map(r => [r.id, r]));
-      setPendingApprovals(approvalData.map(a => ({
-        ...a,
-        child_name: childMap[a.child_id] ?? 'Your child',
-        reward_title: a.reward_title ?? (a as Record<string, unknown>).reward_name as string ?? rewardMap[a.reward_id]?.title ?? 'Unknown reward',
-        coin_cost: a.coin_cost ?? rewardMap[a.reward_id]?.coin_cost ?? 0,
-      })));
-    } else {
+
+    // Use only original production columns (reward_name, cost) to avoid 400 on missing
+    // columns. Then try adding status filter; if that also 400s, fall back without it.
+    async function fetchApprovals() {
+      const BASE_SELECT = 'id, parent_id, child_id, reward_id, reward_name, cost';
+      const { data, error } = await supabase
+        .from('reward_redemptions')
+        .select(BASE_SELECT)
+        .eq('status', 'pending');
+
+      if (!error) return { data, error: null };
+
+      console.error('[dashboard] approval query (with status filter) failed:',
+        error.code, error.message, error.details, error.hint);
+
+      // status column may not exist — retry without the filter
+      const fallback = await supabase
+        .from('reward_redemptions')
+        .select(BASE_SELECT);
+
+      if (fallback.error) {
+        console.error('[dashboard] approval fallback query also failed:',
+          fallback.error.code, fallback.error.message);
+      }
+      return { data: fallback.data, error: fallback.error ?? error };
+    }
+
+    const { data: approvalRaw, error: approvalErr } = await fetchApprovals();
+
+    if (approvalErr) {
+      setApprovalQueryErr(`${approvalErr.code}: ${approvalErr.message}`);
       setPendingApprovals([]);
+    } else {
+      setApprovalQueryErr(null);
+      const rows = (approvalRaw ?? []) as Record<string, unknown>[];
+      const childMap = Object.fromEntries((childData || []).map(c => [c.id, c.name]));
+      const rewardMap = Object.fromEntries((rewardData || []).map((r: { id: string; title: string; coin_cost: number }) => [r.id, r]));
+      setPendingApprovals(
+        rows.map(a => ({
+          id: a.id as string,
+          child_id: a.child_id as string,
+          reward_id: a.reward_id as string | undefined,
+          child_name: childMap[a.child_id as string] ?? 'Your child',
+          // prefer reward_title (new column) → reward_name (original) → rewardMap lookup
+          reward_title: (a.reward_title as string | undefined)
+            ?? (a.reward_name as string | undefined)
+            ?? rewardMap[a.reward_id as string]?.title
+            ?? 'Unknown reward',
+          // prefer coin_cost (new column) → cost (original) → rewardMap lookup
+          coin_cost: (a.coin_cost as number | undefined)
+            ?? (a.cost as number | undefined)
+            ?? rewardMap[a.reward_id as string]?.coin_cost
+            ?? 0,
+        }))
+      );
     }
 
     async function loadWeather() {
@@ -595,6 +638,14 @@ export default function DashboardPage() {
             completedToday={totalTasksDone}
             totalToday={totalToday}
           />
+        )}
+
+        {/* ── Debug: approval query error ── */}
+        {approvalQueryErr && (
+          <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
+            <strong>⚠️ Reward Requests unavailable</strong>
+            <pre className="mt-1 whitespace-pre-wrap break-all">{approvalQueryErr}</pre>
+          </div>
         )}
 
         {/* ── Reward Requests ── */}
