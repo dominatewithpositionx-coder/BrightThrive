@@ -927,6 +927,48 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </div>
         </div>
 
+        {/* ── Compact Wallet Summary ───────────────────────────── */}
+        {(() => {
+          const pendingCount  = pendingRedemptions.size;
+          const approvedCount = approvedRedemptions.size;
+          const availableCount = affordableRewards.filter(
+            r => !pendingRedemptions.has(r.id) && !approvedRedemptions.has(r.id)
+          ).length;
+          return (
+            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm px-4 py-3.5 flex flex-col gap-2">
+              {/* Balance row */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">✨ My Wallet</span>
+                <span className="text-lg font-black text-amber-500">{child.points} 🪙 BrytCoins</span>
+              </div>
+
+              {/* Status pills */}
+              <div className="flex flex-wrap gap-2">
+                {approvedCount > 0 && (
+                  <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-xs font-bold rounded-full px-2.5 py-1">
+                    ✅ {approvedCount} reward{approvedCount !== 1 ? 's' : ''} approved!
+                  </span>
+                )}
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center gap-1 bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold rounded-full px-2.5 py-1">
+                    ⏳ {pendingCount} waiting for parent
+                  </span>
+                )}
+                {availableCount > 0 && pendingCount === 0 && approvedCount === 0 && (
+                  <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-full px-2.5 py-1">
+                    🎁 {availableCount} reward{availableCount !== 1 ? 's' : ''} ready to choose!
+                  </span>
+                )}
+                {rewards.length === 0 && (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-500 text-xs font-medium rounded-full px-2.5 py-1">
+                    🎁 No rewards yet — ask a parent!
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Error / success banners */}
         {missionError && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 text-center font-medium">
