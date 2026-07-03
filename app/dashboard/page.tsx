@@ -70,7 +70,9 @@ function getGreeting() {
 }
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0];
+  // Use local date so mission_date (stored as local YYYY-MM-DD) matches correctly.
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function DashboardPage() {
@@ -731,11 +733,13 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {children.map((child) => {
                 const avatar = getAvatar(child.name);
-                const childMissions = missions.filter((m) => m.child_id === child.id && (m.mission_date === today || !m.mission_date));
+                // Only count missions with today's date (or undated from today's fetch window).
+                // Exclude undated missions that may be from previous days to avoid stale coinsToday.
+                const childMissions = missions.filter((m) => m.child_id === child.id && m.mission_date === today);
                 const done = childMissions.filter((m) => m.is_completed).length;
                 const total = childMissions.length;
                 const completionPct = total > 0 ? Math.round((done / total) * 100) : 0;
-                const coinsToday = childMissions.filter(m => m.is_completed).length * 10;
+                const coinsToday = done * 10;
                 const explorerLevel = getExplorerLevel(child.points);
                 const isGenerating = generatingChildIds.has(child.id);
 
@@ -884,44 +888,72 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ── No-rewards nudge ── */}
-        {children.length > 0 && rewards.length === 0 && (
-          <section className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-6 text-center space-y-4">
-            <div className="text-4xl">🎁</div>
-            <div>
-              <p className="text-base font-black text-gray-900">Your children are earning BrytCoins!</p>
-              <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                Add a few rewards so they have something exciting to work towards.
-              </p>
+        {/* ── Rewards management — always visible when children exist ── */}
+        {children.length > 0 && (
+          <section className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎁</span>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900">Rewards</h2>
+                  <p className="text-xs text-gray-400">
+                    {rewards.length === 0
+                      ? 'No rewards yet — add some for your kids!'
+                      : `${rewards.length} reward${rewards.length !== 1 ? 's' : ''} available`}
+                  </p>
+                </div>
+              </div>
+              <a
+                href="/dashboard/rewards"
+                className="inline-flex items-center gap-1.5 min-h-[36px] bg-amber-400 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2 rounded-2xl transition-colors"
+              >
+                🎁 Manage Rewards
+              </a>
             </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { title: '30 min Roblox', coin_cost: 50 },
-                { title: '1 hour screen time', coin_cost: 70 },
-                { title: 'Choose dinner tonight', coin_cost: 60 },
-                { title: 'Friend playdate', coin_cost: 100 },
-              ].map((preset) => (
-                <button
-                  key={preset.title}
-                  onClick={async () => {
-                    const { data: { user: u } } = await supabase.auth.getUser();
-                    if (!u) return;
-                    let { error } = await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost, reward_type: 'standard', is_active: true, sort_order: 0 }]);
-                    if (error) await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost }]);
-                    await init();
-                  }}
-                  className="min-h-[40px] bg-white border border-amber-200 text-gray-700 font-semibold text-sm px-4 py-2 rounded-2xl hover:bg-amber-50 hover:border-amber-300 active:scale-95 transition-all"
-                >
-                  + {preset.title} · {preset.coin_cost}🪙
-                </button>
-              ))}
-            </div>
-            <a
-              href="/dashboard/rewards"
-              className="inline-flex items-center gap-2 min-h-[44px] bg-amber-400 hover:bg-amber-500 text-white font-bold text-sm px-6 py-3 rounded-2xl transition-colors"
-            >
-              🎁 Manage All Rewards
-            </a>
+
+            {rewards.length === 0 ? (
+              <div className="px-6 py-5 space-y-4">
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Your children are earning BrytCoins! Add rewards so they have something exciting to work towards.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { title: '30 min Roblox', coin_cost: 50 },
+                    { title: '1 hour screen time', coin_cost: 70 },
+                    { title: 'Choose dinner tonight', coin_cost: 60 },
+                    { title: 'Friend playdate', coin_cost: 100 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.title}
+                      onClick={async () => {
+                        const { data: { user: u } } = await supabase.auth.getUser();
+                        if (!u) return;
+                        let { error } = await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost, reward_type: 'standard', is_active: true, sort_order: 0 }]);
+                        if (error) await supabase.from('rewards').insert([{ parent_id: u.id, title: preset.title, coin_cost: preset.coin_cost }]);
+                        await init();
+                      }}
+                      className="min-h-[36px] bg-amber-50 border border-amber-200 text-gray-700 font-semibold text-xs px-3 py-1.5 rounded-2xl hover:bg-amber-100 active:scale-95 transition-all"
+                    >
+                      + {preset.title} · {preset.coin_cost}🪙
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {rewards.slice(0, 5).map((r) => (
+                  <div key={r.id} className="px-6 py-3 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-800 truncate">{r.title}</span>
+                    <span className="text-xs font-bold text-amber-500 ml-3 flex-shrink-0">{r.coin_cost} 🪙</span>
+                  </div>
+                ))}
+                {rewards.length > 5 && (
+                  <div className="px-6 py-3 text-xs text-gray-400 font-medium">
+                    +{rewards.length - 5} more — <a href="/dashboard/rewards" className="text-amber-500 hover:underline">view all</a>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 

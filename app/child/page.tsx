@@ -1572,25 +1572,40 @@ export default function ChildPage() {
       return;
     }
 
-    // Coins update — mission DB write already succeeded above
+    // Coins update — omit p_mission_id to avoid the ledger unique constraint (23505 → 409).
+    // Double-award is prevented at the app level: mission.is_completed drives nowCompleted,
+    // so re-completing an already-completed mission resolves as a deduction, not an award.
     const coinsPayload = {
       p_child_id: selected.id,
       p_amount: pointsChange,
       p_type: pointsChange > 0 ? 'earned' : 'deducted',
       p_description: nowCompleted ? `Completed task: ${mission.title}` : `Undid task: ${mission.title}`,
-      p_mission_id: mission.id,
     };
     console.log('[add_coins] payload:', JSON.stringify(coinsPayload));
     const { error: coinsError } = await supabase.rpc('add_coins', coinsPayload);
     if (coinsError) {
       console.error('[add_coins] FAILED — code:', coinsError.code,
         'message:', coinsError.message, 'details:', coinsError.details, 'hint:', coinsError.hint);
-      // Revert the optimistic coin balance so UI matches actual DB state.
-      // Mission completion is NOT reverted — it was saved successfully.
-      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
     } else {
       console.log('[add_coins] SUCCESS — child:', selected.id, 'delta:', pointsChange, 'new balance:', newPoints);
+    }
+
+    // Always re-fetch the real wallet balance so UI reflects true DB state,
+    // regardless of whether add_coins succeeded or failed.
+    const { data: freshWallet } = await supabase
+      .from('bt_coin_wallet')
+      .select('balance')
+      .eq('child_id', selected.id)
+      .single();
+    if (freshWallet != null) {
+      const realPoints = (freshWallet as { balance: number }).balance;
+      console.log('[wallet refetch] real balance:', realPoints);
+      setSelected((prev) => prev ? { ...prev, points: realPoints } : prev);
+      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: realPoints } : c));
+    } else if (coinsError) {
+      // Fallback: revert optimistic balance since we couldn't confirm the real value
+      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
+      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
     }
 
     // Streak reflects whether any mission is still completed today after this toggle.
