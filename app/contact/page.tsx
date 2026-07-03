@@ -24,8 +24,12 @@ export default function ContactPage() {
 
       if (res.ok) {
         setSuccess(true);
+        setName('');
+        setEmail('');
+        setMessage('');
       } else {
-        setError('Something went wrong. Please email us directly at hello@brytthrive.com');
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error ?? 'Something went wrong. Please email us directly at hello@brytthrive.com');
       }
     } catch {
       setError('Something went wrong. Please email us directly at hello@brytthrive.com');
@@ -45,7 +49,7 @@ export default function ContactPage() {
 
         {success ? (
           <p className="text-teal-700 font-medium text-lg">
-            Thanks {name}! We&apos;ll be in touch soon.
+            Thank you! We&apos;ve received your message and will get back to you shortly.
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
