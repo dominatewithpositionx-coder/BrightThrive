@@ -9,6 +9,7 @@ import ServiceWorkerRegistrar from '@/components/brightthrive/ServiceWorkerRegis
 import MobileNav from '@/components/brightthrive/MobileNav';
 import Logo from '@/components/brightthrive/Logo';
 import ClientChrome from '@/components/brightthrive/ClientChrome';
+import { APP_VERSION } from '@/lib/version';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
@@ -118,6 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/how-it-works" className="hover:text-gray-900">How it works</Link>
             </div>
           </div>
+          <p className="mt-4 text-xs text-gray-400 text-center">{APP_VERSION}</p>
         </footer>
         </ClientChrome>
 

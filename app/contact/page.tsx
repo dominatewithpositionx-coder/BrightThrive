@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { CheckCircle } from 'lucide-react';
 
 export default function ContactPage() {
   const [name, setName] = useState('');
@@ -48,9 +49,10 @@ export default function ContactPage() {
         </p>
 
         {success ? (
-          <p className="text-teal-700 font-medium text-lg">
-            Thank you! We&apos;ve received your message and will get back to you shortly.
-          </p>
+          <div className="flex items-center gap-2.5 text-teal-700 font-medium text-lg">
+            <CheckCircle size={20} className="flex-shrink-0 text-teal-600" />
+            <p>Thank you! We&apos;ve received your message and will get back to you shortly.</p>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
