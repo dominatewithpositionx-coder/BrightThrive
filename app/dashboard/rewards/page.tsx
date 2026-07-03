@@ -12,7 +12,7 @@ import { trackRewardCreated, trackRewardRedeemed } from '@/lib/analytics';
 
 type Reward = { id: string; title: string; coin_cost: number; created_at: string };
 type Child  = { id: string; name: string; age: number | null; points: number };
-type Redemption = { id: string; child_id: string; reward_title: string; coin_cost: number; requested_at: string };
+type Redemption = { id: string; child_id: string; reward_name?: string; reward_title?: string; coin_cost: number; requested_at: string };
 type ConfirmState = { child: Child; reward: Reward } | null;
 type DeleteRewardState = Reward | null;
 
@@ -103,7 +103,7 @@ export default function RewardsPage() {
       supabase.from('rewards').select('id, title, coin_cost, created_at').order('created_at', { ascending: false }),
       supabase.from('children').select('id, name, age'),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
-      supabase.from('reward_redemptions').select('id, child_id, reward_title, coin_cost, requested_at').order('requested_at', { ascending: false }),
+      supabase.from('reward_redemptions').select('id, child_id, reward_name, reward_title, coin_cost, requested_at').order('requested_at', { ascending: false }),
     ]);
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
     setRewards(rewardData || []);
@@ -186,14 +186,15 @@ export default function RewardsPage() {
 
     let { error: redemptionError } = await supabase.from('reward_redemptions').insert([{
       child_id: child.id, reward_id: reward.id, parent_id: user.id,
-      reward_title: reward.title, reward_type: 'standard', coin_cost: reward.coin_cost,
+      reward_name: reward.title, reward_title: reward.title,
+      reward_type: 'standard', coin_cost: reward.coin_cost,
       status: 'fulfilled', requested_at: new Date().toISOString(), fulfilled_at: new Date().toISOString(),
     }]);
     if (redemptionError) {
-      // Optional columns may not exist — retry with minimal required set
+      // Retry with the minimum columns guaranteed to exist in the original production schema
       const retryRed = await supabase.from('reward_redemptions').insert([{
-        child_id: child.id, reward_id: reward.id, parent_id: user.id,
-        reward_title: reward.title, coin_cost: reward.coin_cost,
+        child_id: child.id, reward_id: reward.id,
+        reward_name: reward.title, coin_cost: reward.coin_cost,
       }]);
       redemptionError = retryRed.error;
     }
@@ -532,7 +533,7 @@ export default function RewardsPage() {
                       {getChildName(entry.child_id)[0].toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-navy truncate">{entry.reward_title}</p>
+                      <p className="text-sm font-semibold text-navy truncate">{entry.reward_title ?? (entry as unknown as Record<string, unknown>).reward_name as string}</p>
                       <p className="text-xs text-gray-500">{getChildName(entry.child_id)} · {new Date(entry.requested_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

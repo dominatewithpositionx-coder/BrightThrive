@@ -724,28 +724,24 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         setRequestingRewardId(null);
         return;
       }
-      const { data: insertData, error: insertError } = await supabase.from('reward_redemptions').insert({
+      const { error: insertError } = await supabase.from('reward_redemptions').insert({
         child_id: child.id,
         reward_id: reward.id,
         parent_id: session.user.id,
+        reward_name: reward.title,
         reward_title: reward.title,
         reward_type: 'standard',
         coin_cost: reward.coin_cost,
         status: 'pending',
-      }).select();
-      console.log('[reward insert data]', insertData);
-      console.log('[reward insert error]', insertError);
+      });
       if (insertError) {
-        console.log('[reward insert error.code]', insertError.code);
-        console.log('[reward insert error.message]', insertError.message);
-        console.log('[reward insert error.details]', insertError.details);
-        console.log('[reward insert error.hint]', insertError.hint);
+        console.error('[askParent] insert failed:', insertError.code, insertError.message);
         setRequestingRewardId(null);
         return;
       }
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
     } catch (e) {
-      console.error('[reward insert exception]', e);
+      console.error('[askParent] exception:', e);
     }
     setRequestingRewardId(null);
   }
@@ -759,16 +755,17 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
       const insert: Record<string, unknown> = {
         child_id: child.id,
         parent_id: session.user.id,
+        reward_name: '🎁 Please add rewards for me!',
         reward_title: '🎁 Please add rewards for me!',
         coin_cost: 0,
         status: 'pending',
       };
       const { error } = await supabase.from('reward_redemptions').insert(insert);
       if (error) {
-        // reward_id may be required — retry with a UUID placeholder approach by skipping
-        await supabase.from('reward_redemptions').insert({ ...insert, reward_type: 'standard' });
+        console.error('[tellParent] insert failed:', error.code, error.message);
+      } else {
+        setTellParentSent(true);
       }
-      setTellParentSent(true);
     } catch { }
     setSendingTellParent(false);
   }

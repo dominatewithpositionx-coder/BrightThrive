@@ -225,7 +225,7 @@ export default function DashboardPage() {
 
     const [{ data: rewardData }, { data: approvalData }] = await Promise.all([
       supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false }),
-      supabase.from('reward_redemptions').select('id, child_id, reward_id, reward_title, coin_cost').eq('status', 'pending'),
+      supabase.from('reward_redemptions').select('id, child_id, reward_id, reward_name, reward_title, coin_cost').eq('status', 'pending'),
     ]);
     setRewards(rewardData || []);
     if (approvalData && approvalData.length > 0) {
@@ -234,7 +234,7 @@ export default function DashboardPage() {
       setPendingApprovals(approvalData.map(a => ({
         ...a,
         child_name: childMap[a.child_id] ?? 'Your child',
-        reward_title: a.reward_title ?? rewardMap[a.reward_id]?.title ?? 'Unknown reward',
+        reward_title: a.reward_title ?? (a as Record<string, unknown>).reward_name as string ?? rewardMap[a.reward_id]?.title ?? 'Unknown reward',
         coin_cost: a.coin_cost ?? rewardMap[a.reward_id]?.coin_cost ?? 0,
       })));
     } else {
