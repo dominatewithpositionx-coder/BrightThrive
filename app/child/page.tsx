@@ -724,7 +724,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         setRequestingRewardId(null);
         return;
       }
-      const { error } = await supabase.from('reward_redemptions').insert({
+      const { data: insertData, error } = await supabase.from('reward_redemptions').insert({
         child_id: child.id,
         reward_id: reward.id,
         parent_id: session.user.id,
@@ -732,22 +732,16 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
         reward_type: 'standard',
         coin_cost: reward.coin_cost,
         status: 'pending',
-      });
+      }).select();
+      console.log('[reward insert data]', insertData);
+      console.log('[reward insert error]', error);
       if (error) {
-        console.error('[askParent] full insert failed:', error.code, error.message);
-        // Fallback: some production schemas don't yet have reward_title / coin_cost / reward_type.
-        // Try with only the columns that exist in the original schema.
-        const { error: err2 } = await supabase.from('reward_redemptions').insert({
-          child_id: child.id,
-          reward_id: reward.id,
-          parent_id: session.user.id,
-          status: 'pending',
-        });
-        if (err2) {
-          console.error('[askParent] minimal insert also failed:', err2.code, err2.message);
-          setRequestingRewardId(null);
-          return; // both paths failed — do not show "waiting" state
-        }
+        console.log('[reward insert error.code]', error.code);
+        console.log('[reward insert error.message]', error.message);
+        console.log('[reward insert error.details]', error.details);
+        console.log('[reward insert error.hint]', error.hint);
+        setRequestingRewardId(null);
+        return;
       }
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
     } catch (e) {
