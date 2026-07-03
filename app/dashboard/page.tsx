@@ -228,35 +228,16 @@ export default function DashboardPage() {
       .from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false });
     setRewards(rewardData || []);
 
-    // Use only original production columns (reward_name, cost) to avoid 400 on missing
-    // columns. Then try adding status filter; if that also 400s, fall back without it.
-    async function fetchApprovals() {
-      const BASE_SELECT = 'id, parent_id, child_id, reward_id, reward_name, cost';
-      const { data, error } = await supabase
-        .from('reward_redemptions')
-        .select(BASE_SELECT)
-        .eq('status', 'pending');
-
-      if (!error) return { data, error: null };
-
-      console.error('[dashboard] approval query (with status filter) failed:',
-        error.code, error.message, error.details, error.hint);
-
-      // status column may not exist — retry without the filter
-      const fallback = await supabase
-        .from('reward_redemptions')
-        .select(BASE_SELECT);
-
-      if (fallback.error) {
-        console.error('[dashboard] approval fallback query also failed:',
-          fallback.error.code, fallback.error.message);
-      }
-      return { data: fallback.data, error: fallback.error ?? error };
-    }
-
-    const { data: approvalRaw, error: approvalErr } = await fetchApprovals();
+    // SELECT matches the schema that was confirmed working (includes reward_title, coin_cost,
+    // status). reward_name is included for rows inserted before that column was renamed.
+    const { data: approvalRaw, error: approvalErr } = await supabase
+      .from('reward_redemptions')
+      .select('id, child_id, reward_id, reward_title, coin_cost, reward_name, status')
+      .eq('status', 'pending');
 
     if (approvalErr) {
+      console.error('[dashboard] reward_redemptions query failed:',
+        approvalErr.code, approvalErr.message, approvalErr.details, approvalErr.hint);
       setApprovalQueryErr(`${approvalErr.code}: ${approvalErr.message}`);
       setPendingApprovals([]);
     } else {
@@ -270,14 +251,11 @@ export default function DashboardPage() {
           child_id: a.child_id as string,
           reward_id: a.reward_id as string | undefined,
           child_name: childMap[a.child_id as string] ?? 'Your child',
-          // prefer reward_title (new column) → reward_name (original) → rewardMap lookup
           reward_title: (a.reward_title as string | undefined)
             ?? (a.reward_name as string | undefined)
             ?? rewardMap[a.reward_id as string]?.title
             ?? 'Unknown reward',
-          // prefer coin_cost (new column) → cost (original) → rewardMap lookup
           coin_cost: (a.coin_cost as number | undefined)
-            ?? (a.cost as number | undefined)
             ?? rewardMap[a.reward_id as string]?.coin_cost
             ?? 0,
         }))
