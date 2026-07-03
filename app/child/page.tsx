@@ -693,6 +693,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const [pendingRedemptions, setPendingRedemptions] = useState<Set<string>>(new Set());
   const [approvedRedemptions, setApprovedRedemptions] = useState<Set<string>>(new Set());
   const [requestingRewardId, setRequestingRewardId] = useState<string | null>(null);
+  const [askParentError, setAskParentError] = useState<string | null>(null);
   const [tellParentSent, setTellParentSent] = useState(false);
   const [sendingTellParent, setSendingTellParent] = useState(false);
 
@@ -716,32 +717,51 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const nextReward         = sortedRewards.find((r) => r.coin_cost > child.points) ?? null;
 
   async function askParent(reward: Reward) {
-    if (requestingRewardId) return;
+    console.log('[askParent] button clicked, reward:', reward.id, reward.title);
+    setAskParentError(null);
+    if (requestingRewardId) {
+      console.log('[askParent] already requesting, skipping');
+      return;
+    }
     setRequestingRewardId(reward.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('[askParent] session:', session ? `uid=${session.user.id}` : 'NULL — no session');
       if (!session) {
+        setAskParentError('No session — please reload and try again.');
         setRequestingRewardId(null);
         return;
       }
-      const { error: insertError } = await supabase.from('reward_redemptions').insert({
+      console.log('[askParent] child.id:', child.id);
+      const payload = {
+        parent_id: session.user.id,
         child_id: child.id,
         reward_id: reward.id,
-        parent_id: session.user.id,
         reward_name: reward.title,
         reward_title: reward.title,
-        reward_type: 'standard',
+        cost: reward.coin_cost,
         coin_cost: reward.coin_cost,
+        reward_type: 'standard',
         status: 'pending',
-      });
+        requested_at: new Date().toISOString(),
+      };
+      console.log('[askParent] insert payload:', JSON.stringify(payload));
+      const { data: insertData, error: insertError } = await supabase
+        .from('reward_redemptions')
+        .insert(payload)
+        .select('id');
+      console.log('[askParent] insert result — data:', insertData, 'error:', insertError);
       if (insertError) {
-        console.error('[askParent] insert failed:', insertError.code, insertError.message);
+        console.error('[askParent] insert FAILED:', insertError.code, insertError.message, insertError.details, insertError.hint);
+        setAskParentError(`Request failed (${insertError.code}): ${insertError.message}`);
         setRequestingRewardId(null);
         return;
       }
+      console.log('[askParent] insert SUCCESS, row id:', insertData?.[0]?.id);
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
     } catch (e) {
       console.error('[askParent] exception:', e);
+      setAskParentError('Unexpected error — see console.');
     }
     setRequestingRewardId(null);
   }
@@ -970,6 +990,11 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                 <p className="text-lg font-black text-white">🎁 Choose Your Reward!</p>
                 <p className="text-xs text-white/75 mt-0.5">You earned it — ask a parent to unlock it</p>
               </div>
+              {askParentError && (
+                <div className="bg-red-100 border border-red-300 rounded-xl px-3 py-2 text-xs text-red-700 font-medium text-center">
+                  ⚠️ {askParentError}
+                </div>
+              )}
 
               {sortedRewards.length === 0 ? (
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-4 text-center space-y-3">
@@ -1066,6 +1091,11 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
               )}
             </div>
 
+            {askParentError && (
+              <div className="mx-4 mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 font-medium text-center">
+                ⚠️ {askParentError}
+              </div>
+            )}
             {/* Rewards list */}
             <div className="divide-y divide-gray-50">
               {/* Unlocked first */}
