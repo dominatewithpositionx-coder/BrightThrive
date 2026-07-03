@@ -223,19 +223,35 @@ export default function DashboardPage() {
     const loc = (planData?.personalization_data as Record<string, unknown> | null)?.location as string | undefined;
     if (loc) setFamilyLocation(loc);
 
-    const [{ data: rewardData }, { data: approvalData }] = await Promise.all([
+    const [{ data: rewardData }, { data: approvalData, error: approvalError }] = await Promise.all([
       supabase.from('rewards').select('id, title, coin_cost').order('created_at', { ascending: false }),
       supabase.from('reward_redemptions').select('id, child_id, reward_id, reward_title, coin_cost').eq('status', 'pending'),
     ]);
     setRewards(rewardData || []);
-    if (approvalData && approvalData.length > 0) {
+
+    // If the full query fails (e.g. reward_title / coin_cost columns not yet added by migration),
+    // fall back to the minimal column set that exists in every production schema version.
+    let resolvedApprovals: Record<string, unknown>[] | null = approvalData as Record<string, unknown>[] | null;
+    if (approvalError || !approvalData) {
+      console.error('[dashboard] approval query error:', approvalError?.code, approvalError?.message);
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('reward_redemptions')
+        .select('id, child_id, reward_id')
+        .eq('status', 'pending');
+      if (fallbackError) console.error('[dashboard] fallback approval query error:', fallbackError.code, fallbackError.message);
+      resolvedApprovals = (fallbackData as Record<string, unknown>[] | null);
+    }
+
+    if (resolvedApprovals && resolvedApprovals.length > 0) {
       const childMap = Object.fromEntries((childData || []).map(c => [c.id, c.name]));
       const rewardMap = Object.fromEntries((rewardData || []).map(r => [r.id, r]));
-      setPendingApprovals(approvalData.map(a => ({
-        ...a,
-        child_name: childMap[a.child_id] ?? 'Your child',
-        reward_title: a.reward_title ?? rewardMap[a.reward_id]?.title ?? 'Unknown reward',
-        coin_cost: a.coin_cost ?? rewardMap[a.reward_id]?.coin_cost ?? 0,
+      setPendingApprovals(resolvedApprovals.map((a) => ({
+        id: a.id as string,
+        child_id: a.child_id as string,
+        reward_id: a.reward_id as string,
+        child_name: (childMap[(a.child_id as string)] ?? 'Your child'),
+        reward_title: ((a.reward_title as string | undefined) ?? rewardMap[(a.reward_id as string)]?.title ?? 'Unknown reward'),
+        coin_cost: ((a.coin_cost as number | undefined) ?? rewardMap[(a.reward_id as string)]?.coin_cost ?? 0),
       })));
     } else {
       setPendingApprovals([]);
