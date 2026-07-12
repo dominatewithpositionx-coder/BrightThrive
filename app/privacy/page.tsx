@@ -1,3 +1,15 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | BrytThrive',
+  description: 'Read the BrytThrive privacy policy to understand how we protect your family\'s data.',
+  alternates: { canonical: 'https://www.brytthrive.com/privacy' },
+  openGraph: {
+    title: 'Privacy Policy | BrytThrive',
+    url: 'https://www.brytthrive.com/privacy',
+  },
+};
+
 export default function Privacy() {
   return (
     <main className="min-h-screen bg-white py-16 px-4">

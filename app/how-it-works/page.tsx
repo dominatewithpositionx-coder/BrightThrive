@@ -5,6 +5,12 @@ export const metadata: Metadata = {
   title: 'How BrytThrive Works | BrytThrive',
   description:
     'See exactly how BrytThrive helps families build better habits — from daily missions and mood check-ins to earned rewards, parent insights, and long-term family growth.',
+  alternates: { canonical: 'https://www.brytthrive.com/how-it-works' },
+  openGraph: {
+    title: 'How BrytThrive Works | BrytThrive',
+    description: 'See exactly how BrytThrive helps families build better habits.',
+    url: 'https://www.brytthrive.com/how-it-works',
+  },
 };
 
 // ── Design primitives ─────────────────────────────────────────────────────────

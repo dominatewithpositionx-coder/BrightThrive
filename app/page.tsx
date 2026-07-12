@@ -5,9 +5,11 @@ export const metadata: Metadata = {
   title: 'BrytThrive — Helping Families Grow Stronger, One Small Win at a Time',
   description:
     'BrytThrive helps parents turn daily challenges into positive habits, meaningful conversations, and real family progress — without the battles.',
+  alternates: { canonical: 'https://www.brytthrive.com' },
   openGraph: {
     title: 'BrytThrive — AI-Powered Family Growth Platform',
     description: 'Helping families grow stronger, one small win at a time.',
+    url: 'https://www.brytthrive.com',
   },
 };
 
