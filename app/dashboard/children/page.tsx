@@ -162,15 +162,43 @@ export default function ChildrenPage() {
 
     let childRows = childRes.data;
     if (childRes.error) {
-      // screen_time_limit column missing from schema cache — retry without it
-      console.error('[children] SELECT error, retrying without screen_time_limit:', childRes.error.message);
-      setScreenTimeAvailable(false);
-      const retry = await supabase
+      // Stage 1: new structured location columns (20260020) not yet in schema cache.
+      // Retry with only the columns that exist after migration 20260015.
+      console.error('[children] SELECT error — structured location columns may be missing, retrying:', childRes.error.message);
+      const retry1 = await supabase
         .from('children')
-        .select('id, name, age, created_at')
+        .select('id, name, age, screen_time_limit, location_label, location_name, location_city, created_at')
         .order('created_at', { ascending: true });
-      if (retry.error) console.error('[children] retry error:', retry.error.message);
-      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null, location_label: null, location_name: null, location_city: null, location_region: null, location_country: null, location_lat: null, location_lon: null }));
+
+      if (!retry1.error) {
+        childRows = (retry1.data || []).map(c => ({
+          ...c,
+          location_region: null,
+          location_country: null,
+          location_lat: null,
+          location_lon: null,
+        }));
+      } else {
+        // Stage 2: screen_time_limit or base location columns also missing — bare minimum.
+        console.error('[children] retry1 error — falling back to bare columns:', retry1.error.message);
+        setScreenTimeAvailable(false);
+        const retry2 = await supabase
+          .from('children')
+          .select('id, name, age, created_at')
+          .order('created_at', { ascending: true });
+        if (retry2.error) console.error('[children] retry2 error:', retry2.error.message);
+        childRows = (retry2.data || []).map(c => ({
+          ...c,
+          screen_time_limit: null,
+          location_label: null,
+          location_name: null,
+          location_city: null,
+          location_region: null,
+          location_country: null,
+          location_lat: null,
+          location_lon: null,
+        }));
+      }
     }
 
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
