@@ -7,6 +7,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { toast } from 'sonner';
 import { Flame, Clock, Star, Trash2, Plus, Minus, KeyRound, ChevronUp, AlertTriangle } from 'lucide-react';
 import EmptyState, { EMPTY_STATES } from '@/components/brightthrive/EmptyState';
+import CityAutocomplete from '@/components/brightthrive/CityAutocomplete';
+import type { LocationResult } from '@/lib/geocoding/types';
 
 type Child = {
   id: string;
@@ -18,6 +20,11 @@ type Child = {
   location_label: string | null;
   location_name: string | null;
   location_city: string | null;
+  // Structured geocoded fields — null until migration 20260020 is applied
+  location_region: string | null;
+  location_country: string | null;
+  location_lat: number | null;
+  location_lon: number | null;
 };
 
 type LedgerEntry = {
@@ -136,6 +143,7 @@ export default function ChildrenPage() {
   const [deleting, setDeleting] = useState(false);
   const [editingLocation, setEditingLocation] = useState<string | null>(null);
   const [locationCity, setLocationCity] = useState('');
+  const [locationResult, setLocationResult] = useState<LocationResult | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -144,7 +152,7 @@ export default function ChildrenPage() {
 
   async function fetchData() {
     const [childRes, walletRes, ledgerRes] = await Promise.all([
-      supabase.from('children').select('id, name, age, screen_time_limit, location_label, location_name, location_city, created_at').order('created_at', { ascending: true }),
+      supabase.from('children').select('id, name, age, screen_time_limit, location_label, location_name, location_city, location_region, location_country, location_lat, location_lon, created_at').order('created_at', { ascending: true }),
       supabase.from('bt_coin_wallet').select('child_id, balance'),
       supabase.from('bt_coin_ledger').select('id, child_id, amount, description, created_at').order('created_at', { ascending: false }),
     ]);
@@ -162,7 +170,7 @@ export default function ChildrenPage() {
         .select('id, name, age, created_at')
         .order('created_at', { ascending: true });
       if (retry.error) console.error('[children] retry error:', retry.error.message);
-      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null, location_label: null, location_name: null, location_city: null }));
+      childRows = (retry.data || []).map(c => ({ ...c, screen_time_limit: null, location_label: null, location_name: null, location_city: null, location_region: null, location_country: null, location_lat: null, location_lon: null }));
     }
 
     const walletMap = Object.fromEntries((walletRes.data || []).map(w => [w.child_id, w.balance]));
@@ -222,16 +230,37 @@ export default function ChildrenPage() {
     { label: 'vacation',     name: 'Vacation',       emoji: '🏖️' },
   ];
 
-  async function saveLocation(child: Child, label: string, customName?: string) {
+  async function saveLocation(child: Child, label: string, result?: LocationResult | null) {
     const preset = LOCATION_PRESETS.find(p => p.label === label);
-    const location_name = customName ?? preset?.name ?? label;
-    let { error } = await supabase.from('children').update({
+    const location_name = preset?.name ?? label;
+    // Prefer the structured result; fall back to whatever is in the city text field
+    const cityString = result?.city ?? (locationCity || null);
+
+    const payload: Record<string, unknown> = {
       location_label: label,
       location_name,
-      location_city: locationCity || null,
-    }).eq('id', child.id);
+      location_city: cityString,
+      location_region: result?.region ?? null,
+      location_country: result?.country ?? null,
+      location_lat: result?.latitude ?? null,
+      location_lon: result?.longitude ?? null,
+    };
+
+    let { error } = await supabase.from('children').update(payload).eq('id', child.id);
+
     if (error) {
-      // location columns may not exist in production DB yet
+      // New structured columns may not exist yet — retry with legacy columns only
+      if (error.message?.includes('location_region') || error.message?.includes('location_lat') || error.message?.includes('schema cache')) {
+        const legacy = { location_label: payload.location_label, location_name: payload.location_name, location_city: payload.location_city };
+        const retry = await supabase.from('children').update(legacy).eq('id', child.id);
+        if (retry.error) { toast.error('Could not save location.'); return; }
+        toast.success(`${child.name}'s location updated! (run migration 20260020 for full geocoding)`);
+        setEditingLocation(null);
+        setLocationCity('');
+        setLocationResult(null);
+        fetchData();
+        return;
+      }
       if (error.message?.includes('location_') || error.message?.includes('schema cache')) {
         toast.error('Location save requires a DB migration — run 20260015_child_location.sql in Supabase.');
         return;
@@ -239,9 +268,11 @@ export default function ChildrenPage() {
       toast.error('Could not save location.');
       return;
     }
+
     toast.success(`${child.name}'s location updated!`);
     setEditingLocation(null);
     setLocationCity('');
+    setLocationResult(null);
     fetchData();
   }
 
@@ -472,7 +503,7 @@ export default function ChildrenPage() {
                         <span className="text-sm text-gray-600">📍 Location</span>
                         {editingLocation !== child.id ? (
                           <button
-                            onClick={() => { setEditingLocation(child.id); setLocationCity(child.location_city ?? ''); }}
+                            onClick={() => { setEditingLocation(child.id); setLocationCity(child.location_city ?? ''); setLocationResult(null); }}
                             className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
                           >
                             {child.location_name ? child.location_name : 'Set location'}
@@ -495,14 +526,16 @@ export default function ChildrenPage() {
                             ))}
                           </div>
                           <div className="flex gap-2">
-                            <input
-                              placeholder="City for weather (e.g. Toronto)"
-                              value={locationCity}
-                              onChange={(e) => setLocationCity(e.target.value)}
-                              className="border rounded-lg px-3 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            <CityAutocomplete
+                              initialValue={locationCity}
+                              onSelect={(result, display) => {
+                                setLocationResult(result);
+                                setLocationCity(result?.city ?? display);
+                              }}
+                              className="flex-1"
                             />
                             <button
-                              onClick={() => saveLocation(child, child.location_label ?? 'home')}
+                              onClick={() => saveLocation(child, child.location_label ?? 'home', locationResult)}
                               className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-teal-700 transition-colors whitespace-nowrap"
                             >
                               Save
