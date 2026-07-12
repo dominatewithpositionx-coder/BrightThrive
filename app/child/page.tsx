@@ -487,48 +487,6 @@ function MissionReflectionModal({ mission, onConfirm, onCancel }: {
   );
 }
 
-// ── MissionSwapModal ──────────────────────────────────────────────────────────
-
-function MissionSwapModal({ mission, onCancel, onSwap }: {
-  mission: Mission;
-  onCancel: () => void;
-  onSwap: (reason: string) => void;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
-      >
-        <div className="text-center mb-5">
-          <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Swap Mission</p>
-          <h2 className="font-black text-navy text-base leading-snug mb-1 line-clamp-2">{mission.title}</h2>
-          <p className="text-sm text-gray-400">Why do you want to swap this?</p>
-        </div>
-        <div className="space-y-2">
-          {SWAP_REASONS.map((reason) => (
-            <button
-              key={reason}
-              onClick={() => onSwap(reason)}
-              className="w-full py-3 px-4 rounded-2xl bg-gray-50 hover:bg-purple-50 hover:border-purple-200 border border-gray-100 text-sm font-medium text-navy text-left active:scale-[0.98] transition-all min-h-[48px]"
-            >
-              {reason}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={onCancel}
-          className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
-        >
-          Keep this mission
-        </button>
-      </motion.div>
-    </div>
-  );
-}
-
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
 // Estimated times per category
@@ -572,14 +530,7 @@ const REFLECTION_PROMPTS: Record<string, { question: string; options: string[] }
 };
 const DEFAULT_REFLECTION = { question: 'What was the best part?', options: ['Fun', 'Easy', 'Challenging', "I'm proud"] };
 
-const SWAP_REASONS = [
-  'Too hard',
-  'Not interested',
-  'Cannot do this now',
-  'Give me something active',
-  'Give me something creative',
-  'Give me something quiet',
-];
+// Single-mission swap is planned as a separate future PR (needs a new /api/swap-mission endpoint).
 
 function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle: (m: Mission) => void; index: number }) {
   const emoji    = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
@@ -749,11 +700,10 @@ function MissionLoadingScreen({ childName, onRetry, failed }: { childName: strin
 // ── Mission row (flat list design) ───────────────────────────────────────────
 // States: completed (locked) | active/started (shows I Did It!) | idle (shows Start Mission)
 
-function MissionRow({ mission, onStart, onComplete, onSwap, isActive, isSaving, isLast }: {
+function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }: {
   mission: Mission;
   onStart: (m: Mission) => void;
   onComplete: (m: Mission) => void;
-  onSwap: (m: Mission) => void;
   isActive: boolean;
   isSaving: boolean;
   isLast: boolean;
@@ -787,7 +737,7 @@ function MissionRow({ mission, onStart, onComplete, onSwap, isActive, isSaving, 
               onClick={() => !isSaving && onComplete(mission)}
               disabled={isSaving}
               aria-label={`I completed "${mission.title}"`}
-              className="flex-1 h-9 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+              className="w-full h-9 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
             >
               {isSaving ? '⏳ Saving…' : '✅ I Did It!'}
             </button>
@@ -795,19 +745,11 @@ function MissionRow({ mission, onStart, onComplete, onSwap, isActive, isSaving, 
             <button
               onClick={() => onStart(mission)}
               aria-label={`Start "${mission.title}"`}
-              className="flex-1 h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-xs active:scale-[0.97] transition-all flex items-center justify-center gap-1.5"
+              className="w-full h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-xs active:scale-[0.97] transition-all flex items-center justify-center gap-1.5"
             >
               ▶ Start Mission
             </button>
           )}
-          <button
-            onClick={() => onSwap(mission)}
-            disabled={isSaving}
-            aria-label={`Swap "${mission.title}"`}
-            className="h-9 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-medium active:scale-[0.97] transition-all flex-shrink-0 disabled:opacity-40"
-          >
-            Swap
-          </button>
         </div>
       )}
     </div>
@@ -846,9 +788,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
 
   const [activeMissionId, setActiveMissionId]     = useState<string | null>(null);
   const [reflectionMission, setReflectionMission] = useState<Mission | null>(null);
-  const [swapMission, setSwapMission]             = useState<Mission | null>(null);
   const [savingMissionId, setSavingMissionId]     = useState<string | null>(null);
-  const [swapMessage, setSwapMessage]             = useState<string | null>(null);
 
   function handleMissionStart(mission: Mission) {
     if (mission.is_completed || savingMissionId) return;
@@ -871,18 +811,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
       setSavingMissionId(null);
       setActiveMissionId(null);
     }
-  }
-
-  function handleSwapOpen(mission: Mission) {
-    if (mission.is_completed || savingMissionId) return;
-    setSwapMission(mission);
-  }
-
-  function handleSwapReason(_reason: string) {
-    setSwapMission(null);
-    // Phase 1 UI only — single-mission replacement needs a new API endpoint (see PR notes).
-    setSwapMessage('Swap coming soon! For now, try starting a different mission.');
-    setTimeout(() => setSwapMessage(null), 3500);
   }
 
   const [showCompleted, setShowCompleted] = useState(false);
@@ -1088,7 +1016,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
                   mission={m}
                   onStart={handleMissionStart}
                   onComplete={handleMissionReadyToComplete}
-                  onSwap={handleSwapOpen}
                   isActive={activeMissionId === m.id}
                   isSaving={savingMissionId === m.id}
                   isLast={i === pending.length - 1}
@@ -1122,7 +1049,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
                         mission={m}
                         onStart={() => {}}
                         onComplete={() => {}}
-                        onSwap={() => {}}
                         isActive={false}
                         isSaving={false}
                         isLast={i === done.length - 1}
@@ -1311,18 +1237,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
           </motion.div>
         )}
 
-        {/* Swap feedback message */}
-        {swapMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 text-sm text-purple-700 text-center font-medium"
-          >
-            {swapMessage}
-          </motion.div>
-        )}
-
         {/* Get more missions (when not all done) — disabled until current round is complete */}
         {!allDone && !isDemoMode && (
           <button
@@ -1451,16 +1365,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
         )}
       </AnimatePresence>
 
-      {/* Swap modal */}
-      <AnimatePresence>
-        {swapMission && (
-          <MissionSwapModal
-            mission={swapMission}
-            onCancel={() => setSwapMission(null)}
-            onSwap={handleSwapReason}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -1788,7 +1692,7 @@ export default function ChildPage() {
     setGeneratingMore(false);
   }
 
-  async function handleMissionComplete(mission: Mission, reflectionAnswer: string) {
+  async function handleMissionComplete(mission: Mission, _reflectionAnswer: string) {
     if (!selected) return;
     if (mission.is_completed) return; // idempotent guard — already awarded
     if (mission.id.startsWith('demo-')) {
@@ -1798,14 +1702,56 @@ export default function ChildPage() {
     }
 
     const prevPoints = selected.points;
-    const newPoints  = prevPoints + 10;
-
-    // Optimistic UI — mark complete and add 10 coins immediately
-    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: true } : m));
-    setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
-    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
     setMissionError(null);
 
+    // Step 1: Write mission completion. No UI celebration yet — wait for coins to confirm.
+    const { error: missionErr } = await supabase
+      .from('missions')
+      .update({ is_completed: true })
+      .eq('id', mission.id);
+
+    if (missionErr) {
+      console.error('[mission complete] DB update failed:', missionErr);
+      setMissionError('Could not save this mission. Please try again.');
+      return;
+    }
+
+    // Mission row is complete in DB — update local state so it locks immediately.
+    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: true } : m));
+
+    // Step 2: Award coins.
+    // p_mission_id activates the DB dedup guard from migration 20260019:
+    //   - First call: wallet updated, ledger row inserted (ON CONFLICT DO NOTHING is a no-op).
+    //   - Retry/duplicate call: guard finds existing ledger entry → wallet update skipped → RPC returns success.
+    // Therefore: any coinsError here is always a genuine failure, never a duplicate-award signal.
+    const { error: coinsError } = await supabase.rpc('add_coins', {
+      p_child_id:    selected.id,
+      p_amount:      10,
+      p_type:        'earned',
+      p_description: `Completed: ${mission.title}`,
+      p_mission_id:  mission.id,
+    });
+
+    if (coinsError) {
+      console.error('[add_coins] genuine failure — rolling back mission:', coinsError.code, coinsError.message);
+      // Roll back mission so the child can retry. Do not show confetti or a success banner.
+      await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
+      setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
+      setMissionError('Could not award your coins. Mission reset — tap "I Did It!" again to retry.');
+      return;
+    }
+
+    // Step 3: Refetch real wallet balance. Source of truth — do not trust the +10 guess.
+    const { data: freshWallet } = await supabase
+      .from('bt_coin_wallet')
+      .select('balance')
+      .eq('child_id', selected.id)
+      .single();
+    const realPoints = freshWallet != null ? (freshWallet as { balance: number }).balance : prevPoints + 10;
+    setSelected((prev) => prev ? { ...prev, points: realPoints } : prev);
+    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: realPoints } : c));
+
+    // Step 4: Both writes confirmed — celebrate.
     fireConfetti();
     trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
     const CHEERS = ["You're amazing! 🌟", 'You crushed it! 🚀', 'Way to go! ⭐', 'Fantastic work! 🎉', "You're a star! 💫", 'Outstanding! 🏆'];
@@ -1813,47 +1759,6 @@ export default function ChildPage() {
     const cheer = CHEERS[h % CHEERS.length];
     setMissionSuccess(`🎉 ${cheer} +10 BrytCoins earned! 🪙`);
     setTimeout(() => setMissionSuccess(null), 3500);
-
-    // DB write
-    const { error: missionErr } = await supabase
-      .from('missions')
-      .update({ is_completed: true })
-      .eq('id', mission.id);
-
-    if (missionErr) {
-      console.error('[mission complete] update failed:', missionErr);
-      setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
-      setSelected((prev) => prev ? { ...prev, points: prevPoints } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: prevPoints } : c));
-      setMissionError('Oops! Could not save that. Try again.');
-      return;
-    }
-
-    // Coins — pass p_mission_id so the DB dedup guard (add_coins migration 20260019) is active.
-    // If add_coins detects a prior positive ledger entry for this mission_id, it skips the wallet
-    // update silently. This prevents double-awards on rapid taps or retries.
-    const { error: coinsError } = await supabase.rpc('add_coins', {
-      p_child_id:   selected.id,
-      p_amount:     10,
-      p_type:       'earned',
-      p_description: `Completed: ${mission.title} — ${reflectionAnswer}`,
-      p_mission_id: mission.id,
-    });
-    if (coinsError) {
-      console.error('[add_coins] failed:', coinsError.code, coinsError.message);
-    }
-
-    // Refetch real wallet balance — source of truth regardless of RPC outcome
-    const { data: freshWallet } = await supabase
-      .from('bt_coin_wallet')
-      .select('balance')
-      .eq('child_id', selected.id)
-      .single();
-    if (freshWallet != null) {
-      const realPoints = (freshWallet as { balance: number }).balance;
-      setSelected((prev) => prev ? { ...prev, points: realPoints } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: realPoints } : c));
-    }
 
     try {
       const result = await updateStreak(supabase, selected.id, true);
