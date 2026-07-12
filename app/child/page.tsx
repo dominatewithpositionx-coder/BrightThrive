@@ -443,6 +443,50 @@ function MoodCheckIn({ childName, onSelect }: { childName: string; onSelect: (mo
   );
 }
 
+// ── MissionReflectionModal ────────────────────────────────────────────────────
+
+function MissionReflectionModal({ mission, onConfirm, onCancel }: {
+  mission: Mission;
+  onConfirm: (answer: string) => void;
+  onCancel: () => void;
+}) {
+  const prompt = REFLECTION_PROMPTS[mission.category ?? ''] ?? DEFAULT_REFLECTION;
+  const emoji  = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+      >
+        <div className="text-center mb-5">
+          <div className="text-4xl mb-2">{emoji}</div>
+          <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Quick check-in</p>
+          <h2 className="font-black text-navy text-lg leading-tight">{prompt.question}</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {prompt.options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => onConfirm(opt)}
+              className="py-3 px-3 rounded-2xl bg-gray-50 hover:bg-teal-50 hover:border-teal-200 border border-gray-100 text-sm font-semibold text-navy active:scale-95 transition-all min-h-[52px]"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onCancel}
+          className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
+        >
+          Not yet
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── ChildView (missions) ──────────────────────────────────────────────────────
 
 // Estimated times per category
@@ -468,6 +512,25 @@ const CAT_SUBTITLES: Record<string, string> = {
   adventure:              'Explore the world!',
   general:                'You got this!',
 };
+
+// ── Reflection prompts — one quick tap after "I Did It!" ──────────────────────
+
+const REFLECTION_PROMPTS: Record<string, { question: string; options: string[] }> = {
+  movement:               { question: 'How did it feel?',          options: ['Fun', 'Tiring', 'Awesome'] },
+  kindness:               { question: 'Who did you help?',         options: ['Family', 'Friend', 'Someone else'] },
+  creativity:             { question: 'What did you make?',        options: ['Drawing', 'Building', 'Story', 'Something else'] },
+  outdoor:                { question: 'What did you notice?',      options: ['Animal', 'Plant', 'Weather', 'Something surprising'] },
+  adventure:              { question: 'What did you notice?',      options: ['Animal', 'Plant', 'Weather', 'Something surprising'] },
+  learning:               { question: 'What did you learn?',       options: ['Something new', 'A cool fact', 'A skill', 'Something surprising'] },
+  mindfulness:            { question: 'How do you feel now?',      options: ['Calm', 'Happy', 'Relaxed', 'Better'] },
+  healthy_habits:         { question: 'How do you feel?',          options: ['Good', 'Energised', 'Proud', 'Great'] },
+  responsibility:         { question: 'What did you do?',          options: ['Cleaned up', 'Helped out', 'Organised', 'Something else'] },
+  emotional_intelligence: { question: 'What did you notice?',      options: ['My feelings', "Others' feelings", 'Something new', 'A change'] },
+  family_connection:      { question: 'Who did you connect with?', options: ['Parent', 'Sibling', 'Grandparent', 'Everyone'] },
+};
+const DEFAULT_REFLECTION = { question: 'What was the best part?', options: ['Fun', 'Easy', 'Challenging', "I'm proud"] };
+
+// Single-mission swap is planned as a separate future PR (needs a new /api/swap-mission endpoint).
 
 function MissionCard({ mission, onToggle, index }: { mission: Mission; onToggle: (m: Mission) => void; index: number }) {
   const emoji    = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
@@ -634,32 +697,68 @@ function MissionLoadingScreen({ childName, onRetry, failed }: { childName: strin
   );
 }
 
-// ── Mission row (flat list design matching How-It-Works mockup) ───────────────
+// ── Mission row (flat list design) ───────────────────────────────────────────
+// States: completed (locked) | active/started (shows I Did It!) | idle (shows Start Mission)
 
-function MissionRow({ mission, onToggle, isLast }: { mission: Mission; onToggle: (m: Mission) => void; isLast: boolean }) {
-  const emoji    = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
-  const catLabel = (mission.category ?? 'general').replace(/_/g, ' ');
+function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }: {
+  mission: Mission;
+  onStart: (m: Mission) => void;
+  onComplete: (m: Mission) => void;
+  isActive: boolean;
+  isSaving: boolean;
+  isLast: boolean;
+}) {
+  const emoji      = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+  const catLabel   = (mission.category ?? 'general').replace(/_/g, ' ');
+  const isComplete = mission.is_completed;
+
   return (
-    <button
-      onClick={() => onToggle(mission)}
-      aria-label={mission.is_completed ? `Undo "${mission.title}"` : `Complete "${mission.title}"`}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 ${!isLast ? 'border-b border-gray-50' : ''}`}
-    >
-      <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${mission.is_completed ? 'bg-teal-500 text-white' : 'border-2 border-gray-200 bg-white'}`}>
-        {mission.is_completed ? '✓' : ''}
+    <div className={`px-4 py-3.5 ${!isLast ? 'border-b border-gray-50' : ''}`}>
+      {/* Title row */}
+      <div className="flex items-center gap-3">
+        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors
+          ${isComplete ? 'bg-teal-500 text-white' : isActive ? 'bg-amber-400 text-white' : 'border-2 border-gray-200 bg-white'}`}>
+          {isComplete ? '✓' : isActive ? '▶' : ''}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium leading-snug ${isComplete ? 'line-through text-gray-400' : 'text-navy'}`}>
+            {mission.title}
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">{emoji} {catLabel}</p>
+        </div>
+        <span className="text-xs font-bold text-amber-500 flex-shrink-0 whitespace-nowrap">🪙 10</span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium leading-snug ${mission.is_completed ? 'line-through text-gray-400' : 'text-navy'}`}>{mission.title}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{emoji} {catLabel}</p>
-      </div>
-      <span className="text-xs font-bold text-amber-500 flex-shrink-0 whitespace-nowrap">🪙 10</span>
-    </button>
+
+      {/* Action row — hidden for completed missions */}
+      {!isComplete && (
+        <div className="mt-2.5 flex gap-2">
+          {isActive ? (
+            <button
+              onClick={() => !isSaving && onComplete(mission)}
+              disabled={isSaving}
+              aria-label={`I completed "${mission.title}"`}
+              className="w-full h-9 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+            >
+              {isSaving ? '⏳ Saving…' : '✅ I Did It!'}
+            </button>
+          ) : (
+            <button
+              onClick={() => onStart(mission)}
+              aria-label={`Start "${mission.title}"`}
+              className="w-full h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-xs active:scale-[0.97] transition-all flex items-center justify-center gap-1.5"
+            >
+              ▶ Start Mission
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
-function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionToggle, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen, supabase }: {
+function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionComplete, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen, supabase }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number; mood: MoodKey | null;
-  onBack: () => void; onMissionToggle: (mission: Mission) => void;
+  onBack: () => void; onMissionComplete: (mission: Mission, reflectionAnswer: string) => Promise<void>;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
   missionPack: string | null;
   missionError: string | null; missionSuccess: string | null;
@@ -686,6 +785,33 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
   const pendingAfternoon = pending.filter(m => getDaypartGroup(m.category ?? '') === 'afternoon');
   const pendingEvening   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'evening');
   const pendingBonus     = pending.filter(m => getDaypartGroup(m.category ?? '') === 'bonus');
+
+  const [activeMissionId, setActiveMissionId]     = useState<string | null>(null);
+  const [reflectionMission, setReflectionMission] = useState<Mission | null>(null);
+  const [savingMissionId, setSavingMissionId]     = useState<string | null>(null);
+
+  function handleMissionStart(mission: Mission) {
+    if (mission.is_completed || savingMissionId) return;
+    setActiveMissionId(mission.id);
+  }
+
+  function handleMissionReadyToComplete(mission: Mission) {
+    if (mission.is_completed || savingMissionId) return;
+    setReflectionMission(mission);
+  }
+
+  async function handleReflectionConfirm(answer: string) {
+    if (!reflectionMission) return;
+    const mission = reflectionMission;
+    setReflectionMission(null);
+    setSavingMissionId(mission.id);
+    try {
+      await onMissionComplete(mission, answer);
+    } finally {
+      setSavingMissionId(null);
+      setActiveMissionId(null);
+    }
+  }
 
   const [showCompleted, setShowCompleted] = useState(false);
   const [showRewards, setShowRewards]     = useState(false);
@@ -885,7 +1011,15 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           {pending.length > 0 && (
             <div className="border-t border-gray-50">
               {pending.map((m, i) => (
-                <MissionRow key={m.id} mission={m} onToggle={onMissionToggle} isLast={i === pending.length - 1} />
+                <MissionRow
+                  key={m.id}
+                  mission={m}
+                  onStart={handleMissionStart}
+                  onComplete={handleMissionReadyToComplete}
+                  isActive={activeMissionId === m.id}
+                  isSaving={savingMissionId === m.id}
+                  isLast={i === pending.length - 1}
+                />
               ))}
             </div>
           )}
@@ -910,7 +1044,15 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
                     className="overflow-hidden"
                   >
                     {done.map((m, i) => (
-                      <MissionRow key={m.id} mission={m} onToggle={onMissionToggle} isLast={i === done.length - 1} />
+                      <MissionRow
+                        key={m.id}
+                        mission={m}
+                        onStart={() => {}}
+                        onComplete={() => {}}
+                        isActive={false}
+                        isSaving={false}
+                        isLast={i === done.length - 1}
+                      />
                     ))}
                   </motion.div>
                 )}
@@ -1095,14 +1237,19 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </motion.div>
         )}
 
-        {/* Get more missions (when not all done) */}
+        {/* Get more missions (when not all done) — disabled until current round is complete */}
         {!allDone && !isDemoMode && (
           <button
             onClick={onGenerateMore}
-            disabled={generatingMore}
-            className="w-full min-h-[44px] bg-white border border-gray-200 text-gray-600 font-semibold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-60"
+            disabled={generatingMore || pending.length > 0}
+            aria-label={pending.length > 0 ? 'Complete your current missions first' : 'Get more missions'}
+            className="w-full min-h-[44px] bg-white border border-gray-200 text-gray-600 font-semibold px-6 py-3 rounded-2xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
           >
-            {generatingMore ? '✨ Creating more adventures…' : '✨ Get More Missions'}
+            {generatingMore
+              ? '✨ Creating more adventures…'
+              : pending.length > 0
+              ? '✨ Finish missions to get more'
+              : '✨ Get More Missions'}
           </button>
         )}
 
@@ -1206,6 +1353,18 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionTo
           </div>
 
       </div>
+
+      {/* Reflection modal */}
+      <AnimatePresence>
+        {reflectionMission && (
+          <MissionReflectionModal
+            mission={reflectionMission}
+            onConfirm={handleReflectionConfirm}
+            onCancel={() => setReflectionMission(null)}
+          />
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
@@ -1492,6 +1651,16 @@ export default function ChildPage() {
 
   async function handleGenerateMore() {
     if (!selected) return;
+
+    // Handler-level guard: only allow when all missions in the current round are complete.
+    const currentMissions = missions.filter((m) => m.child_id === selected.id);
+    const hasPending = currentMissions.some((m) => !m.is_completed);
+    if (hasPending) {
+      setLastGenError('Finish your current missions first!');
+      setTimeout(() => setLastGenError(null), 3000);
+      return;
+    }
+
     setGeneratingMore(true);
     setLastGenError(null);
     try {
@@ -1523,96 +1692,76 @@ export default function ChildPage() {
     setGeneratingMore(false);
   }
 
-  // Validation levels (future — not yet built):
-  // 1. Child self-check (current) — tap to mark done
-  // 2. Parent spot-check — periodic review notification
-  // 3. Parent approval gate for high-value rewards (>100 BrytCoins)
-  // 4. Optional photo proof — child photos completion
-  // 5. Optional AI-assisted review of submitted photos
-  async function handleMissionToggle(mission: Mission) {
+  async function handleMissionComplete(mission: Mission, _reflectionAnswer: string) {
     if (!selected) return;
+    if (mission.is_completed) return; // idempotent guard — already awarded
     if (mission.id.startsWith('demo-')) {
       setMissionSuccess('✨ Your real missions are almost ready — check back in a moment!');
       setTimeout(() => setMissionSuccess(null), 3000);
       return;
     }
-    const nowCompleted = !mission.is_completed;
-    const pointsChange = nowCompleted ? +10 : -10;
-    const newPoints = selected.points + pointsChange;
 
-    // Optimistic UI update — checkbox responds immediately
-    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: nowCompleted } : m));
-    setSelected((prev) => prev ? { ...prev, points: newPoints } : prev);
-    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: newPoints } : c));
+    const prevPoints = selected.points;
     setMissionError(null);
 
-    if (nowCompleted) {
-      fireConfetti();
-      trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
-      const CHEERS = ["You're amazing! 🌟", 'You crushed it! 🚀', 'Way to go! ⭐', 'Fantastic work! 🎉', "You're a star! 💫", 'Outstanding! 🏆'];
-      let h = 0; for (const c of mission.title) h += c.charCodeAt(0);
-      const cheer = CHEERS[h % CHEERS.length];
-      setMissionSuccess(`🎉 ${cheer} +10 BrytCoins earned! 🪙`);
-      setTimeout(() => setMissionSuccess(null), 3500);
-    }
-
-    // DB write — after optimistic update
+    // Step 1: Write mission completion. No UI celebration yet — wait for coins to confirm.
     const { error: missionErr } = await supabase
       .from('missions')
-      .update({ is_completed: nowCompleted })
+      .update({ is_completed: true })
       .eq('id', mission.id);
 
     if (missionErr) {
-      console.error('[mission toggle] mission update failed:', missionErr);
-      // Revert optimistic update
-      setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: mission.is_completed } : m));
-      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
-      setMissionError('Oops! Could not save that. Try again.');
+      console.error('[mission complete] DB update failed:', missionErr);
+      setMissionError('Could not save this mission. Please try again.');
       return;
     }
 
-    // Coins update — omit p_mission_id to avoid the ledger unique constraint (23505 → 409).
-    // Double-award is prevented at the app level: mission.is_completed drives nowCompleted,
-    // so re-completing an already-completed mission resolves as a deduction, not an award.
-    const coinsPayload = {
-      p_child_id: selected.id,
-      p_amount: pointsChange,
-      p_type: pointsChange > 0 ? 'earned' : 'deducted',
-      p_description: nowCompleted ? `Completed task: ${mission.title}` : `Undid task: ${mission.title}`,
-    };
-    console.log('[add_coins] payload:', JSON.stringify(coinsPayload));
-    const { error: coinsError } = await supabase.rpc('add_coins', coinsPayload);
+    // Mission row is complete in DB — update local state so it locks immediately.
+    setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: true } : m));
+
+    // Step 2: Award coins.
+    // p_mission_id activates the DB dedup guard from migration 20260019:
+    //   - First call: wallet updated, ledger row inserted (ON CONFLICT DO NOTHING is a no-op).
+    //   - Retry/duplicate call: guard finds existing ledger entry → wallet update skipped → RPC returns success.
+    // Therefore: any coinsError here is always a genuine failure, never a duplicate-award signal.
+    const { error: coinsError } = await supabase.rpc('add_coins', {
+      p_child_id:    selected.id,
+      p_amount:      10,
+      p_type:        'earned',
+      p_description: `Completed: ${mission.title}`,
+      p_mission_id:  mission.id,
+    });
+
     if (coinsError) {
-      console.error('[add_coins] FAILED — code:', coinsError.code,
-        'message:', coinsError.message, 'details:', coinsError.details, 'hint:', coinsError.hint);
-    } else {
-      console.log('[add_coins] SUCCESS — child:', selected.id, 'delta:', pointsChange, 'new balance:', newPoints);
+      console.error('[add_coins] genuine failure — rolling back mission:', coinsError.code, coinsError.message);
+      // Roll back mission so the child can retry. Do not show confetti or a success banner.
+      await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
+      setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
+      setMissionError('Could not award your coins. Mission reset — tap "I Did It!" again to retry.');
+      return;
     }
 
-    // Always re-fetch the real wallet balance so UI reflects true DB state,
-    // regardless of whether add_coins succeeded or failed.
+    // Step 3: Refetch real wallet balance. Source of truth — do not trust the +10 guess.
     const { data: freshWallet } = await supabase
       .from('bt_coin_wallet')
       .select('balance')
       .eq('child_id', selected.id)
       .single();
-    if (freshWallet != null) {
-      const realPoints = (freshWallet as { balance: number }).balance;
-      console.log('[wallet refetch] real balance:', realPoints);
-      setSelected((prev) => prev ? { ...prev, points: realPoints } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: realPoints } : c));
-    } else if (coinsError) {
-      // Fallback: revert optimistic balance since we couldn't confirm the real value
-      setSelected((prev) => prev ? { ...prev, points: selected.points } : prev);
-      setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: selected.points } : c));
-    }
+    const realPoints = freshWallet != null ? (freshWallet as { balance: number }).balance : prevPoints + 10;
+    setSelected((prev) => prev ? { ...prev, points: realPoints } : prev);
+    setChildren((prev) => prev.map((c) => c.id === selected.id ? { ...c, points: realPoints } : c));
 
-    // Streak reflects whether any mission is still completed today after this toggle.
-    const stillHasCompleted = missions.some((m) =>
-      m.child_id === selected.id && (m.id === mission.id ? nowCompleted : m.is_completed));
+    // Step 4: Both writes confirmed — celebrate.
+    fireConfetti();
+    trackMissionCompleted({ child_id: selected.id, mission_id: mission.id, title: mission.title });
+    const CHEERS = ["You're amazing! 🌟", 'You crushed it! 🚀', 'Way to go! ⭐', 'Fantastic work! 🎉', "You're a star! 💫", 'Outstanding! 🏆'];
+    let h = 0; for (const c of mission.title) h += c.charCodeAt(0);
+    const cheer = CHEERS[h % CHEERS.length];
+    setMissionSuccess(`🎉 ${cheer} +10 BrytCoins earned! 🪙`);
+    setTimeout(() => setMissionSuccess(null), 3500);
+
     try {
-      const result = await updateStreak(supabase, selected.id, stillHasCompleted);
+      const result = await updateStreak(supabase, selected.id, true);
       setStreaks((prev) => ({ ...prev, [selected.id]: result.current }));
     } catch { /* streak update is non-blocking */ }
   }
@@ -1694,7 +1843,7 @@ export default function ChildPage() {
             streak={streaks[selected.id] ?? 0}
             mood={selectedMood}
             onBack={handleBack}
-            onMissionToggle={handleMissionToggle}
+            onMissionComplete={handleMissionComplete}
             onGenerateMore={handleGenerateMore}
             generatingMore={generatingMore}
             missionRound={missionRound}
