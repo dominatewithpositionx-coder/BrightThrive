@@ -1705,13 +1705,23 @@ export default function ChildPage() {
     setMissionError(null);
 
     // Step 1: Write mission completion. No UI celebration yet — wait for coins to confirm.
-    const { error: missionErr } = await supabase
+    // .select('id') forces PostgREST to return affected rows (Prefer: return=representation).
+    // Without it, PostgREST returns 204 with no error even when RLS silently blocks the write
+    // and 0 rows are updated — causing add_coins guard 3c to fail with 23514.
+    const { data: updatedRows, error: missionErr } = await supabase
       .from('missions')
       .update({ is_completed: true })
-      .eq('id', mission.id);
+      .eq('id', mission.id)
+      .select('id');
 
     if (missionErr) {
       console.error('[mission complete] DB update failed:', missionErr);
+      setMissionError('Could not save this mission. Please try again.');
+      return;
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      console.error('[mission complete] UPDATE matched 0 rows — RLS may have blocked the write', { missionId: mission.id });
       setMissionError('Could not save this mission. Please try again.');
       return;
     }
