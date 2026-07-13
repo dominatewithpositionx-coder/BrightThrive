@@ -100,26 +100,11 @@ export default function TasksPage() {
 
     if (error) { toast.error('Error updating task.'); return; }
 
-    const pointsChange = mission.is_completed ? -10 : +10;
-    const description = mission.is_completed
-      ? `Undid task: ${mission.title}`
-      : `Completed task: ${mission.title}`;
-
-    const { error: coinError } = await supabase.rpc('add_coins', {
-      p_child_id: mission.child_id,
-      p_amount: pointsChange,
-      p_type: pointsChange > 0 ? 'earned' : 'deducted',
-      p_description: description,
-      p_mission_id: mission.id,
-    });
-
-    if (coinError) {
-      console.error('[dashboard/tasks] add_coins error:', coinError.message, coinError.code, coinError.details);
-      toast.error('Error updating points.');
-    } else {
-      toast.success(mission.is_completed ? 'Task undone. Points removed.' : 'Task completed! +10 pts logged.');
-    }
-
+    // Coin wallet mutations are handled exclusively through the child completion
+    // flow (/child page). The tasks dashboard updates the mission flag only;
+    // it does not award or reverse coins. Reversing coins from the parent
+    // dashboard requires a separate admin function — not add_coins.
+    toast.success(nowCompleted ? 'Task marked complete.' : 'Task undone.');
     fetchData();
   }
 
