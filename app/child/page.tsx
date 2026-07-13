@@ -1742,9 +1742,7 @@ export default function ChildPage() {
       // Roll back mission so the child can retry. Do not show confetti or a success banner.
       await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
       setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
-      const errCode = coinsError.code ?? 'unknown';
-      const errMsg  = coinsError.message ?? '';
-      setMissionError(`Could not award your coins. Mission reset — tap "I Did It!" again to retry. [${errCode}: ${errMsg}]`);
+      setMissionError('Could not award your coins. Mission reset — tap "I Did It!" again to retry.');
       return;
     }
 
