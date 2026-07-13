@@ -1742,20 +1742,21 @@ export default function ChildPage() {
       p_mission_id:  mission.id,
     });
 
-    if (coinsError) {
+    // Supabase returns a truthy-but-empty error object for RETURNS void RPCs in some client
+    // versions (all fields null/empty). Treat that as success; only act on genuine errors
+    // where at least a message or code is present.
+    const coinsErrorIsGenuine = !!(coinsError && (coinsError.message || coinsError.code));
+    if (coinsErrorIsGenuine) {
       console.error('[add_coins] genuine failure — rolling back mission:', {
-        code: coinsError.code,
-        message: coinsError.message,
+        code: coinsError!.code,
+        message: coinsError!.message,
         details: (coinsError as { details?: string }).details ?? null,
         hint: (coinsError as { hint?: string }).hint ?? null,
       });
       // Roll back mission so the child can retry. Do not show confetti or a success banner.
       await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
       setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
-      const _e = coinsError as { code?: string; message?: string; details?: string; hint?: string };
-      setMissionError(
-        `[DIAG] code=${_e.code ?? '—'} | message=${_e.message ?? '—'} | details=${_e.details ?? '—'} | hint=${_e.hint ?? '—'}`
-      );
+      setMissionError('Could not award your coins. Mission reset — tap "I Did It!" again to retry.');
       return;
     }
 
