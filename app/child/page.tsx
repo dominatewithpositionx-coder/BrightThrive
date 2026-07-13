@@ -1733,7 +1733,12 @@ export default function ChildPage() {
     });
 
     if (coinsError) {
-      console.error('[add_coins] genuine failure — rolling back mission:', coinsError.code, coinsError.message);
+      console.error('[add_coins] genuine failure — rolling back mission:', {
+        code: coinsError.code,
+        message: coinsError.message,
+        details: (coinsError as { details?: string }).details ?? null,
+        hint: (coinsError as { hint?: string }).hint ?? null,
+      });
       // Roll back mission so the child can retry. Do not show confetti or a success banner.
       await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
       setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
