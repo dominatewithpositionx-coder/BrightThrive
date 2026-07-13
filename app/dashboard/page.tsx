@@ -352,12 +352,17 @@ export default function DashboardPage() {
     try {
       const approval = pendingApprovals.find(a => a.id === id);
       if (approve && approval) {
+        if (!approval.coin_cost || !approval.reward_id) {
+          console.error('[handleApproval] approval missing coin_cost or reward_id — cannot deduct');
+          setApprovingId(null);
+          return;
+        }
         const { error: coinError } = await supabase.rpc('add_coins', {
-          p_child_id: approval.child_id,
-          p_amount: -(approval.coin_cost ?? 0),
-          p_type: 'redeemed',
+          p_child_id:    approval.child_id,
+          p_amount:      -approval.coin_cost,
+          p_type:        'redeemed',
           p_description: `Redeemed: ${approval.reward_title}`,
-          p_reward_id: approval.reward_id,
+          p_reward_id:   approval.reward_id,
         });
         if (coinError) {
           console.error('[handleApproval] coin deduction failed:', coinError.message);
