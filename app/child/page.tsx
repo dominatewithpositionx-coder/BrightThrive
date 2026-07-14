@@ -1705,13 +1705,23 @@ export default function ChildPage() {
     setMissionError(null);
 
     // Step 1: Write mission completion. No UI celebration yet — wait for coins to confirm.
-    const { error: missionErr } = await supabase
+    // .select('id') forces PostgREST to return affected rows (Prefer: return=representation).
+    // Without it, PostgREST returns 204 with no error even when RLS silently blocks the write
+    // and 0 rows are updated — causing add_coins guard 3c to fail with 23514.
+    const { data: updatedRows, error: missionErr } = await supabase
       .from('missions')
       .update({ is_completed: true })
-      .eq('id', mission.id);
+      .eq('id', mission.id)
+      .select('id');
 
     if (missionErr) {
       console.error('[mission complete] DB update failed:', missionErr);
+      setMissionError('Could not save this mission. Please try again.');
+      return;
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      console.error('[mission complete] UPDATE matched 0 rows — RLS may have blocked the write', { missionId: mission.id });
       setMissionError('Could not save this mission. Please try again.');
       return;
     }
@@ -1732,8 +1742,17 @@ export default function ChildPage() {
       p_mission_id:  mission.id,
     });
 
-    if (coinsError) {
-      console.error('[add_coins] genuine failure — rolling back mission:', coinsError.code, coinsError.message);
+    // Supabase returns a truthy-but-empty error object for RETURNS void RPCs in some client
+    // versions (all fields null/empty). Treat that as success; only act on genuine errors
+    // where at least a message or code is present.
+    const coinsErrorIsGenuine = !!(coinsError && (coinsError.message || coinsError.code));
+    if (coinsErrorIsGenuine) {
+      console.error('[add_coins] genuine failure — rolling back mission:', {
+        code: coinsError!.code,
+        message: coinsError!.message,
+        details: (coinsError as { details?: string }).details ?? null,
+        hint: (coinsError as { hint?: string }).hint ?? null,
+      });
       // Roll back mission so the child can retry. Do not show confetti or a success banner.
       await supabase.from('missions').update({ is_completed: false }).eq('id', mission.id);
       setMissions((prev) => prev.map((m) => m.id === mission.id ? { ...m, is_completed: false } : m));
