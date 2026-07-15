@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Logo from '@/components/brightthrive/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, CheckCircle, Gift, ChevronLeft, Flame, Lock, ChevronDown, Trophy } from 'lucide-react';
+import { Star, CheckCircle, Gift, ChevronLeft, ChevronRight, Flame, Lock, ChevronDown, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { type MoodKey, MOODS, EI_RESPONSES } from '@/lib/mood';
 import { type WeatherData } from '@/lib/weather';
@@ -14,7 +14,13 @@ import { updateStreak } from '@/lib/streaks';
 import {
   trackMoodSelected,
   trackMissionCompleted,
+  trackSuperpowerReflectionShown,
+  trackSuperpowerReflectionSelected,
+  trackSuperpowerReflectionSkipped,
+  trackProudMomentDisplayed,
+  trackProudMomentOpened,
 } from '@/lib/analytics';
+import { getSuperpower, type SuperpowerTag } from '@/lib/superpowers';
 import { KidWelcomeIllustration } from '@/components/brightthrive/Illustrations';
 import ProgressRing from '@/components/brightthrive/ProgressRing';
 import WeatherScene from '@/components/brightthrive/WeatherScene';
@@ -111,7 +117,19 @@ function KidInstallBannerFull({ prompt }: { prompt: BeforeInstallPromptEvent | n
 }
 
 type Child   = { id: string; name: string; age?: number | null; parent_id?: string | null; points: number; location_label?: string | null; location_name?: string | null; location_city?: string | null };
-type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; generated_by?: string };
+type Mission = {
+  id: string;
+  child_id: string;
+  title: string;
+  category?: string;
+  screen_time_reward?: number;
+  is_completed: boolean;
+  generated_by?: string;
+  // FW-01
+  identity_tag?: SuperpowerTag | null;
+  parent_message?: string | null;
+  parent_message_seen_at?: string | null;
+};
 type Reward  = { id: string; title: string; coin_cost: number };
 
 const CAT_EMOJI: Record<string, string> = {
@@ -443,15 +461,53 @@ function MoodCheckIn({ childName, onSelect }: { childName: string; onSelect: (mo
   );
 }
 
-// ── MissionReflectionModal ────────────────────────────────────────────────────
+// ── SuperpowerReflectionSheet ─────────────────────────────────────────────────
+// Shown after mission completion. Presents the mission's assigned Growth Superpower
+// and asks if the child used it. Always skippable — never blocks completion.
 
-function MissionReflectionModal({ mission, onConfirm, onCancel }: {
+function SuperpowerReflectionSheet({ mission, onConfirm, onSkip }: {
   mission: Mission;
-  onConfirm: (answer: string) => void;
-  onCancel: () => void;
+  onConfirm: (answer: 'yes' | 'unsure') => void;
+  onSkip: () => void;
 }) {
-  const prompt = REFLECTION_PROMPTS[mission.category ?? ''] ?? DEFAULT_REFLECTION;
-  const emoji  = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+  const sp = getSuperpower(mission.identity_tag);
+
+  // Fall back to the category-based prompt if no superpower assigned
+  if (!sp) {
+    const prompt = REFLECTION_PROMPTS[mission.category ?? ''] ?? DEFAULT_REFLECTION;
+    const emoji  = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+        >
+          <div className="text-center mb-5">
+            <div className="text-4xl mb-2">{emoji}</div>
+            <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Quick check-in</p>
+            <h2 className="font-black text-navy text-lg leading-tight">{prompt.question}</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {prompt.options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => onConfirm('yes')}
+                className="py-3 px-3 rounded-2xl bg-gray-50 hover:bg-teal-50 hover:border-teal-200 border border-gray-100 text-sm font-semibold text-navy active:scale-95 transition-all min-h-[52px]"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          <button onClick={onSkip} className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors py-2">
+            Skip
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
       <motion.div
@@ -460,27 +516,123 @@ function MissionReflectionModal({ mission, onConfirm, onCancel }: {
         exit={{ opacity: 0, y: 20 }}
         className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
       >
-        <div className="text-center mb-5">
-          <div className="text-4xl mb-2">{emoji}</div>
-          <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">Quick check-in</p>
-          <h2 className="font-black text-navy text-lg leading-tight">{prompt.question}</h2>
+        {/* Superpower badge */}
+        <div className="flex flex-col items-center mb-5">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center text-5xl shadow-lg mb-3">
+            {sp.emoji}
+          </div>
+          <p className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-1">Your special skill</p>
+          <h2 className="font-black text-navy text-xl text-center leading-tight">{sp.label}</h2>
+          <p className="text-sm text-gray-400 text-center mt-1 leading-snug">{sp.childDescription}</p>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          {prompt.options.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => onConfirm(opt)}
-              className="py-3 px-3 rounded-2xl bg-gray-50 hover:bg-teal-50 hover:border-teal-200 border border-gray-100 text-sm font-semibold text-navy active:scale-95 transition-all min-h-[52px]"
-            >
-              {opt}
-            </button>
-          ))}
+
+        <p className="text-center text-sm font-semibold text-gray-600 mb-4">
+          {sp.reflectionPrompt}
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => onConfirm('yes')}
+            className="py-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-sm min-h-[52px]"
+          >
+            ✨ I just did it!
+          </button>
+          <button
+            onClick={() => onConfirm('unsure')}
+            className="py-4 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 font-semibold text-sm active:scale-95 transition-all min-h-[52px]"
+          >
+            🤔 Not sure
+          </button>
         </div>
+
         <button
-          onClick={onCancel}
+          onClick={onSkip}
           className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors py-2"
         >
-          Not yet
+          Skip
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── ProudMomentBanner ─────────────────────────────────────────────────────────
+// Small, non-intrusive banner shown at the top of the child's mission view
+// when there is an unseen parent recognition message. The child opens it voluntarily.
+
+function ProudMomentBanner({ mission, onOpen }: {
+  mission: Mission;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      className="w-full text-left bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-3.5 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow active:scale-[0.98]"
+      aria-label="Open your Proud Moment from a parent"
+    >
+      <div className="w-10 h-10 rounded-2xl bg-amber-400 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">
+        💌
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-amber-800 text-sm leading-tight">You have a Proud Moment!</p>
+        <p className="text-xs text-amber-600 mt-0.5 truncate">A parent left you a message about &ldquo;{mission.title}&rdquo;</p>
+      </div>
+      <ChevronRight size={16} className="text-amber-400 flex-shrink-0" />
+    </button>
+  );
+}
+
+// ── ProudMomentModal ──────────────────────────────────────────────────────────
+// Shown when child taps the banner. Calm, private, warm. No social mechanics.
+
+function ProudMomentModal({ mission, onClose }: {
+  mission: Mission;
+  onClose: () => void;
+}) {
+  const sp = getSuperpower(mission.identity_tag);
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+      >
+        {/* Header */}
+        <div className="flex flex-col items-center mb-5">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-4xl shadow-md mb-3">
+            💌
+          </div>
+          <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">Proud Moment</p>
+          <h2 className="font-black text-navy text-lg text-center leading-tight">A message for you</h2>
+        </div>
+
+        {/* Message */}
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 mb-4">
+          <p className="text-navy font-medium text-sm leading-relaxed text-center">
+            &ldquo;{mission.parent_message}&rdquo;
+          </p>
+        </div>
+
+        {/* Mission + Superpower context */}
+        <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-3 py-2.5 mb-5">
+          {sp && (
+            <span className="text-2xl flex-shrink-0">{sp.emoji}</span>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-400 font-medium">Mission</p>
+            <p className="text-sm font-semibold text-navy truncate">{mission.title}</p>
+            {sp && (
+              <p className="text-xs text-teal-600 font-medium mt-0.5">{sp.label}</p>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all shadow-sm"
+        >
+          Thanks! 🌟
         </button>
       </motion.div>
     </div>
@@ -756,7 +908,7 @@ function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }
   );
 }
 
-function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionComplete, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen, supabase }: {
+function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionComplete, onGenerateMore, generatingMore, missionRound, missionPack, missionError, missionSuccess, weather, isDemoMode, isAutoGenerating, autoGenFailed, onRetryGen, supabase, onProudMomentSeen }: {
   child: Child; missions: Mission[]; rewards: Reward[]; streak: number; mood: MoodKey | null;
   onBack: () => void; onMissionComplete: (mission: Mission, reflectionAnswer: string) => Promise<void>;
   onGenerateMore: () => void; generatingMore: boolean; missionRound: number;
@@ -765,6 +917,7 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
   weather: WeatherData | null; isDemoMode?: boolean;
   isAutoGenerating?: boolean; autoGenFailed?: boolean; onRetryGen?: () => void;
   supabase: ReturnType<typeof createBrowserClient>;
+  onProudMomentSeen: (missionId: string) => void;
 }) {
   const theme   = getDayTheme();
   const level   = getExplorerLevel(child.points);
@@ -789,6 +942,12 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
   const [activeMissionId, setActiveMissionId]     = useState<string | null>(null);
   const [reflectionMission, setReflectionMission] = useState<Mission | null>(null);
   const [savingMissionId, setSavingMissionId]     = useState<string | null>(null);
+  const [proudMomentMission, setProudMomentMission] = useState<Mission | null>(null);
+
+  // Find the most recent unseen parent message for this child (shown as a small banner)
+  const unseenProudMoment = missions.find(
+    m => m.parent_message && !m.parent_message_seen_at
+  ) ?? null;
 
   function handleMissionStart(mission: Mission) {
     if (mission.is_completed || savingMissionId) return;
@@ -798,19 +957,47 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
   function handleMissionReadyToComplete(mission: Mission) {
     if (mission.is_completed || savingMissionId) return;
     setReflectionMission(mission);
+    trackSuperpowerReflectionShown({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
   }
 
-  async function handleReflectionConfirm(answer: string) {
+  async function handleReflectionConfirm(answer: 'yes' | 'unsure') {
     if (!reflectionMission) return;
     const mission = reflectionMission;
     setReflectionMission(null);
     setSavingMissionId(mission.id);
+    trackSuperpowerReflectionSelected({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none', selected: answer });
     try {
       await onMissionComplete(mission, answer);
     } finally {
       setSavingMissionId(null);
       setActiveMissionId(null);
     }
+  }
+
+  async function handleReflectionSkip() {
+    if (!reflectionMission) return;
+    const mission = reflectionMission;
+    trackSuperpowerReflectionSkipped({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
+    setReflectionMission(null);
+    setSavingMissionId(mission.id);
+    try {
+      await onMissionComplete(mission, '');
+    } finally {
+      setSavingMissionId(null);
+      setActiveMissionId(null);
+    }
+  }
+
+  // Track when the proud moment banner is first displayed
+  const proudMomentTrackedRef = useRef<string | null>(null);
+  if (unseenProudMoment && proudMomentTrackedRef.current !== unseenProudMoment.id) {
+    proudMomentTrackedRef.current = unseenProudMoment.id;
+    trackProudMomentDisplayed({ mission_id: unseenProudMoment.id, identity_tag: unseenProudMoment.identity_tag ?? 'none' });
+  }
+
+  function handleOpenProudMoment(mission: Mission) {
+    setProudMomentMission(mission);
+    trackProudMomentOpened({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
   }
 
   const [showCompleted, setShowCompleted] = useState(false);
@@ -1111,6 +1298,14 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
           );
         })()}
 
+        {/* ── Proud Moment banner (small, child opens voluntarily) ── */}
+        {unseenProudMoment && (
+          <ProudMomentBanner
+            mission={unseenProudMoment}
+            onOpen={() => handleOpenProudMoment(unseenProudMoment)}
+          />
+        )}
+
         {/* Error / success banners */}
         {missionError && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 text-center font-medium">
@@ -1354,13 +1549,33 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
 
       </div>
 
-      {/* Reflection modal */}
+      {/* Superpower reflection sheet */}
       <AnimatePresence>
         {reflectionMission && (
-          <MissionReflectionModal
+          <SuperpowerReflectionSheet
             mission={reflectionMission}
             onConfirm={handleReflectionConfirm}
-            onCancel={() => setReflectionMission(null)}
+            onSkip={handleReflectionSkip}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Proud Moment detail modal */}
+      <AnimatePresence>
+        {proudMomentMission && (
+          <ProudMomentModal
+            mission={proudMomentMission}
+            onClose={() => {
+              const m = proudMomentMission;
+              setProudMomentMission(null);
+              const seenAt = new Date().toISOString();
+              supabase
+                .from('missions')
+                .update({ parent_message_seen_at: seenAt })
+                .eq('id', m!.id)
+                .then(() => { onProudMomentSeen(m!.id); })
+                .catch(() => {});
+            }}
           />
         )}
       </AnimatePresence>
@@ -1471,14 +1686,15 @@ export default function ChildPage() {
     let missionData: Mission[] | null = null;
 
     // Primary: filter by today's mission_date and this parent's child IDs.
+    // FW-01 columns included: identity_tag, parent_message, parent_message_seen_at
     const missionRes = await supabase
       .from('missions')
-      .select('id, child_id, title, category, screen_time_reward, is_completed, generated_by')
+      .select('id, child_id, title, category, screen_time_reward, is_completed, generated_by, identity_tag, parent_message, parent_message_seen_at')
       .in('child_id', kidIds)
       .eq('mission_date', today);
 
     if (missionRes.error) {
-      // mission_date column may not exist on older production DBs — fall back to updated_at filter.
+      // New columns may not exist yet — fall back to base columns only.
       const fallback = await supabase
         .from('missions')
         .select('id, child_id, title, category, screen_time_reward, is_completed')
@@ -1487,10 +1703,9 @@ export default function ChildPage() {
         .lte('updated_at', today + 'T23:59:59.999Z');
 
       if (fallback.error) {
-        // Both date strategies failed — show empty rather than risk showing stale data.
         missionData = [];
       } else {
-        missionData = (fallback.data ?? []).map(m => ({ ...m, generated_by: undefined }));
+        missionData = (fallback.data ?? []).map(m => ({ ...m, generated_by: undefined, identity_tag: null, parent_message: null, parent_message_seen_at: null }));
       }
     } else {
       missionData = missionRes.data;
@@ -1779,6 +1994,17 @@ export default function ChildPage() {
     setMissionSuccess(`🎉 ${cheer} +10 BrytCoins earned! 🪙`);
     setTimeout(() => setMissionSuccess(null), 3500);
 
+    // Step 5: Write reflection answer (fire-and-forget — non-blocking).
+    // reflectionAnswer is 'yes' | 'unsure' | '' (skipped)
+    if (_reflectionAnswer && _reflectionAnswer !== '') {
+      Promise.resolve(
+        supabase
+          .from('missions')
+          .update({ reflection_emoji: _reflectionAnswer === 'yes' ? '✅' : '🤔' })
+          .eq('id', mission.id)
+      ).catch(() => {});
+    }
+
     try {
       const result = await updateStreak(supabase, selected.id, true);
       setStreaks((prev) => ({ ...prev, [selected.id]: result.current }));
@@ -1875,6 +2101,9 @@ export default function ChildPage() {
             autoGenFailed={autoGenFailed}
             onRetryGen={handleRetryAutoGen}
             supabase={supabase}
+            onProudMomentSeen={(missionId) => {
+              setMissions(prev => prev.map((x: Mission) => x.id === missionId ? { ...x, parent_message_seen_at: new Date().toISOString() } : x));
+            }}
           />
         </>
       )}

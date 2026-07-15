@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceSupabaseClient } from '@/lib/supabase';
 import { buildMissionContext, generateMissionPack, todayString } from '@/lib/mission-intelligence';
+import { categoryToSuperpowerTag } from '@/lib/superpowers';
 
 export const runtime = 'nodejs';
 
@@ -153,7 +154,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Strip internal `reasoning` field — not a DB column
+  // Strip internal `reasoning` field — not a DB column.
+  // identity_tag is derived from category via the static CATEGORY_TO_SUPERPOWER map.
   const rowsWithDate = pack.missions.map((m) => ({
     child_id: childId,
     title: m.title,
@@ -161,11 +163,13 @@ export async function POST(req: NextRequest) {
     screen_time_reward: m.screen_time_reward ?? 5,
     is_completed: false,
     mission_date: missionDate,
+    identity_tag: categoryToSuperpowerTag(m.category ?? 'general'),
   }));
 
   let { data, error } = await supabase.from('missions').insert(rowsWithDate).select();
 
   if (error) {
+    // Fallback: omit mission_date and identity_tag if the columns don't exist yet
     const rowsNoDate = pack.missions.map((m) => ({
       child_id: childId,
       title: m.title,

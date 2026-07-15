@@ -5,7 +5,14 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronRight, Plus, X, Send, Check, Pencil } from 'lucide-react';
+import { getSuperpower, fillTemplate } from '@/lib/superpowers';
+import {
+  trackParentRecognitionPromptViewed,
+  trackParentRecognitionTemplateSelected,
+  trackParentRecognitionEdited,
+  trackParentRecognitionSent,
+} from '@/lib/analytics';
 import Link from 'next/link';
 import OnboardingWizard from './components/OnboardingWizard';
 import { type WeatherData } from '@/lib/weather';
@@ -19,7 +26,21 @@ const supabase = createBrowserClient(
 );
 
 type Child = { id: string; name: string; age: number | null; points: number; streak: number };
-type Mission = { id: string; child_id: string; title: string; category?: string; screen_time_reward?: number; is_completed: boolean; mission_date?: string; updated_at?: string; generated_by?: string };
+type Mission = {
+  id: string;
+  child_id: string;
+  title: string;
+  category?: string;
+  screen_time_reward?: number;
+  is_completed: boolean;
+  mission_date?: string;
+  updated_at?: string;
+  generated_by?: string;
+  // FW-01
+  identity_tag?: string | null;
+  parent_message?: string | null;
+  parent_message_at?: string | null;
+};
 type Reward = { id: string; title: string; coin_cost: number };
 
 const REWARD_PRESETS: Record<string, Array<{ title: string; coin_cost: number; emoji: string }>> = {
@@ -48,6 +69,178 @@ const CAT_EMOJI: Record<string, string> = {
   healthy_habits: '🥦',
   general: '⭐',
 };
+
+// ── RecognitionPanel ──────────────────────────────────────────────────────────
+// Shown on the parent dashboard for the most recent completed mission that
+// has no parent_message yet. Parent picks a template or edits, then sends.
+// Goal: under 10 seconds total interaction.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function RecognitionPanel({
+  mission,
+  childName,
+  onSent,
+  supabase,
+}: {
+  mission: Mission;
+  childName: string;
+  onSent: (missionId: string) => void;
+  supabase: any; // module-level client
+}) {
+  const sp = getSuperpower(mission.identity_tag);
+  const templates = sp
+    ? sp.parentTemplates.map(t => fillTemplate(t, childName))
+    : [
+        `${childName}, I saw that you completed your mission today. I'm proud that you followed through.`,
+        `${childName}, you put real effort into finishing what you started.`,
+        `${childName}, completing that mission showed real dedication. Well done.`,
+      ];
+
+  const [open, setOpen] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [message, setMessage] = useState('');
+  const [edited, setEdited] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  if (sent) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+          <Check size={14} className="text-white" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-green-800">Recognition sent to {childName} ✓</p>
+          <p className="text-xs text-green-600 mt-0.5">They&apos;ll see it when they start their next session.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => {
+          setOpen(true);
+          trackParentRecognitionPromptViewed({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
+        }}
+        className="w-full text-left bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:shadow-sm transition-shadow"
+      >
+        <div className="w-10 h-10 rounded-2xl bg-teal-500 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">
+          {sp ? sp.emoji : '⭐'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-0.5">
+            {sp ? sp.label : 'Mission complete'}
+          </p>
+          <p className="text-sm font-semibold text-navy truncate">{mission.title}</p>
+          <p className="text-xs text-teal-600 mt-0.5">Recognise {childName}&apos;s effort →</p>
+        </div>
+      </button>
+    );
+  }
+
+  async function handleSend() {
+    if (!message.trim()) return;
+    setSending(true);
+    const { error } = await supabase
+      .from('missions')
+      .update({
+        parent_message: message.trim(),
+        parent_message_at: new Date().toISOString(),
+      })
+      .eq('id', mission.id);
+
+    if (!error) {
+      trackParentRecognitionSent({
+        mission_id: mission.id,
+        identity_tag: mission.identity_tag ?? 'none',
+        edited,
+        message_length: message.trim().length,
+      });
+      setSent(true);
+      onSent(mission.id);
+    }
+    setSending(false);
+  }
+
+  return (
+    <div className="bg-white border border-teal-200 rounded-2xl overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-3 border-b border-teal-100">
+        <div className="flex items-center gap-2.5">
+          <span className="text-2xl">{sp ? sp.emoji : '⭐'}</span>
+          <div>
+            <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">{sp ? sp.label : 'Mission complete'}</p>
+            <p className="text-sm font-semibold text-navy leading-tight">{mission.title}</p>
+          </div>
+          <button onClick={() => setOpen(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <p className="text-xs font-semibold text-gray-500 mb-2.5">Choose a message for {childName}:</p>
+
+        {/* Template chips */}
+        <div className="space-y-2 mb-3">
+          {templates.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setSelectedIdx(i);
+                setMessage(t);
+                setEdited(false);
+                trackParentRecognitionTemplateSelected({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none', template_index: i });
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm leading-snug border transition-all ${
+                selectedIdx === i && !edited
+                  ? 'bg-teal-50 border-teal-300 text-teal-900 font-medium'
+                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-teal-200'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* Edit field — shown after template selected */}
+        {selectedIdx !== null && (
+          <div className="mb-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Pencil size={11} className="text-gray-400" />
+              <span className="text-xs text-gray-400 font-medium">Edit if you&apos;d like to add a personal detail</span>
+            </div>
+            <textarea
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                if (e.target.value !== templates[selectedIdx!]) {
+                  setEdited(true);
+                  trackParentRecognitionEdited({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
+                }
+              }}
+              maxLength={200}
+              rows={3}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-none"
+            />
+            <p className="text-right text-xs text-gray-300 mt-0.5">{message.length}/200</p>
+          </div>
+        )}
+
+        <button
+          onClick={handleSend}
+          disabled={!message.trim() || sending}
+          className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+        >
+          <Send size={14} />
+          {sending ? 'Sending…' : 'Send to ' + childName}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const AVATAR_COLORS = [
   { bg: 'bg-green-500', light: 'bg-green-50', text: 'text-green-700' },
@@ -114,6 +307,8 @@ export default function DashboardPage() {
   }>>([]);
   const [approvalQueryErr, setApprovalQueryErr] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  // FW-01: track locally-sent recognitions so panel hides immediately after send
+  const [sentMissionIds, setSentMissionIds] = useState<Set<string>>(new Set());
   const router = useRouter();
   const autoGenDoneRef = useRef(false);
 
@@ -201,17 +396,18 @@ export default function DashboardPage() {
     if (childIds.length > 0) {
       const missionRes = await supabase
         .from('missions')
-        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by')
+        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by, identity_tag, parent_message, parent_message_at')
         .in('child_id', childIds)
         .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
 
       if (missionRes.error) {
+        // FW-01 columns may not exist yet — fall back to base columns
         const retry = await supabase
           .from('missions')
           .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
           .in('child_id', childIds)
           .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
-        missionData = retry.data;
+        missionData = (retry.data ?? []).map(m => ({ ...m, identity_tag: null, parent_message: null, parent_message_at: null }));
       } else {
         missionData = missionRes.data;
       }
@@ -830,6 +1026,26 @@ export default function DashboardPage() {
                           🎁 Add Rewards for {child.name}
                         </a>
                       )}
+
+                      {/* ── FW-01: Parent Recognition Panel ── */}
+                      {(() => {
+                        const recognitionTarget = childMissions.find(
+                          m => m.is_completed &&
+                               m.identity_tag &&
+                               !m.parent_message &&
+                               !sentMissionIds.has(m.id)
+                        );
+                        if (!recognitionTarget) return null;
+                        return (
+                          <RecognitionPanel
+                            key={recognitionTarget.id}
+                            mission={recognitionTarget}
+                            childName={child.name}
+                            onSent={(id) => setSentMissionIds(prev => new Set(prev).add(id))}
+                            supabase={supabase}
+                          />
+                        );
+                      })()}
 
                       {/* Kid view */}
                       <Link
