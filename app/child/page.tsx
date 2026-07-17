@@ -465,24 +465,47 @@ function MoodCheckIn({ childName, onSelect }: { childName: string; onSelect: (mo
 // Shown after mission completion. Presents the mission's assigned Growth Superpower
 // and asks if the child used it. Always skippable — never blocks completion.
 
-function SuperpowerReflectionSheet({ mission, onConfirm, onSkip }: {
+function SuperpowerReflectionSheet({ mission, onConfirm, onSkip, triggerRef }: {
   mission: Mission;
   onConfirm: (answer: 'yes' | 'unsure') => void;
   onSkip: () => void;
+  triggerRef?: React.RefObject<HTMLElement>;
 }) {
   const sp = getSuperpower(mission.identity_tag);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // Move focus into modal on open; restore to trigger on close
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    return () => {
+      if (triggerRef?.current) triggerRef.current.focus();
+      else prev?.focus();
+    };
+  }, [triggerRef]);
 
   // Fall back to the category-based prompt if no superpower assigned
   if (!sp) {
     const prompt = REFLECTION_PROMPTS[mission.category ?? ''] ?? DEFAULT_REFLECTION;
     const emoji  = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
     return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 outline-none"
         >
           <div className="text-center mb-5">
             <div className="text-4xl mb-2">{emoji}</div>
@@ -509,12 +532,16 @@ function SuperpowerReflectionSheet({ mission, onConfirm, onSkip }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 outline-none"
       >
         {/* Superpower badge */}
         <div className="flex flex-col items-center mb-5">
@@ -527,7 +554,7 @@ function SuperpowerReflectionSheet({ mission, onConfirm, onSkip }: {
         </div>
 
         <p className="text-center text-sm font-semibold text-gray-600 mb-4">
-          {sp.reflectionPrompt}
+          Does this feel like the special skill you used?
         </p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -535,7 +562,7 @@ function SuperpowerReflectionSheet({ mission, onConfirm, onSkip }: {
             onClick={() => onConfirm('yes')}
             className="py-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-sm min-h-[52px]"
           >
-            ✨ I just did it!
+            ✨ Yes, that was me!
           </button>
           <button
             onClick={() => onConfirm('unsure')}
@@ -852,12 +879,11 @@ function MissionLoadingScreen({ childName, onRetry, failed }: { childName: strin
 // ── Mission row (flat list design) ───────────────────────────────────────────
 // States: completed (locked) | active/started (shows I Did It!) | idle (shows Start Mission)
 
-function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }: {
+function MissionRow({ mission, onComplete, isSaving, disabled, isLast }: {
   mission: Mission;
-  onStart: (m: Mission) => void;
   onComplete: (m: Mission) => void;
-  isActive: boolean;
   isSaving: boolean;
+  disabled: boolean;
   isLast: boolean;
 }) {
   const emoji      = CAT_EMOJI[mission.category ?? 'general'] ?? '⭐';
@@ -869,8 +895,8 @@ function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }
       {/* Title row */}
       <div className="flex items-center gap-3">
         <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors
-          ${isComplete ? 'bg-teal-500 text-white' : isActive ? 'bg-amber-400 text-white' : 'border-2 border-gray-200 bg-white'}`}>
-          {isComplete ? '✓' : isActive ? '▶' : ''}
+          ${isComplete ? 'bg-teal-500 text-white' : 'border-2 border-gray-200 bg-white'}`}>
+          {isComplete ? '✓' : ''}
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium leading-snug ${isComplete ? 'line-through text-gray-400' : 'text-navy'}`}>
@@ -883,25 +909,15 @@ function MissionRow({ mission, onStart, onComplete, isActive, isSaving, isLast }
 
       {/* Action row — hidden for completed missions */}
       {!isComplete && (
-        <div className="mt-2.5 flex gap-2">
-          {isActive ? (
-            <button
-              onClick={() => !isSaving && onComplete(mission)}
-              disabled={isSaving}
-              aria-label={`I completed "${mission.title}"`}
-              className="w-full h-9 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
-            >
-              {isSaving ? '⏳ Saving…' : '✅ I Did It!'}
-            </button>
-          ) : (
-            <button
-              onClick={() => onStart(mission)}
-              aria-label={`Start "${mission.title}"`}
-              className="w-full h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-xs active:scale-[0.97] transition-all flex items-center justify-center gap-1.5"
-            >
-              ▶ Start Mission
-            </button>
-          )}
+        <div className="mt-2.5">
+          <button
+            onClick={() => !(disabled || isSaving) && onComplete(mission)}
+            disabled={disabled || isSaving}
+            aria-label={`I completed "${mission.title}"`}
+            className="w-full h-9 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs hover:from-teal-600 hover:to-emerald-600 active:scale-[0.97] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+          >
+            {isSaving ? '⏳ Saving…' : '✅ I Did It!'}
+          </button>
         </div>
       )}
     </div>
@@ -939,7 +955,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
   const pendingEvening   = pending.filter(m => getDaypartGroup(m.category ?? '') === 'evening');
   const pendingBonus     = pending.filter(m => getDaypartGroup(m.category ?? '') === 'bonus');
 
-  const [activeMissionId, setActiveMissionId]     = useState<string | null>(null);
   const [reflectionMission, setReflectionMission] = useState<Mission | null>(null);
   const [savingMissionId, setSavingMissionId]     = useState<string | null>(null);
   const [proudMomentMission, setProudMomentMission] = useState<Mission | null>(null);
@@ -949,13 +964,8 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
     m => m.parent_message && !m.parent_message_seen_at
   ) ?? null;
 
-  function handleMissionStart(mission: Mission) {
-    if (mission.is_completed || savingMissionId) return;
-    setActiveMissionId(mission.id);
-  }
-
   function handleMissionReadyToComplete(mission: Mission) {
-    if (mission.is_completed || savingMissionId) return;
+    if (mission.is_completed || savingMissionId || reflectionMission) return;
     setReflectionMission(mission);
     trackSuperpowerReflectionShown({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
   }
@@ -970,7 +980,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
       await onMissionComplete(mission, answer);
     } finally {
       setSavingMissionId(null);
-      setActiveMissionId(null);
     }
   }
 
@@ -984,7 +993,6 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
       await onMissionComplete(mission, '');
     } finally {
       setSavingMissionId(null);
-      setActiveMissionId(null);
     }
   }
 
@@ -1030,51 +1038,40 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
   const nextReward         = sortedRewards.find((r) => r.coin_cost > child.points) ?? null;
 
   async function askParent(reward: Reward) {
-    console.log('[askParent] button clicked, reward:', reward.id, reward.title);
     setAskParentError(null);
-    if (requestingRewardId) {
-      console.log('[askParent] already requesting, skipping');
-      return;
-    }
+    if (requestingRewardId) return;
     setRequestingRewardId(reward.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('[askParent] session:', session ? `uid=${session.user.id}` : 'NULL — no session');
       if (!session) {
         setAskParentError('No session — please reload and try again.');
         setRequestingRewardId(null);
         return;
       }
-      console.log('[askParent] child.id:', child.id);
-      const payload = {
-        parent_id: session.user.id,
-        child_id: child.id,
-        reward_id: reward.id,
-        reward_name: reward.title,
-        reward_title: reward.title,
-        cost: reward.coin_cost,
-        coin_cost: reward.coin_cost,
-        reward_type: 'standard',
-        status: 'pending',
-        requested_at: new Date().toISOString(),
-      };
-      console.log('[askParent] insert payload:', JSON.stringify(payload));
-      const { data: insertData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('reward_redemptions')
-        .insert(payload)
-        .select('id');
-      console.log('[askParent] insert result — data:', insertData, 'error:', insertError);
+        .insert({
+          parent_id: session.user.id,
+          child_id: child.id,
+          reward_id: reward.id,
+          reward_name: reward.title,
+          reward_title: reward.title,
+          cost: reward.coin_cost,
+          coin_cost: reward.coin_cost,
+          reward_type: 'standard',
+          status: 'pending',
+          requested_at: new Date().toISOString(),
+        });
       if (insertError) {
-        console.error('[askParent] insert FAILED:', insertError.code, insertError.message, insertError.details, insertError.hint);
-        setAskParentError(`Request failed (${insertError.code}): ${insertError.message}`);
+        console.error('[askParent] insert failed:', insertError.code, insertError.message);
+        setAskParentError(`Request failed: ${insertError.message}`);
         setRequestingRewardId(null);
         return;
       }
-      console.log('[askParent] insert SUCCESS, row id:', insertData?.[0]?.id);
       setPendingRedemptions(prev => new Set(prev).add(reward.id));
     } catch (e) {
       console.error('[askParent] exception:', e);
-      setAskParentError('Unexpected error — see console.');
+      setAskParentError('Unexpected error — please try again.');
     }
     setRequestingRewardId(null);
   }
@@ -1201,10 +1198,9 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
                 <MissionRow
                   key={m.id}
                   mission={m}
-                  onStart={handleMissionStart}
                   onComplete={handleMissionReadyToComplete}
-                  isActive={activeMissionId === m.id}
                   isSaving={savingMissionId === m.id}
+                  disabled={savingMissionId !== null || reflectionMission !== null}
                   isLast={i === pending.length - 1}
                 />
               ))}
@@ -1234,10 +1230,9 @@ function ChildView({ child, missions, rewards, streak, mood, onBack, onMissionCo
                       <MissionRow
                         key={m.id}
                         mission={m}
-                        onStart={() => {}}
                         onComplete={() => {}}
-                        isActive={false}
                         isSaving={false}
+                        disabled={true}
                         isLast={i === done.length - 1}
                       />
                     ))}
@@ -1876,55 +1871,41 @@ export default function ChildPage() {
       return;
     }
 
-    console.log('[generate/DIAG] button clicked — childId:', selected.id, 'missionRound:', missionRound, 'mood:', selectedMood ?? null);
-    console.log('[generate/DIAG] generatingMore before:', generatingMore, 'autoGenerating before:', autoGenerating);
     setGeneratingMore(true);
     setLastGenError(null);
     setMissionError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.log('[generate/DIAG] no session — aborting');
         setMissionError('Session expired — please log in again.');
         setGeneratingMore(false);
         return;
       }
-      const reqBody = { childId: selected.id, parentId: session.user.id, count: 8, missionRound, mood: selectedMood ?? null };
-      console.log('[generate/DIAG] request start — body:', JSON.stringify(reqBody));
       const res = await fetch('/api/generate-missions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(reqBody),
+        body: JSON.stringify({ childId: selected.id, parentId: session.user.id, count: 8, missionRound, mood: selectedMood ?? null }),
       });
-      console.log('[generate/DIAG] response status:', res.status);
       const data = await res.json();
-      console.log('[generate/DIAG] response body:', JSON.stringify(data));
       if (!res.ok) {
         const errMsg = data.error ?? 'Could not generate missions. Please try again.';
-        console.log('[generate/DIAG] generation failed:', errMsg);
         setLastGenError(errMsg);
-        setMissionError(errMsg); // surface in visible red banner
+        setMissionError(errMsg);
         setTimeout(() => setMissionError(null), 6000);
       } else {
-        console.log('[generate/DIAG] generated count:', data.generated);
         setMissionRound(r => r + 1);
         if (data.pack) setMissionPack(data.pack);
-        const fetchStart = Date.now();
         await fetchData();
-        console.log('[generate/DIAG] post-generation fetchData completed in', Date.now() - fetchStart, 'ms');
-        const missionCountAfter = missions.filter(m => m.child_id === selected.id).length;
-        console.log('[generate/DIAG] visible mission count after fetch:', missionCountAfter);
       }
     } catch (e) {
-      console.log('[generate/DIAG] caught exception:', String(e));
+      const msg = 'Could not generate missions. Please try again.';
       setLastGenError(String(e));
-      setMissionError('Could not generate missions. Please try again.');
+      setMissionError(msg);
       setTimeout(() => setMissionError(null), 6000);
     }
-    console.log('[generate/DIAG] generatingMore after: false');
     setGeneratingMore(false);
   }
 
@@ -1971,49 +1952,20 @@ export default function ChildPage() {
     //   - Retry/duplicate call: guard finds existing ledger entry → wallet update skipped → RPC returns success.
     // Therefore: any coinsError here is always a genuine failure, never a duplicate-award signal.
 
-    // DIAGNOSTIC — full award pipeline trace
-    const missionId = mission.id;
-    const childId   = selected.id;
-    console.log('[add_coins/DIAG] missionId', missionId);
-    console.log('[add_coins/DIAG] childId', childId);
-    const { data: _walletBefore } = await supabase.from('bt_coin_wallet').select('balance').eq('child_id', childId).single();
-    const walletBefore = _walletBefore?.balance ?? 'NO_ROW';
-    console.log('[add_coins/DIAG] wallet_before', walletBefore);
-    const rpcRequest = { missionId, childId, amount: 10 };
-    console.log('[add_coins/DIAG] RPC request', rpcRequest);
-
     const rpcResponse = await supabase.rpc('add_coins', {
-      p_child_id:    childId,
+      p_child_id:    selected.id,
       p_amount:      10,
       p_type:        'earned',
       p_description: `Completed: ${mission.title}`,
-      p_mission_id:  missionId,
+      p_mission_id:  mission.id,
     });
     const coinsError = rpcResponse.error;
-
-    console.log('[add_coins/DIAG] RPC raw response', JSON.stringify(rpcResponse.data));
-    console.log('[add_coins/DIAG] RPC raw error', JSON.stringify(coinsError));
-    const { data: _walletAfter } = await supabase.from('bt_coin_wallet').select('balance').eq('child_id', childId).single();
-    const walletAfter = _walletAfter?.balance ?? 'NO_ROW';
-    console.log('[add_coins/DIAG] wallet_after', walletAfter);
 
     // Supabase returns a truthy-but-empty error object for RETURNS void RPCs in some client
     // versions (all fields null/empty). Treat that as success; only act on genuine errors
     // where at least a message or code is present.
     const coinsErrorIsGenuine = !!(coinsError && (coinsError.message || coinsError.code));
-    console.log('[add_coins/DIAG] coinsErrorIsGenuine', coinsErrorIsGenuine);
 
-    // If RPC succeeded but wallet did not change, check whether ON CONFLICT suppressed
-    // the ledger insert — meaning this mission_id already has a positive ledger entry.
-    if (!coinsErrorIsGenuine && walletAfter === walletBefore) {
-      const { data: existingLedger, error: ledgerErr } = await supabase
-        .from('bt_coin_ledger')
-        .select('id, amount, created_at')
-        .eq('mission_id', missionId)
-        .gt('amount', 0);
-      console.log('[add_coins/DIAG] WALLET_UNCHANGED — existing positive ledger rows for this mission_id:',
-        ledgerErr ? `LEDGER_QUERY_ERROR: ${ledgerErr.message}` : JSON.stringify(existingLedger));
-    }
     if (coinsErrorIsGenuine) {
       console.error('[add_coins] genuine failure — rolling back mission:', {
         code: coinsError!.code,

@@ -102,6 +102,7 @@ function RecognitionPanel({
   const [edited, setEdited] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   if (sent) {
     return (
@@ -141,8 +142,9 @@ function RecognitionPanel({
   }
 
   async function handleSend() {
-    if (!message.trim()) return;
+    if (!message.trim() || sending) return;
     setSending(true);
+    setSendError(null);
     const { error } = await supabase
       .from('missions')
       .update({
@@ -151,7 +153,10 @@ function RecognitionPanel({
       })
       .eq('id', mission.id);
 
-    if (!error) {
+    if (error) {
+      console.error('[RecognitionPanel] send failed:', error.code, error.message);
+      setSendError('Could not send your message. Please try again.');
+    } else {
       trackParentRecognitionSent({
         mission_id: mission.id,
         identity_tag: mission.identity_tag ?? 'none',
@@ -181,7 +186,7 @@ function RecognitionPanel({
       </div>
 
       <div className="p-4">
-        <p className="text-xs font-semibold text-gray-500 mb-2.5">Choose a message for {childName}:</p>
+        <p className="text-xs font-semibold text-gray-500 mb-2.5">Tap a message to select it:</p>
 
         {/* Template chips */}
         <div className="space-y-2 mb-3">
@@ -192,40 +197,49 @@ function RecognitionPanel({
                 setSelectedIdx(i);
                 setMessage(t);
                 setEdited(false);
+                setSendError(null);
                 trackParentRecognitionTemplateSelected({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none', template_index: i });
               }}
               className={`w-full text-left px-3 py-2.5 rounded-xl text-sm leading-snug border transition-all ${
                 selectedIdx === i && !edited
-                  ? 'bg-teal-50 border-teal-300 text-teal-900 font-medium'
-                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-teal-200'
+                  ? 'bg-teal-50 border-teal-400 text-teal-900 font-medium ring-1 ring-teal-300'
+                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-teal-200 hover:bg-teal-50/40'
               }`}
             >
+              {selectedIdx === i && !edited && (
+                <span className="inline-block w-2 h-2 rounded-full bg-teal-500 mr-1.5 align-middle" />
+              )}
               {t}
             </button>
           ))}
         </div>
 
-        {/* Edit field — shown after template selected */}
-        {selectedIdx !== null && (
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Pencil size={11} className="text-gray-400" />
-              <span className="text-xs text-gray-400 font-medium">Edit if you&apos;d like to add a personal detail</span>
-            </div>
-            <textarea
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                if (e.target.value !== templates[selectedIdx!]) {
-                  setEdited(true);
-                  trackParentRecognitionEdited({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
-                }
-              }}
-              maxLength={200}
-              rows={3}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-none"
-            />
-            <p className="text-right text-xs text-gray-300 mt-0.5">{message.length}/200</p>
+        {/* Personalize field — always visible; pre-filled from template selection */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Pencil size={11} className="text-gray-400" />
+            <span className="text-xs text-gray-500 font-semibold">Personalize your message</span>
+          </div>
+          <textarea
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (selectedIdx !== null && e.target.value !== templates[selectedIdx]) {
+                setEdited(true);
+                trackParentRecognitionEdited({ mission_id: mission.id, identity_tag: mission.identity_tag ?? 'none' });
+              }
+            }}
+            placeholder="Select a message above, then edit it here if you'd like…"
+            maxLength={200}
+            rows={3}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-none placeholder:text-gray-300"
+          />
+          <p className="text-right text-xs text-gray-300 mt-0.5">{message.length}/200</p>
+        </div>
+
+        {sendError && (
+          <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 font-medium">
+            ⚠️ {sendError}
           </div>
         )}
 
@@ -306,6 +320,7 @@ export default function DashboardPage() {
   }>>([]);
   const [approvalQueryErr, setApprovalQueryErr] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [approvalErrors, setApprovalErrors] = useState<Record<string, string>>({});
   // FW-01: track locally-sent recognitions so panel hides immediately after send
   const [sentMissionIds, setSentMissionIds] = useState<Set<string>>(new Set());
   const router = useRouter();
@@ -332,9 +347,6 @@ export default function DashboardPage() {
       if (res.error) {
         console.error('[dashboard/poll] missions re-fetch failed:', res.error.code, res.error.message);
       } else if (res.data) {
-        // DIAGNOSTIC — remove after root cause confirmed
-        const completed = res.data.filter(m => m.is_completed);
-        console.log('[dashboard/poll] fetched', res.data.length, 'missions,', completed.length, 'completed. Completed sample:', JSON.stringify(completed.slice(0, 3).map(m => ({ id: m.id, is_completed: m.is_completed, identity_tag: m.identity_tag, parent_message: m.parent_message }))));
         setMissions(res.data);
       }
     }, 30_000);
@@ -439,9 +451,6 @@ export default function DashboardPage() {
       } else {
         missionData = missionRes.data;
       }
-      // DIAGNOSTIC — remove after root cause confirmed
-      console.log('[dashboard/init] missionData sample (first 3 rows):', JSON.stringify((missionData ?? []).slice(0, 3).map(m => ({ id: m.id, child_id: m.child_id, is_completed: m.is_completed, mission_date: m.mission_date, identity_tag: m.identity_tag, parent_message: m.parent_message }))));
-      console.log('[dashboard/init] todayStr():', todayStr());
     }
 
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
@@ -575,15 +584,36 @@ export default function DashboardPage() {
   }
 
   async function handleApproval(id: string, approve: boolean) {
+    if (approvingId === id) return; // double-click guard
     setApprovingId(id);
+    setApprovalErrors(prev => { const next = { ...prev }; delete next[id]; return next; });
     try {
       const approval = pendingApprovals.find(a => a.id === id);
       if (approve && approval) {
-        if (!approval.coin_cost || !approval.reward_id) {
-          console.error('[handleApproval] approval missing coin_cost or reward_id — cannot deduct');
+        if (approval.coin_cost == null || !approval.reward_id) {
+          setApprovalErrors(prev => ({ ...prev, [id]: 'Reward data is missing — please refresh and try again.' }));
           setApprovingId(null);
           return;
         }
+
+        // Fetch the latest wallet balance before deducting — dashboard state may be stale.
+        const { data: freshWallet } = await supabase
+          .from('bt_coin_wallet')
+          .select('balance')
+          .eq('child_id', approval.child_id)
+          .single();
+        const currentBalance = freshWallet?.balance ?? 0;
+        if (currentBalance < approval.coin_cost) {
+          const childNm = approval.child_name ?? 'Your child';
+          const needed = approval.coin_cost - currentBalance;
+          setApprovalErrors(prev => ({
+            ...prev,
+            [id]: `${childNm} needs ${needed} more BrytCoin${needed !== 1 ? 's' : ''} before this reward can be approved.`,
+          }));
+          setApprovingId(null);
+          return;
+        }
+
         const { error: coinError } = await supabase.rpc('add_coins', {
           p_child_id:    approval.child_id,
           p_amount:      -approval.coin_cost,
@@ -592,16 +622,39 @@ export default function DashboardPage() {
           p_reward_id:   approval.reward_id,
         });
         if (coinError) {
-          console.error('[handleApproval] coin deduction failed:', coinError.message);
+          console.error('[handleApproval] coin deduction failed:', coinError.code, coinError.message);
+          const msg = coinError.message?.includes('Insufficient balance')
+            ? `${approval.child_name ?? 'Your child'} doesn't have enough BrytCoins for this reward.`
+            : `Could not approve reward: ${coinError.message}`;
+          setApprovalErrors(prev => ({ ...prev, [id]: msg }));
           setApprovingId(null);
           return;
         }
       }
-      await supabase.from('reward_redemptions')
+      const { error: statusErr } = await supabase
+        .from('reward_redemptions')
         .update({ status: approve ? 'approved' : 'declined' })
         .eq('id', id);
+      if (statusErr) {
+        console.error('[handleApproval] status update failed:', statusErr.message);
+        setApprovalErrors(prev => ({ ...prev, [id]: `Could not update request: ${statusErr.message}` }));
+        setApprovingId(null);
+        return;
+      }
       setPendingApprovals(prev => prev.filter(a => a.id !== id));
-    } catch { }
+
+      // Refresh wallet balances so the dashboard balance reflects the deduction.
+      if (approve) {
+        const { data: walletData } = await supabase.from('bt_coin_wallet').select('child_id, balance');
+        if (walletData) {
+          const walletMap = Object.fromEntries(walletData.map(w => [w.child_id, w.balance]));
+          setChildren(prev => prev.map(c => walletMap[c.id] !== undefined ? { ...c, points: walletMap[c.id] } : c));
+        }
+      }
+    } catch (e) {
+      console.error('[handleApproval] exception:', e);
+      setApprovalErrors(prev => ({ ...prev, [id]: 'Unexpected error — please try again.' }));
+    }
     setApprovingId(null);
   }
 
@@ -907,13 +960,18 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-500 font-medium mb-0.5">{approval.child_name} is hoping for…</p>
                         <p className="text-lg font-black text-gray-900 mb-1">{approval.reward_title}</p>
                         <p className="text-sm font-bold text-amber-600 mb-4">{approval.coin_cost} 🪙 BrytCoins</p>
+                        {approvalErrors[approval.id] && (
+                          <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 font-medium">
+                            ⚠️ {approvalErrors[approval.id]}
+                          </div>
+                        )}
                         <div className="flex gap-3">
                           <button
                             onClick={() => handleApproval(approval.id, true)}
                             disabled={approvingId === approval.id}
                             className="flex-1 min-h-[44px] bg-teal-500 hover:bg-teal-600 active:scale-95 text-white font-bold rounded-2xl transition-all disabled:opacity-60 text-sm"
                           >
-                            {approvingId === approval.id ? '…' : '❤️ Say Yes!'}
+                            {approvingId === approval.id ? 'Approving…' : '❤️ Say Yes!'}
                           </button>
                           <button
                             onClick={() => handleApproval(approval.id, false)}
