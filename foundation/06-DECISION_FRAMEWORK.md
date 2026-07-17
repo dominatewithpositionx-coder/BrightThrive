@@ -1,7 +1,7 @@
 # BrytThrive Decision Framework
 
 > **Status:** Active
-> **Last updated:** July 17, 2026
+> **Last updated:** July 17, 2026 (rev 2)
 
 The Decision Framework is a practical evaluation tool for every feature proposal, product change, and technical initiative. It translates the [Constitution](./01-CONSTITUTION.md) and [Product Operating System](./03-PRODUCT_OPERATING_SYSTEM.md) into a structured scoring process.
 
@@ -106,18 +106,36 @@ A **Strong No** on any constitutional dimension (rows marked ⚠️) requires a 
 
 ---
 
+### ⚠️ Child Individuality
+
+**Does this feature preserve each child's identity, autonomy, and progress independently?**
+
+*A No here requires redesign.*
+
+*Consider: are sibling wallets, journeys, and AI models fully isolated? Does this surface any comparison between children?*
+
+*Derived from [Article VII](./01-CONSTITUTION.md#article-vii--every-child-is-an-individual)*
+
+---
+
 ### Evidence
 
-**What is the quality of evidence supporting this proposal?**
+**What evidence from the [Research Library](./09-RESEARCH_LIBRARY.md) supports this proposal?**
+
+*A proposal with no supporting evidence must identify its assumption and include a pilot plan before advancing.*
+
+*Derived from [Article VI](./01-CONSTITUTION.md#article-vi--evidence-before-opinion)*
 
 | Evidence Level | Definition |
 |---------------|-----------|
 | Observed behavior | Derived from real user interaction data |
 | Parent/child feedback | Direct qualitative input from users |
+| Scientific literature | Peer-reviewed or expert-validated research |
+| Internal experiment | Controlled A/B test or pilot result |
 | Hypothesis | Reasoned but untested assumption |
 | Speculation | Intuition without supporting data |
 
-Proposals based on speculation that score Neutral or below on acquisition, activation, or retention should be deferred until evidence improves.
+Proposals based on speculation that score Neutral or below on acquisition, activation, or retention must include a pilot plan before advancing.
 
 ---
 
@@ -141,9 +159,11 @@ When submitting a feature proposal, complete the following:
 | Revenue | | |
 | Family Win | | |
 | Child Agency | | |
+| Child Individuality | | |
 | Constitutional Alignment | | |
 | Engineering Complexity | | |
 | Evidence | | |
+| Research Library reference | | |
 
 ### Constitutional conflicts (if any)
 [List any conflicts with the Constitution and how the proposal addresses them.]

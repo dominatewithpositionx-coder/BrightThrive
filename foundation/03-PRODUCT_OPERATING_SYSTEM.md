@@ -1,7 +1,7 @@
 # BrytThrive Product Operating System
 
 > **Status:** Active
-> **Last updated:** July 17, 2026
+> **Last updated:** July 17, 2026 (rev 2)
 
 The Product Operating System defines how BrytThrive makes decisions. It translates the [Constitution](./01-CONSTITUTION.md) and [Product Bible](./02-PRODUCT-BIBLE.md) into day-to-day operating practice.
 
@@ -57,6 +57,20 @@ Every field, screen, and step added to onboarding must justify itself by improvi
 **Does this respect the child's sense of ownership and autonomy?**
 
 A feature that makes the child feel managed, surveilled, or controlled — rather than capable and celebrated — fails this test and must be redesigned.
+
+### Evidence
+**What evidence from the [Research Library](./09-RESEARCH_LIBRARY.md) supports this decision?**
+
+Every meaningful product decision should be supported by parent feedback, child behavior, product analytics, scientific literature, controlled experiments, or expert guidance. If no evidence exists, identify the assumption, recommend a pilot, and gather evidence before proceeding.
+
+*Derived from [Article VI — Evidence Before Opinion](./01-CONSTITUTION.md#article-vi--evidence-before-opinion)*
+
+### Child Individuality
+**Does this feature preserve each child's identity, autonomy, and progress independently?**
+
+Any feature that touches multiple children must ensure sibling data, wallets, journeys, and AI models remain fully isolated. Sibling comparisons must never be surfaced or encouraged.
+
+*Derived from [Article VII — Every Child is an Individual](./01-CONSTITUTION.md#article-vii--every-child-is-an-individual)*
 
 ---
 

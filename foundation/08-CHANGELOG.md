@@ -19,6 +19,44 @@ Each entry records:
 
 ## Amendment Record
 
+### v1.3.0 — Every Child is an Individual
+
+| Field | Value |
+|-------|-------|
+| **Amendment** | Every Child is an Individual |
+| **Constitutional article** | Article VII |
+| **Date** | July 17, 2026 |
+| **Status** | Ratified |
+| **Documents affected** | `01-CONSTITUTION.md`, `03-PRODUCT_OPERATING_SYSTEM.md`, `06-DECISION_FRAMEWORK.md`, `09-RESEARCH_LIBRARY.md`, `README.md` |
+| **Summary** | Ratified the principle that every child in BrytThrive has an independent identity, wallet, AI model, journey, and recognition history. Sibling comparisons are prohibited. Any multi-child feature must preserve full individual isolation. |
+
+---
+
+### v1.2.0 — Evidence Before Opinion
+
+| Field | Value |
+|-------|-------|
+| **Amendment** | Evidence Before Opinion |
+| **Constitutional article** | Article VI |
+| **Date** | July 17, 2026 |
+| **Status** | Ratified |
+| **Documents affected** | `01-CONSTITUTION.md`, `03-PRODUCT_OPERATING_SYSTEM.md`, `06-DECISION_FRAMEWORK.md`, `09-RESEARCH_LIBRARY.md`, `README.md` |
+| **Summary** | Ratified the principle that every meaningful product decision must be supported by evidence — parent feedback, child behavior, analytics, scientific literature, experiments, or expert guidance. When evidence is absent, the team must identify the assumption, pilot it, and gather evidence before proceeding. Establishes the Research Library as the institutional evidence repository. |
+
+---
+
+### Research Library Established
+
+| Field | Value |
+|-------|-------|
+| **Change** | Research Library created |
+| **Date** | July 17, 2026 |
+| **Status** | Active |
+| **Documents affected** | `09-RESEARCH_LIBRARY.md` (new) |
+| **Summary** | Created the permanent evidence repository for BrytThrive. Defines evidence standards (★ ratings), evidence categories, entry template, evidence index, and research backlog. |
+
+---
+
 ### v1.1.0 — Family Journey Principle
 
 | Field | Value |

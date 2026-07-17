@@ -36,6 +36,7 @@ Every AI agent, engineer, designer, and product contributor begins here before m
 | 06 | [DECISION_FRAMEWORK.md](./06-DECISION_FRAMEWORK.md) | Structured scorecard for evaluating feature proposals | Occasionally |
 | 07 | [GLOSSARY.md](./07-GLOSSARY.md) | Shared vocabulary — the authority on BrytThrive terminology | As needed |
 | 08 | [CHANGELOG.md](./08-CHANGELOG.md) | Permanent amendment history | Each amendment |
+| 09 | [RESEARCH_LIBRARY.md](./09-RESEARCH_LIBRARY.md) | Institutional evidence repository — captures research, insights, and product implications | Continuously |
 
 ---
 
@@ -60,6 +61,9 @@ If you are new to BrytThrive — whether you are an AI agent, an engineer, a des
 | Onboarding changes | [01-CONSTITUTION.md](./01-CONSTITUTION.md) Article V + [03-PRODUCT_OPERATING_SYSTEM.md](./03-PRODUCT_OPERATING_SYSTEM.md) |
 | AI behavior, prompts, outputs | [05-AI_PRINCIPLES.md](./05-AI_PRINCIPLES.md) + [01-CONSTITUTION.md](./01-CONSTITUTION.md) Article IV |
 | UI/UX design | [04-DESIGN_PRINCIPLES.md](./04-DESIGN_PRINCIPLES.md) |
+| Multi-child features | [01-CONSTITUTION.md](./01-CONSTITUTION.md) Article VII |
+| Evidence requirements | [01-CONSTITUTION.md](./01-CONSTITUTION.md) Article VI + [09-RESEARCH_LIBRARY.md](./09-RESEARCH_LIBRARY.md) |
+| Research, insights, experiments | [09-RESEARCH_LIBRARY.md](./09-RESEARCH_LIBRARY.md) |
 | Terminology in copy or code | [07-GLOSSARY.md](./07-GLOSSARY.md) |
 | Product vision and roadmap | [02-PRODUCT-BIBLE.md](./02-PRODUCT-BIBLE.md) |
 | Constitutional disputes | [01-CONSTITUTION.md](./01-CONSTITUTION.md) is the final authority |
@@ -78,6 +82,8 @@ If you are new to BrytThrive — whether you are an AI agent, an engineer, a des
 | III | The Parent | Founding |
 | IV | The Role of AI | Founding |
 | V | The Family Journey Principle | Ratified July 17, 2026 |
+| VI | Evidence Before Opinion | Ratified July 17, 2026 |
+| VII | Every Child is an Individual | Ratified July 17, 2026 |
 
 ---
 

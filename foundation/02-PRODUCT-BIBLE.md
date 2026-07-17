@@ -271,3 +271,11 @@ Secondary retention mechanisms:
 | P5 | Family milestone celebrations | Research |
 
 *Specific implementation details belong in engineering tickets, not this document.*
+
+---
+
+## Evidence and Research
+
+Product decisions documented in this Bible should be grounded in evidence. The [Research Library](./09-RESEARCH_LIBRARY.md) is the institutional repository for all evidence that informs BrytThrive's product direction — from parent interviews and child behavior to scientific literature and pilot experiments.
+
+When a section of this document is updated, the relevant Research Library entries should be cited where evidence exists.

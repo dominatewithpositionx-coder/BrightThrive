@@ -1,6 +1,6 @@
 # BrytThrive Constitution
 
-> **Version:** 1.1.0
+> **Version:** 1.3.0
 > **Status:** Active
 > **Last amended:** July 17, 2026
 
@@ -14,7 +14,9 @@
 4. [Article III — The Parent](#article-iii--the-parent)
 5. [Article IV — The Role of AI](#article-iv--the-role-of-ai)
 6. [Article V — The Family Journey Principle](#article-v--the-family-journey-principle)
-7. [Amendment History](#amendment-history)
+7. [Article VI — Evidence Before Opinion](#article-vi--evidence-before-opinion)
+8. [Article VII — Every Child is an Individual](#article-vii--every-child-is-an-individual)
+9. [Amendment History](#amendment-history)
 
 ---
 
@@ -109,12 +111,89 @@ Only then has onboarding truly succeeded.
 
 ---
 
+## Article VI — Evidence Before Opinion
+
+> **Ratified:** July 17, 2026
+> **Status:** Active
+
+BrytThrive is built on observed evidence, measurable outcomes, and continuous learning — not assumptions.
+
+Every meaningful product decision should be supported by one or more of:
+
+- Parent feedback
+- Child behavior
+- Product analytics
+- Scientific literature
+- Controlled experiments
+- Expert guidance
+
+When evidence conflicts with opinion, BrytThrive follows the evidence.
+
+This principle applies equally to:
+
+- AI recommendations
+- Product roadmap decisions
+- UX improvements
+- Mission design
+- Recognition strategies
+
+#### Constitutional Test
+
+Before implementing any feature, ask:
+
+> "What evidence supports this decision?"
+
+If no evidence exists:
+
+1. Identify the assumption.
+2. Recommend a pilot or experiment.
+3. Gather evidence.
+4. Revisit the decision.
+
+*Evidence is captured and maintained in the [Research Library](./09-RESEARCH_LIBRARY.md).*
+
+---
+
+## Article VII — Every Child is an Individual
+
+> **Ratified:** July 17, 2026
+> **Status:** Active
+
+BrytThrive recognizes that every child is unique.
+
+No child should lose their identity simply because they belong to a family.
+
+Every child deserves their own:
+
+- Growth Profile
+- Mission History
+- BrytCoin Wallet
+- AI Learning Model
+- Recognition History
+- Rewards
+- Superpowers
+- Journey
+
+The family is the environment. The child is the hero.
+
+#### Constitutional Test
+
+Any feature supporting multiple children must preserve each child's identity, autonomy, and progress independently.
+
+- Sibling comparisons must never be encouraged.
+- AI recommendations must always be individualized.
+- A child's data, wallet, and journey must never be visible to another child.
+
+---
+
 ## Amendment History
 
 | Version | Amendment | Date | Status |
 |---------|-----------|------|--------|
 | 1.0.0 | Founding articles (I–IV) established | Pre-2026 | Ratified |
 | 1.1.0 | Family Journey Principle (Article V) | July 17, 2026 | Ratified |
+| 1.2.0 | Evidence Before Opinion (Article VI) | July 17, 2026 | Ratified |
+| 1.3.0 | Every Child is an Individual (Article VII) | July 17, 2026 | Ratified |
 
 ---
 
