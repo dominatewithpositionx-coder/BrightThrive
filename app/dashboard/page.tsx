@@ -34,7 +34,7 @@ type Mission = {
   screen_time_reward?: number;
   is_completed: boolean;
   mission_date?: string;
-  updated_at?: string;
+  created_at?: string;
   generated_by?: string;
   // FW-01
   identity_tag?: string | null;
@@ -326,7 +326,7 @@ export default function DashboardPage() {
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
       const res = await supabase
         .from('missions')
-        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by, identity_tag, parent_message, parent_message_at')
+        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, created_at, generated_by, identity_tag, parent_message, parent_message_at')
         .in('child_id', childIds)
         .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
       if (res.error) {
@@ -423,7 +423,7 @@ export default function DashboardPage() {
     if (childIds.length > 0) {
       const missionRes = await supabase
         .from('missions')
-        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by, identity_tag, parent_message, parent_message_at')
+        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, created_at, generated_by, identity_tag, parent_message, parent_message_at')
         .in('child_id', childIds)
         .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
 
@@ -432,7 +432,7 @@ export default function DashboardPage() {
         console.error('[dashboard/init] primary missions SELECT failed — schema cache may be stale. Code:', missionRes.error.code, 'Message:', missionRes.error.message);
         const retry = await supabase
           .from('missions')
-          .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
+          .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, created_at')
           .in('child_id', childIds)
           .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
         missionData = (retry.data ?? []).map(m => ({ ...m, identity_tag: null, parent_message: null, parent_message_at: null }));
@@ -776,7 +776,7 @@ export default function DashboardPage() {
 
   const recentCompleted = [...missions]
     .filter((m) => m.is_completed)
-    .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime())
+    .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
     .slice(0, 5);
 
   // Weekly stats (last 7 days)
