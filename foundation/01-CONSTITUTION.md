@@ -1,4 +1,4 @@
-# BrytThrive Foundation — Constitution
+# BrytThrive Constitution
 
 > **Version:** 1.1.0
 > **Status:** Active
@@ -24,11 +24,13 @@ BrytThrive exists to help families build stronger bonds through shared wins, dai
 
 Principles recorded here are ratified — they are not suggestions. Any feature, flow, or technical implementation that conflicts with a ratified principle must be redesigned before shipping.
 
+Before proposing or implementing any feature, verify alignment with this Constitution and with the full [Foundation](./README.md). If a proposal conflicts with a governing principle, explain the conflict, recommend a redesign, and — if necessary — propose a Constitutional Amendment before proceeding.
+
 ---
 
 ## Article I — Mission
 
-*(Founding article — to be formally documented in a future amendment.)*
+*(Founding article — to be formally expanded in a future amendment.)*
 
 BrytThrive's mission is to give every child the experience of being seen, celebrated, and motivated to grow — while giving every parent the tools to make that happen consistently and joyfully.
 
@@ -36,7 +38,7 @@ BrytThrive's mission is to give every child the experience of being seen, celebr
 
 ## Article II — The Child
 
-*(Founding article — to be formally documented in a future amendment.)*
+*(Founding article — to be formally expanded in a future amendment.)*
 
 Every product decision must consider the child's experience first. A feature that is useful to parents but confusing, boring, or demeaning to a child is not a BrytThrive feature.
 
@@ -44,7 +46,7 @@ Every product decision must consider the child's experience first. A feature tha
 
 ## Article III — The Parent
 
-*(Founding article — to be formally documented in a future amendment.)*
+*(Founding article — to be formally expanded in a future amendment.)*
 
 Parents are partners, not administrators. BrytThrive gives parents real-time visibility, meaningful controls, and the language to celebrate their children — without making the app feel like homework.
 
@@ -52,7 +54,7 @@ Parents are partners, not administrators. BrytThrive gives parents real-time vis
 
 ## Article IV — The Role of AI
 
-*(Founding article — to be formally documented in a future amendment.)*
+*(Founding article — to be formally expanded in a future amendment.)*
 
 AI in BrytThrive exists to serve the family, not to collect data about them. AI personalization must be earned through demonstrated behavior, not pre-configured through lengthy intake forms.
 
@@ -113,3 +115,7 @@ Only then has onboarding truly succeeded.
 |---------|-----------|------|--------|
 | 1.0.0 | Founding articles (I–IV) established | Pre-2026 | Ratified |
 | 1.1.0 | Family Journey Principle (Article V) | July 17, 2026 | Ratified |
+
+---
+
+*See [08-CHANGELOG.md](./08-CHANGELOG.md) for the full amendment record.*
