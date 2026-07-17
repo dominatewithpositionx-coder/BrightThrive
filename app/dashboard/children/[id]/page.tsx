@@ -81,15 +81,17 @@ function formatDateShort(dateStr: string | null | undefined): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// Labels for onboarding answers shown in "What You Shared"
+// Labels for onboarding answers shown in "Your Family Setup"
+// These are FAMILY-LEVEL answers (keyed by parent_id in family_plans),
+// not per-child. All questions used plural framing during onboarding.
 const ONBOARDING_LABELS: Record<string, string> = {
-  primary_goal: 'Your primary goal',
-  child_description: 'How you described your child',
+  primary_goal: 'Primary goal for your family',
+  child_description: 'How you described your kids',
   parent_involvement: 'How involved you want to be',
-  motivation_preference: 'What motivates your child',
+  motivation_preference: 'What motivates your kids',
   screen_time_preference: 'Daily earned screen time',
   routine_timing: 'When routines matter most',
-  success_definition: 'What success looks like',
+  success_definition: 'What success looks like for your family',
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -280,10 +282,16 @@ export default function ChildGrowthProfilePage() {
           </p>
         </div>
 
-        {/* ── Section 2: What You Shared ────────────────────────────────── */}
+        {/* ── Section 2: Your Family Setup ─────────────────────────────── */}
+        {/* NOTE: personalization_data is family-level (keyed by parent_id).
+            These answers describe the whole family, not this child specifically.
+            Display them as family context only. */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-base font-bold text-gray-900 mb-1">What You Shared</h2>
-          <p className="text-xs text-gray-400 mb-4">Your answers from when you set up BrytThrive for your family.</p>
+          <h2 className="text-base font-bold text-gray-900 mb-1">Your Family Setup</h2>
+          <p className="text-xs text-gray-400 mb-1">Shared during setup · Applies to all your children</p>
+          <p className="text-xs text-gray-300 mb-4">
+            These answers shape how BrytThrive generates missions across your whole family — not just {child.name}.
+          </p>
 
           {onboardingEntries.length === 0 ? (
             <div className="bg-gray-50 rounded-2xl px-4 py-5 text-center">
@@ -295,7 +303,7 @@ export default function ChildGrowthProfilePage() {
             <div className="space-y-3">
               {onboardingEntries.map(({ key, label, value }) => (
                 <div key={key} className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-2 flex-shrink-0" />
                   <div>
                     <p className="text-xs text-gray-400 font-medium">{label}</p>
                     <p className="text-sm text-gray-700 font-semibold mt-0.5">
@@ -311,7 +319,8 @@ export default function ChildGrowthProfilePage() {
         {/* ── Section 3: Today's Personalization ───────────────────────── */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-base font-bold text-gray-900 mb-1">Today&apos;s Personalization</h2>
-          <p className="text-xs text-gray-400 mb-4">How BrytThrive is tailoring the experience for {child.name} right now.</p>
+          <p className="text-xs text-gray-400 mb-1">Specific to {child.name} · Updated as they grow</p>
+          <p className="text-xs text-gray-300 mb-4">Level, streak, and superpowers are tracked individually for {child.name} alone.</p>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Explorer level */}
