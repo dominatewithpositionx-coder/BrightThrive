@@ -1118,10 +1118,6 @@ export default function DashboardPage() {
 
                       {/* ── FW-01: Parent Recognition Panel ── */}
                       {(() => {
-                        // DIAGNOSTIC — remove after root cause confirmed
-                        if (childMissions.length > 0) {
-                          console.log(`[dashboard/recognitionTarget] child=${child.name} today=${today} childMissions=`, JSON.stringify(childMissions.map(m => ({ id: m.id, is_completed: m.is_completed, identity_tag: m.identity_tag, parent_message: m.parent_message, mission_date: m.mission_date }))));
-                        }
                         const recognitionTarget = childMissions.find(
                           m => m.is_completed &&
                                m.identity_tag &&
