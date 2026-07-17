@@ -329,7 +329,14 @@ export default function DashboardPage() {
         .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by, identity_tag, parent_message, parent_message_at')
         .in('child_id', childIds)
         .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
-      if (!res.error && res.data) setMissions(res.data);
+      if (res.error) {
+        console.error('[dashboard/poll] missions re-fetch failed:', res.error.code, res.error.message);
+      } else if (res.data) {
+        // DIAGNOSTIC — remove after root cause confirmed
+        const completed = res.data.filter(m => m.is_completed);
+        console.log('[dashboard/poll] fetched', res.data.length, 'missions,', completed.length, 'completed. Completed sample:', JSON.stringify(completed.slice(0, 3).map(m => ({ id: m.id, is_completed: m.is_completed, identity_tag: m.identity_tag, parent_message: m.parent_message }))));
+        setMissions(res.data);
+      }
     }, 30_000);
     return () => clearInterval(id);
   }, [children.length > 0]);
@@ -422,6 +429,7 @@ export default function DashboardPage() {
 
       if (missionRes.error) {
         // FW-01 columns may not exist yet — fall back to base columns
+        console.error('[dashboard/init] primary missions SELECT failed — schema cache may be stale. Code:', missionRes.error.code, 'Message:', missionRes.error.message);
         const retry = await supabase
           .from('missions')
           .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at')
@@ -431,6 +439,9 @@ export default function DashboardPage() {
       } else {
         missionData = missionRes.data;
       }
+      // DIAGNOSTIC — remove after root cause confirmed
+      console.log('[dashboard/init] missionData sample (first 3 rows):', JSON.stringify((missionData ?? []).slice(0, 3).map(m => ({ id: m.id, child_id: m.child_id, is_completed: m.is_completed, mission_date: m.mission_date, identity_tag: m.identity_tag, parent_message: m.parent_message }))));
+      console.log('[dashboard/init] todayStr():', todayStr());
     }
 
     const walletMap = Object.fromEntries((walletData || []).map(w => [w.child_id, w.balance]));
@@ -1049,6 +1060,10 @@ export default function DashboardPage() {
 
                       {/* ── FW-01: Parent Recognition Panel ── */}
                       {(() => {
+                        // DIAGNOSTIC — remove after root cause confirmed
+                        if (childMissions.length > 0) {
+                          console.log(`[dashboard/recognitionTarget] child=${child.name} today=${today} childMissions=`, JSON.stringify(childMissions.map(m => ({ id: m.id, is_completed: m.is_completed, identity_tag: m.identity_tag, parent_message: m.parent_message, mission_date: m.mission_date }))));
+                        }
                         const recognitionTarget = childMissions.find(
                           m => m.is_completed &&
                                m.identity_tag &&
