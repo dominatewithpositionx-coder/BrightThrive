@@ -310,8 +310,29 @@ export default function DashboardPage() {
   const [sentMissionIds, setSentMissionIds] = useState<Set<string>>(new Set());
   const router = useRouter();
   const autoGenDoneRef = useRef(false);
+  const childrenRef = useRef<Child[]>([]);
 
   useEffect(() => { init(); }, []);
+
+  useEffect(() => { childrenRef.current = children; }, [children]);
+
+  // Auto-refresh missions every 30 s so the RecognitionPanel appears promptly
+  // after a child completes a mission without the parent needing to reload.
+  useEffect(() => {
+    if (children.length === 0) return;
+    const id = setInterval(async () => {
+      const childIds = childrenRef.current.map(c => c.id);
+      if (childIds.length === 0) return;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+      const res = await supabase
+        .from('missions')
+        .select('id, child_id, title, category, screen_time_reward, is_completed, mission_date, updated_at, generated_by, identity_tag, parent_message, parent_message_at')
+        .in('child_id', childIds)
+        .or(`mission_date.gte.${sevenDaysAgo},mission_date.is.null`);
+      if (!res.error && res.data) setMissions(res.data);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [children.length > 0]);
 
   // Auto-generate missions on first load when none exist for today
   useEffect(() => {
