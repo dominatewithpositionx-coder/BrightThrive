@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceSupabaseClient } from '@/lib/supabase';
 import { buildMissionContext, generateMissionPack, todayString } from '@/lib/mission-intelligence';
+import { categoryToSuperpowerTag } from '@/lib/superpowers';
 
 export const runtime = 'nodejs';
 
@@ -153,7 +154,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Strip internal `reasoning` field — not a DB column
+  // Strip internal `reasoning` field — not a DB column.
+  // identity_tag is derived from category via the static CATEGORY_TO_SUPERPOWER map.
   const rowsWithDate = pack.missions.map((m) => ({
     child_id: childId,
     title: m.title,
@@ -161,21 +163,19 @@ export async function POST(req: NextRequest) {
     screen_time_reward: m.screen_time_reward ?? 5,
     is_completed: false,
     mission_date: missionDate,
+    identity_tag: categoryToSuperpowerTag(m.category ?? 'general'),
   }));
 
   let { data, error } = await supabase.from('missions').insert(rowsWithDate).select();
 
   if (error) {
-    const rowsNoDate = pack.missions.map((m) => ({
-      child_id: childId,
-      title: m.title,
-      category: m.category ?? 'general',
-      screen_time_reward: m.screen_time_reward ?? 5,
-      is_completed: false,
-    }));
-    const retry = await supabase.from('missions').insert(rowsNoDate).select();
+    console.error('[generate-missions] primary insert failed — code:', error.code, '| message:', error.message, '| details:', error.details, '| hint:', error.hint);
+    // Retry with the same payload — transient errors (PostgREST schema-cache lag,
+    // brief network hiccup) clear on a second attempt. identity_tag and mission_date
+    // are preserved so no successful path ever writes NULL for these FW-01 fields.
+    const retry = await supabase.from('missions').insert(rowsWithDate).select();
     if (retry.error) {
-      console.error('[generate-missions] mission insert failed (both attempts):', retry.error);
+      console.error('[generate-missions] retry insert also failed — code:', retry.error.code, '| message:', retry.error.message, '| details:', retry.error.details, '| hint:', retry.error.hint);
       return NextResponse.json({ error: retry.error.message, code: retry.error.code }, { status: 500 });
     }
     data = retry.data;
