@@ -1871,39 +1871,60 @@ export default function ChildPage() {
     const currentMissions = missions.filter((m) => m.child_id === selected.id);
     const hasPending = currentMissions.some((m) => !m.is_completed);
     if (hasPending) {
-      setLastGenError('Finish your current missions first!');
-      setTimeout(() => setLastGenError(null), 3000);
+      setMissionError('Finish your current missions first!');
+      setTimeout(() => setMissionError(null), 3000);
       return;
     }
 
+    console.log('[generate/DIAG] button clicked — childId:', selected.id, 'missionRound:', missionRound, 'mood:', selectedMood ?? null);
+    console.log('[generate/DIAG] generatingMore before:', generatingMore, 'autoGenerating before:', autoGenerating);
     setGeneratingMore(true);
     setLastGenError(null);
+    setMissionError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setLastGenError('No session — please log in again.');
+        console.log('[generate/DIAG] no session — aborting');
+        setMissionError('Session expired — please log in again.');
         setGeneratingMore(false);
         return;
       }
+      const reqBody = { childId: selected.id, parentId: session.user.id, count: 8, missionRound, mood: selectedMood ?? null };
+      console.log('[generate/DIAG] request start — body:', JSON.stringify(reqBody));
       const res = await fetch('/api/generate-missions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ childId: selected.id, count: 8, missionRound, mood: selectedMood ?? null }),
+        body: JSON.stringify(reqBody),
       });
+      console.log('[generate/DIAG] response status:', res.status);
       const data = await res.json();
+      console.log('[generate/DIAG] response body:', JSON.stringify(data));
       if (!res.ok) {
-        setLastGenError(data.error ?? 'Could not generate more missions.');
+        const errMsg = data.error ?? 'Could not generate missions. Please try again.';
+        console.log('[generate/DIAG] generation failed:', errMsg);
+        setLastGenError(errMsg);
+        setMissionError(errMsg); // surface in visible red banner
+        setTimeout(() => setMissionError(null), 6000);
       } else {
+        console.log('[generate/DIAG] generated count:', data.generated);
         setMissionRound(r => r + 1);
         if (data.pack) setMissionPack(data.pack);
+        const fetchStart = Date.now();
         await fetchData();
+        console.log('[generate/DIAG] post-generation fetchData completed in', Date.now() - fetchStart, 'ms');
+        const missionCountAfter = missions.filter(m => m.child_id === selected.id).length;
+        console.log('[generate/DIAG] visible mission count after fetch:', missionCountAfter);
       }
     } catch (e) {
+      console.log('[generate/DIAG] caught exception:', String(e));
       setLastGenError(String(e));
+      setMissionError('Could not generate missions. Please try again.');
+      setTimeout(() => setMissionError(null), 6000);
     }
+    console.log('[generate/DIAG] generatingMore after: false');
     setGeneratingMore(false);
   }
 
