@@ -20,7 +20,17 @@ type EventName =
   | 'streak_achieved'
   | 'kid_view_opened'
   | 'weekly_summary_viewed'
-  | 'win_recorded';
+  | 'win_recorded'
+  // FW-01: Growth Superpowers + Parent Recognition + Proud Moment
+  | 'growth_superpower_reflection_shown'
+  | 'growth_superpower_reflection_selected'
+  | 'growth_superpower_reflection_skipped'
+  | 'parent_recognition_prompt_viewed'
+  | 'parent_recognition_template_selected'
+  | 'parent_recognition_edited'
+  | 'parent_recognition_sent'
+  | 'proud_moment_displayed'
+  | 'proud_moment_opened';
 
 type EventProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -132,4 +142,73 @@ export function trackWeeklySummaryViewed(props: { child_count: number }) {
 
 export function trackWinRecorded(props: { parent_id: string }) {
   emit('win_recorded', props);
+}
+
+// ── FW-01: Growth Superpowers + Parent Recognition ────────────────────────
+
+export function trackSuperpowerReflectionShown(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('growth_superpower_reflection_shown', props);
+}
+
+export function trackSuperpowerReflectionSelected(props: {
+  mission_id: string;
+  identity_tag: string;
+  selected: 'yes' | 'unsure';
+}) {
+  emit('growth_superpower_reflection_selected', props);
+}
+
+export function trackSuperpowerReflectionSkipped(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('growth_superpower_reflection_skipped', props);
+}
+
+export function trackParentRecognitionPromptViewed(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('parent_recognition_prompt_viewed', props);
+}
+
+export function trackParentRecognitionTemplateSelected(props: {
+  mission_id: string;
+  identity_tag: string;
+  template_index: number;
+}) {
+  emit('parent_recognition_template_selected', props);
+}
+
+export function trackParentRecognitionEdited(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('parent_recognition_edited', props);
+}
+
+export function trackParentRecognitionSent(props: {
+  mission_id: string;
+  identity_tag: string;
+  edited: boolean;
+  message_length: number;
+}) {
+  emit('parent_recognition_sent', props);
+}
+
+export function trackProudMomentDisplayed(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('proud_moment_displayed', props);
+}
+
+export function trackProudMomentOpened(props: {
+  mission_id: string;
+  identity_tag: string;
+}) {
+  emit('proud_moment_opened', props);
 }
