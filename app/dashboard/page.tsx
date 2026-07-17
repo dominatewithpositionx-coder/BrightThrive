@@ -1136,15 +1136,23 @@ export default function DashboardPage() {
                         );
                       })()}
 
-                      {/* Kid view */}
-                      <Link
-                        href="/child"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 py-1 transition-colors"
-                      >
-                        Open Kid View <ChevronRight size={12} />
-                      </Link>
+                      {/* Actions row */}
+                      <div className="flex items-center justify-between">
+                        <Link
+                          href={`/dashboard/children/${child.id}`}
+                          className="flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-teal-600 py-1 transition-colors"
+                        >
+                          Growth Profile <ChevronRight size={11} />
+                        </Link>
+                        <Link
+                          href="/child"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 py-1 transition-colors"
+                        >
+                          Open Kid View <ChevronRight size={12} />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
