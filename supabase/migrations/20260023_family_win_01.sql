@@ -1,16 +1,15 @@
--- ============================================================
 -- Migration: 20260023_family_win_01.sql
--- Purpose:   Growth Superpowers V1 + Parent Recognition + Child Reflection
--- Sprint:    Family Win #1 — Parent notices effort. Child feels proud.
--- Reversible: YES — all columns nullable; rollback drops them (see EOF)
--- ============================================================
+-- Family Win #1: Growth Superpowers, Parent Recognition, Child Reflection
+-- All changes are additive. All new columns are nullable. Safe to run on live production.
 
--- 1. Growth Superpower identity tag
+BEGIN;
+
+-- 1. Superpower identity tag — set at mission INSERT from category mapping
 ALTER TABLE public.missions
   ADD COLUMN IF NOT EXISTS identity_tag text
   CHECK (
-    identity_tag IS NULL OR
-    identity_tag = ANY(ARRAY[
+    identity_tag IS NULL
+    OR identity_tag = ANY(ARRAY[
       'boundary_builder',
       'focus_finder',
       'self_soother',
@@ -19,35 +18,40 @@ ALTER TABLE public.missions
     ])
   );
 
--- 2. Child reflection — single emoji or short token, skippable
+-- 2. Child reflection answer — '✅' (yes) or '🤔' (unsure), NULL if skipped
 ALTER TABLE public.missions
   ADD COLUMN IF NOT EXISTS reflection_emoji text
   CHECK (reflection_emoji IS NULL OR char_length(reflection_emoji) <= 8);
 
--- 3. Parent recognition message — max 200 chars
+-- 3. Parent recognition message — written by parent, max 200 chars
 ALTER TABLE public.missions
   ADD COLUMN IF NOT EXISTS parent_message text
   CHECK (parent_message IS NULL OR char_length(parent_message) <= 200);
 
--- 4. When the parent sent the recognition
+-- 4. Timestamp when parent sent the recognition message
 ALTER TABLE public.missions
   ADD COLUMN IF NOT EXISTS parent_message_at timestamptz;
 
--- 5. Cross-device seen state — DB column, not localStorage
+-- 5. Timestamp when child opened the Proud Moment — stored in DB for cross-device reliability
 ALTER TABLE public.missions
   ADD COLUMN IF NOT EXISTS parent_message_seen_at timestamptz;
 
--- 6. Partial index for unseen recognition query (child pre-session check)
+-- 6. Partial index: fast lookup of missions with an unseen parent message
 CREATE INDEX IF NOT EXISTS missions_unseen_recognition_idx
   ON public.missions (child_id, parent_message_at)
-  WHERE parent_message IS NOT NULL AND parent_message_seen_at IS NULL;
+  WHERE parent_message IS NOT NULL
+    AND parent_message_seen_at IS NULL;
 
--- 7. Partial index for Proud Moments future view
+-- 7. Partial index: future Proud Moments history view
 CREATE INDEX IF NOT EXISTS missions_proud_moments_idx
   ON public.missions (child_id, mission_date DESC)
-  WHERE is_completed = true AND parent_message IS NOT NULL;
+  WHERE is_completed = true
+    AND parent_message IS NOT NULL;
 
--- Rollback reference (do NOT run with the migration):
+COMMIT;
+
+-- Rollback (do NOT run with the migration above):
+-- BEGIN;
 -- ALTER TABLE public.missions
 --   DROP COLUMN IF EXISTS identity_tag,
 --   DROP COLUMN IF EXISTS reflection_emoji,
@@ -56,3 +60,4 @@ CREATE INDEX IF NOT EXISTS missions_proud_moments_idx
 --   DROP COLUMN IF EXISTS parent_message_seen_at;
 -- DROP INDEX IF EXISTS missions_unseen_recognition_idx;
 -- DROP INDEX IF EXISTS missions_proud_moments_idx;
+-- COMMIT;
