@@ -1949,6 +1949,11 @@ export default function ChildPage() {
     //   - First call: wallet updated, ledger row inserted (ON CONFLICT DO NOTHING is a no-op).
     //   - Retry/duplicate call: guard finds existing ledger entry → wallet update skipped → RPC returns success.
     // Therefore: any coinsError here is always a genuine failure, never a duplicate-award signal.
+
+    // DIAGNOSTIC — wallet balance immediately before RPC call
+    const { data: walletBefore } = await supabase.from('bt_coin_wallet').select('balance').eq('child_id', selected.id).single();
+    console.log('[add_coins/DIAG] PRE-RPC child_id:', selected.id, 'mission_id:', mission.id, 'wallet_before:', walletBefore?.balance ?? 'NO_ROW');
+
     const { error: coinsError } = await supabase.rpc('add_coins', {
       p_child_id:    selected.id,
       p_amount:      10,
@@ -1957,10 +1962,16 @@ export default function ChildPage() {
       p_mission_id:  mission.id,
     });
 
+    // DIAGNOSTIC — full raw error object and wallet balance after RPC call
+    console.log('[add_coins/DIAG] POST-RPC raw error:', JSON.stringify(coinsError));
+    const { data: walletAfter } = await supabase.from('bt_coin_wallet').select('balance').eq('child_id', selected.id).single();
+    console.log('[add_coins/DIAG] POST-RPC wallet_after:', walletAfter?.balance ?? 'NO_ROW');
+
     // Supabase returns a truthy-but-empty error object for RETURNS void RPCs in some client
     // versions (all fields null/empty). Treat that as success; only act on genuine errors
     // where at least a message or code is present.
     const coinsErrorIsGenuine = !!(coinsError && (coinsError.message || coinsError.code));
+    console.log('[add_coins/DIAG] coinsErrorIsGenuine:', coinsErrorIsGenuine);
     if (coinsErrorIsGenuine) {
       console.error('[add_coins] genuine failure — rolling back mission:', {
         code: coinsError!.code,
